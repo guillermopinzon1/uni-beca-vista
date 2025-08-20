@@ -294,14 +294,24 @@ const Dashboard = () => {
           <TabsContent value="applications" className="mt-6">
             <Card className="border-orange/20">
               <CardHeader>
-                <CardTitle className="text-primary">Solicitudes de Becas</CardTitle>
-                <CardDescription>Revisa y gestiona las solicitudes pendientes</CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-primary">Solicitudes de Becas</CardTitle>
+                    <CardDescription>Revisa y gestiona las solicitudes pendientes</CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => navigate("/postulaciones")}
+                    className="bg-gradient-primary hover:opacity-90"
+                  >
+                    Ver Postulaciones
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
                   <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">No hay solicitudes pendientes</h3>
-                  <p className="text-muted-foreground">Las nuevas solicitudes aparecerán aquí para su revisión</p>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Gestiona las Postulaciones</h3>
+                  <p className="text-muted-foreground">Accede al módulo de postulaciones para ver y gestionar todas las solicitudes</p>
                 </div>
               </CardContent>
             </Card>

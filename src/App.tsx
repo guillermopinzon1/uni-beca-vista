@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import ModuleSelection from "./pages/ModuleSelection";
 import ScholarshipPrograms from "./pages/ScholarshipPrograms";
 import Profile from "./pages/Profile";
+import PostulacionesList from "./pages/PostulacionesList";
+import PostulacionDetail from "./pages/PostulacionDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/postulaciones" element={<PostulacionesList />} />
+          <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
