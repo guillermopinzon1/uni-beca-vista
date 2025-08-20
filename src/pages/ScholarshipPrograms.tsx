@@ -16,7 +16,7 @@ const ScholarshipPrograms = () => {
       title: "Ayudantías",
       description: "Gestiona tu postulación y seguimiento como ayudante académico o de investigación.",
       icon: UserCheck,
-      route: "/dashboard",
+      route: "/ayudantias",
       available: true
     }
     // Future programs: "Becas de Mérito Académico", "Becas Socioeconómicas", etc.

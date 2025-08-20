@@ -6,8 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
+
 import ModuleSelection from "./pages/ModuleSelection";
+import AyudantiasDashboard from "./pages/AyudantiasDashboard";
 import ScholarshipPrograms from "./pages/ScholarshipPrograms";
 import Profile from "./pages/Profile";
 import PostulacionesList from "./pages/PostulacionesList";
@@ -27,8 +28,9 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/modules" element={<ModuleSelection />} />
+          <Route path="/ayudantias" element={<AyudantiasDashboard />} />
           <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          
           <Route path="/profile" element={<Profile />} />
           <Route path="/postulaciones" element={<PostulacionesList />} />
           <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
