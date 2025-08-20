@@ -1,7 +1,8 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, ClipboardList, BarChart3, Calendar, Plus } from "lucide-react";
+import { ArrowLeft, Users, ClipboardList, BarChart3, Calendar } from "lucide-react";
 import ModuleCard from "@/components/ModuleCard";
 
 const AyudantiasDashboard = () => {
@@ -13,24 +14,6 @@ const AyudantiasDashboard = () => {
       description: "Gestiona las postulaciones de estudiantes para ayudantías académicas y de investigación",
       icon: ClipboardList,
       route: "/postulaciones"
-    },
-    {
-      title: "Evaluaciones",
-      description: "Revisa y evalúa las postulaciones de los estudiantes candidatos",
-      icon: BarChart3,
-      route: "#"
-    },
-    {
-      title: "Programación",
-      description: "Administra horarios y asignaciones de ayudantes",
-      icon: Calendar,
-      route: "#"
-    },
-    {
-      title: "Ayudantes Activos",
-      description: "Supervisa y gestiona a los estudiantes ayudantes actualmente asignados",
-      icon: Users,
-      route: "#"
     }
   ];
 
@@ -125,10 +108,6 @@ const AyudantiasDashboard = () => {
                   Accede a las diferentes funcionalidades del sistema de ayudantías
                 </p>
               </div>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Convocatoria
-              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -147,42 +126,6 @@ const AyudantiasDashboard = () => {
               ))}
             </div>
           </div>
-
-          {/* Quick Actions */}
-          <Card className="border-orange/20">
-            <CardHeader>
-              <CardTitle className="text-primary">Acciones Rápidas</CardTitle>
-              <CardDescription>
-                Funcionalidades más utilizadas en el sistema de ayudantías
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex flex-col items-center justify-center"
-                  onClick={() => navigate("/postulaciones")}
-                >
-                  <ClipboardList className="h-6 w-6 mb-2" />
-                  Ver Postulaciones
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex flex-col items-center justify-center"
-                >
-                  <Users className="h-6 w-6 mb-2" />
-                  Gestionar Ayudantes
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex flex-col items-center justify-center"
-                >
-                  <BarChart3 className="h-6 w-6 mb-2" />
-                  Ver Reportes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </main>
     </div>
