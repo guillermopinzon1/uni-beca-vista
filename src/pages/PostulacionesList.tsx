@@ -14,7 +14,7 @@ const PostulacionesList = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     periodo: "",
-    estado: "",
+    estado: "all",
     programa_beca_id: ""
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -175,7 +175,7 @@ const PostulacionesList = () => {
                     <SelectValue placeholder="Seleccionar estado" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendiente">Pendiente</SelectItem>
                     <SelectItem value="en_evaluacion">En Evaluación</SelectItem>
                     <SelectItem value="aprobada">Aprobada</SelectItem>
