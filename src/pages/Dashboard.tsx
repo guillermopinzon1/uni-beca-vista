@@ -15,8 +15,10 @@ import {
   LogOut,
   Calendar,
   TrendingUp,
-  ArrowLeft
+  ArrowLeft,
+  User
 } from "lucide-react";
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -107,6 +109,15 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center space-x-4">
               <Bell className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-primary" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/profile")}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Mi Perfil
+              </Button>
               <Settings className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-primary" />
               <Button
                 variant="outline"
@@ -124,9 +135,21 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Hero Section with University Image */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Panel de Control</h2>
-          <p className="text-muted-foreground">Gestiona las becas y monitorea el progreso</p>
+          <div className="relative h-48 md:h-64 rounded-lg overflow-hidden mb-6">
+            <img 
+              src="/lovable-uploads/ace4150d-3705-4cde-aa94-d5a366dd4664.png" 
+              alt="Universidad Metropolitana Campus" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30 flex items-center">
+              <div className="container mx-auto px-4">
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Panel de Control</h2>
+                <p className="text-white/90 text-lg">Gestiona las becas y monitorea el progreso</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Stats Grid */}
