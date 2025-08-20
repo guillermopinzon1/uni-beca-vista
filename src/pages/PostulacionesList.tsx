@@ -130,7 +130,7 @@ const PostulacionesList = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/ayudantias")}
                 className="p-2"
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />
