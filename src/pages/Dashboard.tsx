@@ -16,8 +16,13 @@ import {
   Calendar,
   TrendingUp,
   ArrowLeft,
-  User
+  User,
+  ClipboardList,
+  BookOpen,
+  BarChart3
 } from "lucide-react";
+import universityCampus from "@/assets/university-campus.jpg";
+import ModuleCard from "@/components/ModuleCard";
 
 
 const Dashboard = () => {
@@ -27,6 +32,33 @@ const Dashboard = () => {
   const handleLogout = () => {
     navigate("/login");
   };
+
+  const modules = [
+    {
+      title: "Gestión de Becas",
+      description: "Administra programas de becas, solicitudes y seguimiento de estudiantes beneficiarios",
+      icon: GraduationCap,
+      route: "/scholarship-programs"
+    },
+    {
+      title: "Postulaciones",
+      description: "Gestiona las postulaciones de estudiantes a diferentes programas de becas",
+      icon: ClipboardList,
+      route: "/postulaciones"
+    },
+    {
+      title: "Ayudantías",
+      description: "Administra el programa de ayudantías estudiantiles y asignaciones",
+      icon: BookOpen,
+      route: "#"
+    },
+    {
+      title: "Reportes y Estadísticas",
+      description: "Genera reportes detallados y visualiza estadísticas del sistema de becas",
+      icon: BarChart3,
+      route: "#"
+    }
+  ];
 
   const scholarships = [
     {
@@ -139,16 +171,44 @@ const Dashboard = () => {
         <div className="mb-8">
           <div className="relative h-48 md:h-64 rounded-lg overflow-hidden mb-6">
             <img 
-              src="/lovable-uploads/ace4150d-3705-4cde-aa94-d5a366dd4664.png" 
+              src={universityCampus}
               alt="Universidad Metropolitana Campus" 
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30 flex items-center">
+            <div className="absolute inset-0 bg-gradient-hero flex items-center">
               <div className="container mx-auto px-4">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Panel de Control</h2>
-                <p className="text-white/90 text-lg">Gestiona las becas y monitorea el progreso</p>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Dashboard Principal</h2>
+                <p className="text-white/90 text-lg">Sistema de Gestión Universitaria</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Modules Section */}
+        <div className="mb-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-primary mb-4">
+              Módulos del Sistema
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Accede a las diferentes funcionalidades del sistema de gestión universitaria
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {modules.map((module, index) => (
+              <ModuleCard
+                key={index}
+                title={module.title}
+                description={module.description}
+                icon={module.icon}
+                onClick={() => {
+                  if (module.route !== "#") {
+                    navigate(module.route);
+                  }
+                }}
+              />
+            ))}
           </div>
         </div>
 

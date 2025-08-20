@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Users, Award, FileText } from "lucide-react";
-import universityHero from "@/assets/university-hero.jpg";
+import universityCampus from "@/assets/university-campus.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ const Index = () => {
       <section className="relative h-screen flex items-center justify-center">
         <div className="absolute inset-0">
           <img
-            src={universityHero}
+            src={universityCampus}
             alt="Universidad Metropolitana"
             className="w-full h-full object-cover"
           />
