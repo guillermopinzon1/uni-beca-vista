@@ -14,7 +14,8 @@ import {
   Settings,
   LogOut,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  ArrowLeft
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -90,6 +91,14 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/scholarship-programs")}
+                className="p-2"
+              >
+                <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />
+              </Button>
               <GraduationCap className="h-8 w-8 text-primary" />
               <div>
                 <h1 className="text-2xl font-bold text-primary">Universidad Metropolitana</h1>

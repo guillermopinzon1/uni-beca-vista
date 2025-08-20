@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home } from "lucide-react";
+import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft } from "lucide-react";
 
 const ScholarshipPrograms = () => {
   const navigate = useNavigate();
@@ -29,6 +29,14 @@ const ScholarshipPrograms = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/modules")}
+                className="p-2"
+              >
+                <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />
+              </Button>
               <GraduationCap className="h-8 w-8 text-primary" />
               <div>
                 <h1 className="text-2xl font-bold text-primary">Universidad Metropolitana</h1>
