@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Users, Award, FileText } from "lucide-react";
-import universityCampus from "@/assets/university-campus.jpg";
+import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -49,10 +49,7 @@ const Index = () => {
             Universidad Metropolitana
           </h1>
           <p className="text-xl md:text-2xl mb-8 opacity-90 animate-slide-up">
-            Sistema Multiplataforma de Gestión de Becas
-          </p>
-          <p className="text-lg mb-12 opacity-80 max-w-2xl mx-auto animate-slide-up">
-            Plataforma integral para la administración, seguimiento y gestión de becas estudiantiles
+            Sistema multiplataforma de la UNIMET
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
