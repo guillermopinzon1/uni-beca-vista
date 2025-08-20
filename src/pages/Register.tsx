@@ -91,6 +91,13 @@ const Register = () => {
               <CardDescription>
                 Regístrate para acceder al sistema de becas
               </CardDescription>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/")}
+                className="mt-4"
+              >
+                Volver al Inicio
+              </Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">

@@ -26,7 +26,7 @@ const Login = () => {
         title: "Inicio de sesión exitoso",
         description: "Bienvenido al Sistema de Gestión de Becas",
       });
-      navigate("/dashboard");
+      navigate("/modules");
     } else {
       toast({
         title: "Error",
@@ -69,6 +69,13 @@ const Login = () => {
               <CardDescription>
                 Ingresa tus credenciales para acceder al sistema
               </CardDescription>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/")}
+                className="mt-4"
+              >
+                Volver al Inicio
+              </Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
