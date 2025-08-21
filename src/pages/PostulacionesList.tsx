@@ -130,7 +130,14 @@ const PostulacionesList = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/ayudantias")}
+                onClick={() => {
+                  const userRole = localStorage.getItem("userRole") || "supervisor";
+                  if (userRole === "aspirante") {
+                    navigate("/scholarship-programs");
+                  } else {
+                    navigate("/ayudantias");
+                  }
+                }}
                 className="p-2"
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />
