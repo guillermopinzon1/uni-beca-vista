@@ -41,6 +41,13 @@ const AspiranteScholarshipPrograms = () => {
       icon: UserPlus,
       route: "/postulaciones",
       highlighted: true
+    },
+    {
+      title: "Requisitos",
+      description: "Consulta los requisitos específicos para cada tipo de beca disponible",
+      icon: FileText,
+      route: "/requisitos",
+      highlighted: false
     }
   ];
 

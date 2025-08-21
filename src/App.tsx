@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Requisitos from "./pages/Requisitos";
 
 import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
           
           <Route path="/profile" element={<Profile />} />
+          <Route path="/requisitos" element={<Requisitos />} />
           <Route path="/postulaciones" element={<PostulacionesList />} />
           <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
