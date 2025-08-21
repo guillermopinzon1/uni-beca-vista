@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import universityHero from "@/assets/university-hero.jpg";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("supervisor");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -21,7 +23,9 @@ const Login = () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    if (email && password) {
+    if (email && password && role) {
+      // Store role in localStorage for role-based navigation
+      localStorage.setItem("userRole", role);
       toast({
         title: "Inicio de sesión exitoso",
         description: "Bienvenido al Sistema de Gestión de Becas",
@@ -100,6 +104,23 @@ const Login = () => {
                     placeholder="••••••••"
                     required
                   />
+                </div>
+                <div className="space-y-3">
+                  <Label>Tipo de Usuario</Label>
+                  <RadioGroup value={role} onValueChange={setRole}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="supervisor" id="supervisor" />
+                      <Label htmlFor="supervisor">Supervisor</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="pasante" id="pasante" />
+                      <Label htmlFor="pasante">Pasante</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="aspirante" id="aspirante" />
+                      <Label htmlFor="aspirante">Aspirante</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 <Button
                   type="submit"

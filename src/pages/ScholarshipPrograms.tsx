@@ -1,10 +1,28 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen } from "lucide-react";
+import PasanteAyudantiasDashboard from "./PasanteAyudantiasDashboard";
+import AspiranteScholarshipPrograms from "./AspiranteScholarshipPrograms";
 
 const ScholarshipPrograms = () => {
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string>("");
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole") || "supervisor";
+    setUserRole(role);
+  }, []);
+
+  // Show role-specific views
+  if (userRole === "pasante") {
+    return <PasanteAyudantiasDashboard />;
+  }
+
+  if (userRole === "aspirante") {
+    return <AspiranteScholarshipPrograms />;
+  }
 
   const handleLogout = () => {
     navigate("/login");
