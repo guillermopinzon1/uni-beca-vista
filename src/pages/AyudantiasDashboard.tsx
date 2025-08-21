@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, ClipboardList, BarChart3, Calendar } from "lucide-react";
+import { ArrowLeft, Users, Clock, CheckCircle, TrendingUp, ClipboardList } from "lucide-react";
 import ModuleCard from "@/components/ModuleCard";
 
 const AyudantiasDashboard = () => {
@@ -19,28 +19,28 @@ const AyudantiasDashboard = () => {
 
   const stats = [
     {
-      title: "Postulaciones Activas",
-      value: "24",
-      change: "+12% vs mes anterior",
-      icon: ClipboardList
-    },
-    {
-      title: "Ayudantes Asignados",
-      value: "156",
-      change: "+8% vs mes anterior", 
+      title: "Ayudantías Activas",
+      value: "15",
+      change: "+3 nuevas este mes",
       icon: Users
     },
     {
-      title: "Departamentos",
-      value: "8",
-      change: "Sin cambios",
-      icon: BarChart3
+      title: "Horas Registradas",
+      value: "1,247",
+      change: "87.5% del objetivo", 
+      icon: Clock
     },
     {
-      title: "Período Actual",
-      value: "2025-1",
-      change: "Activo",
-      icon: Calendar
+      title: "Horas Aprobadas",
+      value: "1,180",
+      change: "94.6% aprobación",
+      icon: CheckCircle
+    },
+    {
+      title: "Progreso Promedio",
+      value: "67.8%",
+      change: "+5.2% vs mes anterior",
+      icon: TrendingUp
     }
   ];
 
