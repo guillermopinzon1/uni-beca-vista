@@ -42,7 +42,7 @@ const PasanteAyudantiasDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/scholarship-programs")}
+              onClick={() => navigate("/modules")}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
