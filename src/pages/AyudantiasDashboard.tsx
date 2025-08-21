@@ -14,6 +14,12 @@ const AyudantiasDashboard = () => {
       description: "Gestiona las postulaciones de estudiantes para ayudantías académicas y de investigación",
       icon: ClipboardList,
       route: "/postulaciones"
+    },
+    {
+      title: "Reportes",
+      description: "Generación de reportes y estadísticas de ayudantías, cumplimiento y evaluaciones",
+      icon: TrendingUp,
+      route: "/reportes"
     }
   ];
 
