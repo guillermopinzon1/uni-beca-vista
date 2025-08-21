@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft } from "lucide-react";
+import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen } from "lucide-react";
 
 const ScholarshipPrograms = () => {
   const navigate = useNavigate();
@@ -13,13 +13,36 @@ const ScholarshipPrograms = () => {
   const programs = [
     {
       id: 1,
-      title: "Ayudantías",
+      title: "Ayudantía",
       description: "Gestiona tu postulación y seguimiento como ayudante académico o de investigación.",
       icon: UserCheck,
       route: "/ayudantias",
       available: true
+    },
+    {
+      id: 2,
+      title: "Impacto",
+      description: "Programa de becas orientado al desarrollo de proyectos de impacto social y comunitario.",
+      icon: Target,
+      route: "/impacto",
+      available: false
+    },
+    {
+      id: 3,
+      title: "Excelencia",
+      description: "Reconocimiento al mérito académico excepcional y trayectoria estudiantil destacada.",
+      icon: Award,
+      route: "/excelencia",
+      available: false
+    },
+    {
+      id: 4,
+      title: "Beca Formación Docente",
+      description: "Programa especializado para la formación y desarrollo de futuros profesores universitarios.",
+      icon: BookOpen,
+      route: "/formacion-docente",
+      available: false
     }
-    // Future programs: "Becas de Mérito Académico", "Becas Socioeconómicas", etc.
   ];
 
   return (
@@ -93,8 +116,8 @@ const ScholarshipPrograms = () => {
           {programs.map((program) => (
             <Card 
               key={program.id} 
-              className="bg-gradient-card border-orange/20 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-              onClick={() => navigate(program.route)}
+              className={`bg-gradient-card border-orange/20 hover:shadow-lg transition-all duration-300 group ${program.available ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'}`}
+              onClick={() => program.available && navigate(program.route)}
             >
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 p-4 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
@@ -110,12 +133,13 @@ const ScholarshipPrograms = () => {
               <CardContent className="text-center pb-6">
                 <Button 
                   className="bg-gradient-primary hover:opacity-90 w-full"
+                  disabled={!program.available}
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(program.route);
+                    if (program.available) navigate(program.route);
                   }}
                 >
-                  Acceder
+                  {program.available ? "Acceder" : "Próximamente"}
                 </Button>
               </CardContent>
             </Card>
