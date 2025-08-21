@@ -138,7 +138,6 @@ const PasanteAyudantiasDashboard = () => {
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
                     <p className="font-medium">15 Enero 2025 - 4 horas</p>
-                    <p className="text-sm text-muted-foreground">Apoyo en laboratorio de física</p>
                   </div>
                   <div className="flex items-center text-green-600">
                     <CheckCircle className="h-4 w-4 mr-1" />
@@ -148,7 +147,6 @@ const PasanteAyudantiasDashboard = () => {
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
                     <p className="font-medium">14 Enero 2025 - 3.5 horas</p>
-                    <p className="text-sm text-muted-foreground">Corrección de exámenes</p>
                   </div>
                   <div className="flex items-center text-yellow-600">
                     <Clock className="h-4 w-4 mr-1" />
@@ -158,7 +156,6 @@ const PasanteAyudantiasDashboard = () => {
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
                     <p className="font-medium">13 Enero 2025 - 4 horas</p>
-                    <p className="text-sm text-muted-foreground">Preparación de material didáctico</p>
                   </div>
                   <div className="flex items-center text-green-600">
                     <CheckCircle className="h-4 w-4 mr-1" />
