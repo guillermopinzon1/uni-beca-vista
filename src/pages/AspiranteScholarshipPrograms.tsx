@@ -140,7 +140,6 @@ const AspiranteScholarshipPrograms = () => {
                 <p>• Asegúrate de cumplir con todos los requisitos académicos antes de postularte</p>
                 <p>• Puedes postularte a múltiples convocatorias si cumples los requisitos</p>
                 <p>• El proceso de selección se basa en el rendimiento académico y disponibilidad horaria</p>
-                <p>• Recibirás notificaciones sobre el estado de tus postulaciones por correo electrónico</p>
               </div>
             </CardContent>
           </Card>
