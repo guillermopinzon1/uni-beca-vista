@@ -30,37 +30,37 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ErrorBoundary>
-      <AuthProvider>
-        <TooltipProvider>
+      <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login-ayudantias" element={<LoginAyudantias />} />
-            <Route path="/register-ayudantias" element={<RegisterAyudantias />} />
-            <Route path="/modules" element={<ModuleSelection />} />
-            <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
-            <Route path="/pasante-ayudantias-dashboard" element={<PasanteAyudantiasDashboard />} />
-            <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
-            <Route path="/aspirante-scholarship-programs" element={<AspiranteScholarshipPrograms />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/requisitos" element={<Requisitos />} />
-            <Route path="/postulaciones" element={<PostulacionesList />} />
-            <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
-            <Route path="/reportes" element={<Reportes />} />
-            <Route path="/impacto" element={<ImpactoProgram />} />
-            <Route path="/excelencia" element={<ExcelenciaProgram />} />
-            <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/login-ayudantias" element={<LoginAyudantias />} />
+              <Route path="/register-ayudantias" element={<RegisterAyudantias />} />
+              <Route path="/modules" element={<ModuleSelection />} />
+              <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
+              <Route path="/pasante-ayudantias-dashboard" element={<PasanteAyudantiasDashboard />} />
+              <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
+              <Route path="/aspirante-scholarship-programs" element={<AspiranteScholarshipPrograms />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/requisitos" element={<Requisitos />} />
+              <Route path="/postulaciones" element={<PostulacionesList />} />
+              <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
+              <Route path="/reportes" element={<Reportes />} />
+              <Route path="/impacto" element={<ImpactoProgram />} />
+              <Route path="/excelencia" element={<ExcelenciaProgram />} />
+              <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </ErrorBoundary>
+    </ErrorBoundary>
   </QueryClientProvider>
 );
 
