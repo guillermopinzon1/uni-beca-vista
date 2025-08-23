@@ -18,6 +18,9 @@ import PostulacionesList from "./pages/PostulacionesList";
 import PostulacionDetail from "./pages/PostulacionDetail";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
+import ImpactoProgram from "./pages/ImpactoProgram";
+import ExcelenciaProgram from "./pages/ExcelenciaProgram";
+import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +45,9 @@ const App = () => (
           <Route path="/postulaciones" element={<PostulacionesList />} />
           <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
           <Route path="/reportes" element={<Reportes />} />
+          <Route path="/impacto" element={<ImpactoProgram />} />
+          <Route path="/excelencia" element={<ExcelenciaProgram />} />
+          <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

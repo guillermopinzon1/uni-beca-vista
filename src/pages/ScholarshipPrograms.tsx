@@ -43,7 +43,7 @@ const ScholarshipPrograms = () => {
       description: "Programa de becas orientado al desarrollo de proyectos de impacto social y comunitario.",
       icon: Target,
       route: "/impacto",
-      available: false
+      available: true
     },
     {
       id: 3,
@@ -51,7 +51,7 @@ const ScholarshipPrograms = () => {
       description: "Reconocimiento al mérito académico excepcional y trayectoria estudiantil destacada.",
       icon: Award,
       route: "/excelencia",
-      available: false
+      available: true
     },
     {
       id: 4,
@@ -59,7 +59,7 @@ const ScholarshipPrograms = () => {
       description: "Programa especializado para la formación y desarrollo de futuros profesores universitarios.",
       icon: BookOpen,
       route: "/formacion-docente",
-      available: false
+      available: true
     }
   ];
 
