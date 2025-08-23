@@ -13,10 +13,10 @@ const ModuleSelection = () => {
   const modules = [
     {
       id: 1,
-      title: "Gestión de Ayudantías",
-      description: "Centraliza la postulación, evaluación y seguimiento de todas las ayudantías.",
+      title: "Gestión de Becas",
+      description: "Centraliza la postulación, evaluación y seguimiento de todas las becas y ayudantías.",
       icon: GraduationCap,
-      route: "/login-ayudantias",
+      route: "/scholarship-programs",
       available: true
     }
     // Future modules can be added here
