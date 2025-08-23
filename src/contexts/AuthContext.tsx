@@ -28,37 +28,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Auto logout when visiting /modules
   useEffect(() => {
-    if (location.pathname === '/modules') {
-      logout();
-    }
-  }, [location.pathname]);
-
-  // Auto logout when leaving ayudantías module
-  useEffect(() => {
-    const currentPath = location.pathname;
-    const isInAyudantias = currentPath.includes('/ayudantias') || 
-                          currentPath.includes('/login-ayudantias') ||
-                          currentPath.includes('/register-ayudantias') ||
-                          currentPath.includes('/pasante-ayudantias');
-
-    // If user was logged in for ayudantías and is now leaving the module
-    if (isLoggedIn && userType && !isInAyudantias && 
-        !currentPath.includes('/excelencia') && 
-        !currentPath.includes('/impacto') && 
-        !currentPath.includes('/formacion-docente')) {
-      
-      // Check if we're going to a non-ayudantías route that should trigger logout
-      const shouldLogout = currentPath === '/' || 
-                          currentPath === '/modules' || 
-                          currentPath === '/scholarship-programs' ||
-                          currentPath.includes('/login') ||
-                          currentPath.includes('/register');
-      
-      if (shouldLogout) {
-        logout();
+    try {
+      if (location.pathname === '/modules') {
+        if (isLoggedIn) {
+          console.log('Auto logout triggered on /modules route');
+          logout();
+        }
       }
+    } catch (error) {
+      console.error('Error in modules logout effect:', error);
     }
-  }, [location.pathname, isLoggedIn, userType]);
+  }, [location.pathname, isLoggedIn]);
+
+  // Auto logout when leaving ayudantías module (simplified logic)
+  useEffect(() => {
+    try {
+      const currentPath = location.pathname;
+      
+      // Only trigger logout logic if user is actually logged in
+      if (!isLoggedIn) return;
+      
+      const isInAyudantiasModule = currentPath.includes('/ayudantias') || 
+                                  currentPath.includes('/login-ayudantias') ||
+                                  currentPath.includes('/register-ayudantias');
+      
+      const isInBecasModules = currentPath.includes('/excelencia') || 
+                              currentPath.includes('/impacto') || 
+                              currentPath.includes('/formacion-docente');
+      
+      // If user is logged in but not in any protected module, logout
+      if (!isInAyudantiasModule && !isInBecasModules) {
+        const shouldLogout = currentPath === '/' || 
+                            currentPath === '/modules' || 
+                            currentPath === '/scholarship-programs' ||
+                            currentPath.includes('/login') ||
+                            currentPath.includes('/register');
+        
+        if (shouldLogout) {
+          console.log('Auto logout triggered for path:', currentPath);
+          logout();
+        }
+      }
+    } catch (error) {
+      console.error('Error in ayudantias logout effect:', error);
+    }
+  }, [location.pathname, isLoggedIn]);
 
   return (
     <AuthContext.Provider value={{ isLoggedIn, userType, login, logout }}>
