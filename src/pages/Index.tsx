@@ -52,21 +52,13 @@ const Index = () => {
             Sistema multiplataforma de la UNIMET
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
+          <div className="flex justify-center animate-slide-up">
             <Button
               size="lg"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/modules")}
               className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
             >
-              Iniciar Sesión
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/register")}
-              className="border-white text-white hover:bg-white/10 text-lg px-8 py-3"
-            >
-              Registrarse
+              Acceder al Sistema
             </Button>
           </div>
         </div>
@@ -109,14 +101,14 @@ const Index = () => {
             ¿Listo para comenzar?
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Únete al sistema de gestión de becas más eficiente para universidades
+            Accede a nuestro sistema multiplataforma para gestionar becas y ayudantías
           </p>
           <Button
             size="lg"
-            onClick={() => navigate("/register")}
+            onClick={() => navigate("/modules")}
             className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
           >
-            Crear Cuenta Gratuita
+            Acceder al Sistema
           </Button>
         </div>
       </section>

@@ -7,16 +7,16 @@ const ModuleSelection = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    navigate("/login");
+    navigate("/");
   };
 
   const modules = [
     {
       id: 1,
-      title: "Gestión de Becas",
-      description: "Centraliza la postulación, evaluación y seguimiento de todas las becas.",
+      title: "Gestión de Ayudantías",
+      description: "Centraliza la postulación, evaluación y seguimiento de todas las ayudantías.",
       icon: GraduationCap,
-      route: "/scholarship-programs",
+      route: "/login-ayudantias",
       available: true
     }
     // Future modules can be added here
@@ -36,18 +36,14 @@ const ModuleSelection = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-foreground">Bienvenido, Usuario</span>
-              </div>
-              <Button
+            <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
                 className="flex items-center gap-2"
               >
                 <LogOut className="h-4 w-4" />
-                Cerrar Sesión
+                Volver al Inicio
               </Button>
             </div>
           </div>
