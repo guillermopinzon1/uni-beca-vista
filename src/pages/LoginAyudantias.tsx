@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
 import { ArrowLeft } from "lucide-react";
 
@@ -16,6 +17,7 @@ const LoginAyudantias = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,11 +41,17 @@ const LoginAyudantias = () => {
       description: `Bienvenido al módulo de ayudantías como ${selectedRole}`,
     });
 
-    // Store user role in localStorage
-    localStorage.setItem("userRole", selectedRole);
+    // Login through auth context
+    const userType = selectedRole === "supervisor" ? "admin" : "student";
+    login(userType);
     
-    // Navigate to scholarship programs
-    navigate("/scholarship-programs");
+    // Navigate based on role
+    if (selectedRole === "supervisor") {
+      navigate("/ayudantias-dashboard");
+    } else {
+      navigate("/pasante-ayudantias-dashboard");
+    }
+    
     setIsLoading(false);
   };
 

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
 import { ArrowLeft } from "lucide-react";
 
@@ -19,6 +20,7 @@ const RegisterAyudantias = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -56,10 +58,12 @@ const RegisterAyudantias = () => {
 
     toast({
       title: "Registro exitoso",
-      description: "Tu cuenta ha sido creada. Ahora puedes iniciar sesión.",
+      description: "Tu cuenta ha sido creada. Iniciando sesión automáticamente...",
     });
 
-    navigate("/login-ayudantias");
+    // Auto login after registration
+    login("student");
+    navigate("/pasante-ayudantias-dashboard");
     setIsLoading(false);
   };
 
