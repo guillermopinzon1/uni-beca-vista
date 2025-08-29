@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import ListaAyudantes from "@/components/ayudantias/ListaAyudantes";
 
 const AyudantiasDashboard = () => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [activeModule, setActiveModule] = useState<string | null>(null);
 
   const sidebarItems = [
     {
-      title: "Postulaciones",
+      title: "Lista de Ayudantes",
       icon: Users,
-      onClick: () => toast.info("En construcción")
+      onClick: () => setActiveModule("lista-ayudantes")
     },
     {
       title: "Reportes", 
@@ -87,14 +89,18 @@ const AyudantiasDashboard = () => {
         {/* Main Content */}
         <main className="flex-1 px-6 py-8">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center py-16">
-              <h2 className="text-2xl font-bold text-primary mb-4">
-                Bienvenido al Sistema de Ayudantías
-              </h2>
-              <p className="text-muted-foreground">
-                Utiliza el menú lateral para navegar entre los diferentes módulos
-              </p>
-            </div>
+            {activeModule === "lista-ayudantes" ? (
+              <ListaAyudantes />
+            ) : (
+              <div className="text-center py-16">
+                <h2 className="text-2xl font-bold text-primary mb-4">
+                  Bienvenido al Sistema de Ayudantías
+                </h2>
+                <p className="text-muted-foreground">
+                  Utiliza el menú lateral para navegar entre los diferentes módulos
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>
