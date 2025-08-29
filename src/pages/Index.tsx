@@ -40,7 +40,7 @@ const Index = () => {
               <img 
                 src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
                 alt="Universidad Metropolitana" 
-                className="h-8"
+                className="h-12"
               />
             </div>
             <nav className="flex items-center space-x-4">
@@ -68,18 +68,18 @@ const Index = () => {
       <section className="relative h-screen flex items-center justify-center pt-16">
         <div className="absolute inset-0">
           <img
-            src={universityCampus}
+            src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png"
             alt="Universidad Metropolitana"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain object-center bg-background"
           />
-          <div className="absolute inset-0 bg-gradient-hero" />
+          <div className="absolute inset-0 bg-background/30" />
         </div>
         
-        <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
+        <div className="relative z-10 text-center text-primary px-4 max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
             Universidad Metropolitana
           </h1>
-          <p className="text-xl md:text-2xl mb-8 opacity-90 animate-slide-up">
+          <p className="text-xl md:text-2xl mb-8 text-muted-foreground animate-slide-up">
             Sistema multiplataforma de la UNIMET
           </p>
           
@@ -87,7 +87,7 @@ const Index = () => {
             <Button
               size="lg"
               onClick={() => navigate("/login")}
-              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 py-3"
             >
               <LogIn className="h-5 w-5 mr-2" />
               Iniciar Sesión
@@ -96,7 +96,7 @@ const Index = () => {
               size="lg"
               variant="outline"
               onClick={() => navigate("/register")}
-              className="border-white text-white hover:bg-white hover:text-primary text-lg px-8 py-3"
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground text-lg px-8 py-3"
             >
               <UserPlus className="h-5 w-5 mr-2" />
               Registrarse
