@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Users, Award, FileText, LogIn, UserPlus } from "lucide-react";
+import { GraduationCap, Users, Award, FileText, LogIn, UserPlus, BookOpen } from "lucide-react";
 import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
 
 const Index = () => {
@@ -100,6 +100,14 @@ const Index = () => {
             >
               <UserPlus className="h-5 w-5 mr-2" />
               Registrarse
+            </Button>
+            <Button
+              size="lg"
+              onClick={() => navigate("/postulaciones-becas")}
+              className="bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-8 py-3"
+            >
+              <BookOpen className="h-5 w-5 mr-2" />
+              Postularme a Beca
             </Button>
           </div>
         </div>

@@ -24,6 +24,7 @@ import ImpactoProgram from "./pages/ImpactoProgram";
 import ExcelenciaProgram from "./pages/ExcelenciaProgram";
 import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
+import PostulacionesBecas from "./pages/PostulacionesBecas";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/pasante-ayudantias-dashboard" element={<PasanteAyudantiasDashboard />} />
               <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
               <Route path="/aspirante-scholarship-programs" element={<AspiranteScholarshipPrograms />} />
+              <Route path="/postulaciones-becas" element={<PostulacionesBecas />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/requisitos" element={<Requisitos />} />
               <Route path="/postulaciones" element={<PostulacionesList />} />
