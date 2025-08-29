@@ -45,6 +45,21 @@ const Index = () => {
             </div>
             <nav className="flex items-center space-x-4">
               <Button
+                variant="ghost"
+                onClick={() => navigate("/login")}
+                className="text-primary hover:text-primary-foreground hover:bg-primary"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Iniciar Sesión
+              </Button>
+              <Button
+                onClick={() => navigate("/register")}
+                className="bg-gradient-primary hover:opacity-90 transition-opacity"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Registrarse
+              </Button>
+              <Button
                 onClick={() => navigate("/postulaciones-becas")}
                 className="bg-white text-primary hover:bg-white/90"
               >
