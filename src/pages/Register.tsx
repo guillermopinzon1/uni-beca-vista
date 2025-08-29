@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import universityHero from "@/assets/university-hero.jpg";
+import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -65,7 +65,7 @@ const Register = () => {
       {/* Left side - Image */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <img
-          src={universityHero}
+          src={universityCampus}
           alt="Universidad Metropolitana"
           className="object-cover w-full h-full"
         />

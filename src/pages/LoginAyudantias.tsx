@@ -4,16 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
+import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 import { ArrowLeft } from "lucide-react";
 
 const LoginAyudantias = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
+  
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ const LoginAyudantias = () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (!email || !password || !selectedRole) {
+    if (!email || !password) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos",
@@ -38,19 +38,12 @@ const LoginAyudantias = () => {
 
     toast({
       title: "Inicio de sesión exitoso",
-      description: `Bienvenido al módulo de ayudantías como ${selectedRole}`,
+      description: "Bienvenido al módulo de ayudantías",
     });
 
     // Login through auth context
-    const userType = selectedRole === "supervisor" ? "admin" : "student";
-    login(userType);
-    
-    // Navigate based on role
-    if (selectedRole === "supervisor") {
-      navigate("/ayudantias-dashboard");
-    } else {
-      navigate("/pasante-ayudantias-dashboard");
-    }
+    login("student");
+    navigate("/pasante-ayudantias-dashboard");
     
     setIsLoading(false);
   };
@@ -117,23 +110,6 @@ const LoginAyudantias = () => {
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <Label>Tipo de usuario</Label>
-                  <RadioGroup value={selectedRole} onValueChange={setSelectedRole}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="supervisor" id="supervisor" />
-                      <Label htmlFor="supervisor">Supervisor</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="pasante" id="pasante" />
-                      <Label htmlFor="pasante">Pasante</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="aspirante" id="aspirante" />
-                      <Label htmlFor="aspirante">Aspirante</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
 
                 <Button
                   type="submit"
