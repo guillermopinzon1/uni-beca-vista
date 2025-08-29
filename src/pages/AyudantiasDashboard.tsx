@@ -1,10 +1,11 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, FileText } from "lucide-react";
+import { ArrowLeft, Users, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import ListaAyudantes from "@/components/ayudantias/ListaAyudantes";
+import BuscarAyudantes from "@/components/ayudantias/BuscarAyudantes";
 
 const AyudantiasDashboard = () => {
   const navigate = useNavigate();
@@ -18,9 +19,9 @@ const AyudantiasDashboard = () => {
       onClick: () => setActiveModule("lista-ayudantes")
     },
     {
-      title: "Reportes", 
-      icon: FileText,
-      onClick: () => toast.info("En construcción")
+      title: "Buscar Ayudantes", 
+      icon: Search,
+      onClick: () => setActiveModule("buscar-ayudantes")
     }
   ];
 
@@ -91,6 +92,8 @@ const AyudantiasDashboard = () => {
           <div className="max-w-7xl mx-auto">
             {activeModule === "lista-ayudantes" ? (
               <ListaAyudantes />
+            ) : activeModule === "buscar-ayudantes" ? (
+              <BuscarAyudantes />
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">
