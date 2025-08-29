@@ -1,8 +1,7 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Users, Award, FileText } from "lucide-react";
+import { GraduationCap, Users, Award, FileText, LogIn, UserPlus } from "lucide-react";
 import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
 
 const Index = () => {
@@ -33,8 +32,37 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-orange/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <GraduationCap className="h-8 w-8 text-primary mr-2" />
+              <span className="text-xl font-bold text-primary">UNIMET</span>
+            </div>
+            <nav className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/login")}
+                className="text-primary hover:text-primary-foreground hover:bg-primary"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Iniciar Sesión
+              </Button>
+              <Button
+                onClick={() => navigate("/register")}
+                className="bg-gradient-primary hover:opacity-90 transition-opacity"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Registrarse
+              </Button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center">
+      <section className="relative h-screen flex items-center justify-center pt-16">
         <div className="absolute inset-0">
           <img
             src={universityCampus}
@@ -52,13 +80,23 @@ const Index = () => {
             Sistema multiplataforma de la UNIMET
           </p>
           
-          <div className="flex justify-center animate-slide-up">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
             <Button
               size="lg"
-              onClick={() => navigate("/modules")}
+              onClick={() => navigate("/login")}
               className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
             >
-              Acceder al Sistema
+              <LogIn className="h-5 w-5 mr-2" />
+              Iniciar Sesión
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate("/register")}
+              className="border-white text-white hover:bg-white hover:text-primary text-lg px-8 py-3"
+            >
+              <UserPlus className="h-5 w-5 mr-2" />
+              Registrarse
             </Button>
           </div>
         </div>
@@ -103,13 +141,25 @@ const Index = () => {
           <p className="text-xl mb-8 opacity-90">
             Accede a nuestro sistema multiplataforma para gestionar becas y ayudantías
           </p>
-          <Button
-            size="lg"
-            onClick={() => navigate("/modules")}
-            className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
-          >
-            Acceder al Sistema
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              size="lg"
+              onClick={() => navigate("/login")}
+              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
+            >
+              <LogIn className="h-5 w-5 mr-2" />
+              Iniciar Sesión
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate("/register")}
+              className="border-white text-white hover:bg-white hover:text-primary text-lg px-8 py-3"
+            >
+              <UserPlus className="h-5 w-5 mr-2" />
+              Registrarse
+            </Button>
+          </div>
         </div>
       </section>
 
