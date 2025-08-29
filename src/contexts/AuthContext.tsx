@@ -54,7 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const isInBecasModules = currentPath.includes('/excelencia') || 
                               currentPath.includes('/impacto') || 
-                              currentPath.includes('/formacion-docente');
+                              currentPath.includes('/formacion-docente') ||
+                              currentPath.includes('/postulaciones-becas');
       
       // If user is logged in but not in any protected module, logout
       if (!isInAyudantiasModule && !isInBecasModules) {
