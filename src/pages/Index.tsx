@@ -37,8 +37,11 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <GraduationCap className="h-8 w-8 text-primary mr-2" />
-              <span className="text-xl font-bold text-primary">UNIMET</span>
+              <img 
+                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
+                alt="Universidad Metropolitana" 
+                className="h-8"
+              />
             </div>
             <nav className="flex items-center space-x-4">
               <Button
