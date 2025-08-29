@@ -34,7 +34,7 @@ const ScholarshipPrograms = () => {
       title: "Ayudantía",
       description: "Gestiona tu postulación y seguimiento como ayudante académico o de investigación.",
       icon: UserCheck,
-      route: "/login-ayudantias",
+      route: "/ayudantias-dashboard",
       available: true
     },
     {

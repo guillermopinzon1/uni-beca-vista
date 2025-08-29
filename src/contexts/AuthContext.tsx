@@ -48,9 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Only trigger logout logic if user is actually logged in
       if (!isLoggedIn) return;
       
-      const isInAyudantiasModule = currentPath.includes('/ayudantias') || 
-                                  currentPath.includes('/login-ayudantias') ||
-                                  currentPath.includes('/register-ayudantias');
+      const isInAyudantiasModule = currentPath.includes('/ayudantias');
       
       const isInBecasModules = currentPath.includes('/excelencia') || 
                               currentPath.includes('/impacto') || 
