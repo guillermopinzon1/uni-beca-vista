@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Home,
   LogOut,
-  Construction
+  Construction,
+  Heart
 } from "lucide-react";
 
 const PostulacionesBecas = () => {
@@ -43,6 +44,14 @@ const PostulacionesBecas = () => {
       title: "Beca de Formación Docente",
       description: "Para estudiantes interesados en la carrera docente y formación pedagógica.",
       icon: BookOpen,
+      route: null,
+      available: false
+    },
+    {
+      id: "necesidad",
+      title: "Beca por Necesidad Económica",
+      description: "Apoyo financiero para estudiantes en situación de vulnerabilidad económica.",
+      icon: Heart,
       route: null,
       available: false
     }
@@ -105,7 +114,7 @@ const PostulacionesBecas = () => {
         </div>
 
         {/* Programs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {programs.map((program) => (
             <Card 
               key={program.id}

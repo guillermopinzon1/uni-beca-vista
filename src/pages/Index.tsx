@@ -45,19 +45,11 @@ const Index = () => {
             </div>
             <nav className="flex items-center space-x-4">
               <Button
-                variant="ghost"
-                onClick={() => navigate("/login")}
-                className="text-primary hover:text-primary-foreground hover:bg-primary"
+                onClick={() => navigate("/postulaciones-becas")}
+                className="bg-white text-primary hover:bg-white/90"
               >
-                <LogIn className="h-4 w-4 mr-2" />
-                Iniciar Sesión
-              </Button>
-              <Button
-                onClick={() => navigate("/register")}
-                className="bg-gradient-primary hover:opacity-90 transition-opacity"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Registrarse
+                <BookOpen className="h-4 w-4 mr-2" />
+                Postularme a Beca
               </Button>
             </nav>
           </div>
@@ -86,25 +78,8 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
             <Button
               size="lg"
-              onClick={() => navigate("/login")}
-              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
-            >
-              <LogIn className="h-5 w-5 mr-2" />
-              Iniciar Sesión
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/register")}
-              className="border-white text-white hover:bg-white hover:text-primary text-lg px-8 py-3"
-            >
-              <UserPlus className="h-5 w-5 mr-2" />
-              Registrarse
-            </Button>
-            <Button
-              size="lg"
               onClick={() => navigate("/postulaciones-becas")}
-              className="bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-8 py-3"
+              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
             >
               <BookOpen className="h-5 w-5 mr-2" />
               Postularme a Beca
@@ -155,20 +130,11 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/postulaciones-becas")}
               className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
             >
-              <LogIn className="h-5 w-5 mr-2" />
-              Iniciar Sesión
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/register")}
-              className="border-white text-white hover:bg-white hover:text-primary text-lg px-8 py-3"
-            >
-              <UserPlus className="h-5 w-5 mr-2" />
-              Registrarse
+              <BookOpen className="h-5 w-5 mr-2" />
+              Postularme a Beca
             </Button>
           </div>
         </div>
