@@ -10,7 +10,7 @@ import BuscarAyudantes from "@/components/ayudantias/BuscarAyudantes";
 const AyudantiasDashboard = () => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [activeModule, setActiveModule] = useState<string | null>(null);
+  const [activeModule, setActiveModule] = useState<string | null>("lista-ayudantes");
 
   const sidebarItems = [
     {
@@ -31,15 +31,6 @@ const AyudantiasDashboard = () => {
       <header className="bg-card border-b border-orange/20 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="text-primary hover:text-primary/90"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Ayudantías</h1>
               <p className="text-sm text-muted-foreground">
