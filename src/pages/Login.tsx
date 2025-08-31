@@ -78,13 +78,6 @@ const Login = () => {
               <CardDescription>
                 Ingresa tus credenciales para acceder al sistema
               </CardDescription>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="mt-4"
-              >
-                Volver al Inicio
-              </Button>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -154,6 +147,13 @@ const Login = () => {
                     Regístrate aquí
                   </Link>
                 </p>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/")}
+                  className="mt-4"
+                >
+                  Volver al Inicio
+                </Button>
               </div>
             </CardContent>
           </Card>
