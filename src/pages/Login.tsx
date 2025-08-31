@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { User, Shield } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
+  const [role, setRole] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -23,12 +24,18 @@ const Login = () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    if (email && password) {
+    if (email && password && role) {
       toast({
         title: "Inicio de sesión exitoso",
         description: "Bienvenido al Sistema de Gestión de Becas",
       });
-      navigate("/modules");
+      
+      // Navigate based on role
+      if (role === "pasante") {
+        navigate("/pasante-ayudantias");
+      } else if (role === "supervisor") {
+        navigate("/ayudantias");
+      }
     } else {
       toast({
         title: "Error",
@@ -102,6 +109,28 @@ const Login = () => {
                     placeholder="••••••••"
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Tipo de Usuario</Label>
+                  <Select onValueChange={setRole} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona tu rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pasante">
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4" />
+                          <span>Pasante</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="supervisor">
+                        <div className="flex items-center space-x-2">
+                          <Shield className="h-4 w-4" />
+                          <span>Supervisor</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button
                   type="submit"
