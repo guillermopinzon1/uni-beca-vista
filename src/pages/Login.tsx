@@ -112,7 +112,7 @@ const Login = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Tipo de Usuario</Label>
-                  <Select onValueChange={setRole} required>
+                  <Select onValueChange={setRole}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona tu rol" />
                     </SelectTrigger>

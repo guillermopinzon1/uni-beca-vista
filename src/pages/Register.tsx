@@ -162,13 +162,6 @@ const Register = () => {
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-primary mb-2">Crear Cuenta</h2>
                 <p className="text-muted-foreground">Selecciona el tipo de registro</p>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/")}
-                  className="mt-4"
-                >
-                  Volver al Inicio
-                </Button>
               </div>
 
               <div className="grid gap-4">
@@ -194,6 +187,16 @@ const Register = () => {
                     </Card>
                   );
                 })}
+              </div>
+              
+              <div className="text-center mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/")}
+                  className="w-full"
+                >
+                  Volver al Inicio
+                </Button>
               </div>
             </div>
           ) : (
