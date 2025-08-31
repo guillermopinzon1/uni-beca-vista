@@ -32,9 +32,9 @@ const Login = () => {
       
       // Navigate based on role
       if (role === "pasante") {
-        navigate("/pasante-ayudantias");
+        navigate("/pasante-ayudantias-dashboard");
       } else if (role === "supervisor") {
-        navigate("/ayudantias");
+        navigate("/ayudantias-dashboard");
       }
     } else {
       toast({
