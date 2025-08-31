@@ -52,10 +52,6 @@ const ModuleSelection = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Módulos del Sistema</h2>
-          <p className="text-muted-foreground">Selecciona el módulo al que deseas acceder</p>
-        </div>
 
         {/* Modules Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
