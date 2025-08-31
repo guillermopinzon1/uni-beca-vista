@@ -152,28 +152,6 @@ const PostulacionesBecas = () => {
           ))}
         </div>
 
-        {/* Announcement Card */}
-        <Card className="border-primary/20 bg-gradient-card max-w-4xl mx-auto">
-          <CardHeader className="text-center">
-            <GraduationCap className="h-12 w-12 text-primary mx-auto mb-4" />
-            <CardTitle className="text-primary text-2xl">¡Próximas Convocatorias!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <CardDescription className="text-lg mb-6">
-              Estamos trabajando en habilitar el sistema de postulaciones para todos nuestros programas de becas.
-              Mantente atento a los anuncios oficiales para conocer las fechas de apertura.
-            </CardDescription>
-            <div className="flex justify-center">
-              <Badge 
-                variant="secondary"
-                className="bg-primary/10 text-primary border-primary/20 text-base px-4 py-2"
-              >
-                <Construction className="h-4 w-4 mr-2" />
-                Sistema en Desarrollo
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
