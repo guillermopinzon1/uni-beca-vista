@@ -166,7 +166,7 @@ const Index = () => {
             <span className="text-xl font-bold text-primary">Universidad Metropolitana</span>
           </div>
           <p className="text-muted-foreground">
-            © 2024 Universidad Metropolitana. Sistema de Gestión de Becas.
+            © 2025 Universidad Metropolitana. Sistema de Gestión de Becas.
           </p>
         </div>
       </footer>
