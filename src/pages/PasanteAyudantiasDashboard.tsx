@@ -18,18 +18,6 @@ const PasanteAyudantiasDashboard = () => {
       value: "40",
       change: "88% aprobación",
       icon: CheckCircle
-    },
-    {
-      title: "Progreso Total",
-      value: "37.9%",
-      change: "45.5/120 horas",
-      icon: TrendingUp
-    },
-    {
-      title: "Días Trabajados",
-      value: "18",
-      change: "Este mes",
-      icon: Calendar
     }
   ];
 
@@ -69,7 +57,7 @@ const PasanteAyudantiasDashboard = () => {
       <main className="px-6 py-8">
         <div className="max-w-7xl mx-auto">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {stats.map((stat, index) => (
               <Card key={index} className="border-orange/20">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
