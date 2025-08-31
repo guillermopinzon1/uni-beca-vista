@@ -31,6 +31,15 @@ const AyudantiasDashboard = () => {
       <header className="bg-card border-b border-orange/20 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/scholarship-programs")}
+              className="text-primary hover:text-primary/90"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver al Inicio
+            </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Ayudantías</h1>
               <p className="text-sm text-muted-foreground">
@@ -42,7 +51,7 @@ const AyudantiasDashboard = () => {
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <p className="text-sm font-medium text-primary">Juan Carlos Pérez</p>
-              <p className="text-xs text-muted-foreground">Administrador</p>
+              <p className="text-xs text-muted-foreground">Supervisor</p>
             </div>
           </div>
         </div>

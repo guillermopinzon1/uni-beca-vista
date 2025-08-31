@@ -33,7 +33,7 @@ const Login = () => {
       // Navigate based on role
       if (role === "pasante") {
         navigate("/pasante-ayudantias-dashboard");
-      } else if (role === "supervisor") {
+      } else if (role === "supervisor" || role === "admin") {
         navigate("/ayudantias-dashboard");
       }
     } else {
@@ -127,6 +127,12 @@ const Login = () => {
                         <div className="flex items-center space-x-2">
                           <Shield className="h-4 w-4" />
                           <span>Supervisor</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="admin">
+                        <div className="flex items-center space-x-2">
+                          <Shield className="h-4 w-4" />
+                          <span>Administrador</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
