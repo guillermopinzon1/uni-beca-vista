@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen } from "lucide-react";
+import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen, CreditCard } from "lucide-react";
 import PasanteAyudantiasDashboard from "./PasanteAyudantiasDashboard";
 import AspiranteScholarshipPrograms from "./AspiranteScholarshipPrograms";
 
@@ -59,6 +59,14 @@ const ScholarshipPrograms = () => {
       description: "Programa especializado para la formación y desarrollo de futuros profesores universitarios.",
       icon: BookOpen,
       route: "/formacion-docente",
+      available: true
+    },
+    {
+      id: 5,
+      title: "Exoneración de Matrícula",
+      description: "Programa de exoneración total o parcial de costos de matrícula para estudiantes destacados.",
+      icon: CreditCard,
+      route: "/exoneracion",
       available: true
     }
   ];

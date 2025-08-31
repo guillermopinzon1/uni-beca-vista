@@ -12,7 +12,8 @@ import {
   Home,
   LogOut,
   Construction,
-  Heart
+  Heart,
+  CreditCard
 } from "lucide-react";
 
 const PostulacionesBecas = () => {
@@ -52,6 +53,14 @@ const PostulacionesBecas = () => {
       title: "Beca por Necesidad Económica",
       description: "Apoyo financiero para estudiantes en situación de vulnerabilidad económica.",
       icon: Heart,
+      route: null,
+      available: false
+    },
+    {
+      id: "exoneracion",
+      title: "Exoneración de Matrícula",
+      description: "Programa de exoneración total o parcial de costos de matrícula para estudiantes destacados.",
+      icon: CreditCard,
       route: null,
       available: false
     }
