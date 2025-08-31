@@ -33,8 +33,10 @@ const Login = () => {
       // Navigate based on role
       if (role === "pasante") {
         navigate("/pasante-ayudantias-dashboard");
-      } else if (role === "supervisor" || role === "admin") {
+      } else if (role === "supervisor") {
         navigate("/ayudantias-dashboard");
+      } else if (role === "admin") {
+        navigate("/admin-dashboard");
       }
     } else {
       toast({
