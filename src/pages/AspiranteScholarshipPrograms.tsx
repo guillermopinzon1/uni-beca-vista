@@ -60,7 +60,7 @@ const AspiranteScholarshipPrograms = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/modules")}
+              onClick={() => navigate(-1)}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

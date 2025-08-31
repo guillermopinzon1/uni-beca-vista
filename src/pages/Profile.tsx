@@ -57,7 +57,7 @@ const Profile = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate(-1)}
                 className="p-2"
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />
@@ -208,7 +208,7 @@ const Profile = () => {
           {/* Actions */}
           <div className="mt-8 flex justify-center">
             <Button 
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(-1)}
               className="bg-gradient-primary hover:opacity-90"
             >
               Volver al Dashboard

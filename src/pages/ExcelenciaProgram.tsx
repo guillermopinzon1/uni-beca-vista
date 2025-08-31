@@ -21,7 +21,7 @@ const ExcelenciaProgram = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/scholarship-programs")}
+                onClick={() => navigate(-1)}
                 className="p-2"
               >
                 <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />

@@ -99,7 +99,7 @@ const PostulacionDetail = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/postulaciones")}
+              onClick={() => navigate(-1)}
               className="p-2"
             >
               <ArrowLeft className="h-5 w-5 text-muted-foreground hover:text-primary" />
@@ -254,7 +254,7 @@ const PostulacionDetail = () => {
               <CardContent className="pt-6">
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/postulaciones")}
+                  onClick={() => navigate(-1)}
                   className="w-full"
                 >
                   Volver al Listado
