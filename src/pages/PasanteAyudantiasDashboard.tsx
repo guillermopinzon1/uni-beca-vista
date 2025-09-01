@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Clock, CheckCircle, TrendingUp, Plus, Calendar } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import AvailabilitySchedule from "@/components/AvailabilitySchedule";
+import ActivityReportSystem from "@/components/ActivityReportSystem";
 
 const PasanteAyudantiasDashboard = () => {
   const navigate = useNavigate();
@@ -178,6 +179,11 @@ const PasanteAyudantiasDashboard = () => {
           {/* Availability Schedule */}
           <div className="mb-8">
             <AvailabilitySchedule />
+          </div>
+
+          {/* Activity Report System */}
+          <div className="mb-8">
+            <ActivityReportSystem />
           </div>
 
           {/* Recent Activity */}
