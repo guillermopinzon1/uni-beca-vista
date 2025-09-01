@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Clock, CheckCircle, TrendingUp, Plus, Calendar } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import AvailabilitySchedule from "@/components/AvailabilitySchedule";
 
 const PasanteAyudantiasDashboard = () => {
   const navigate = useNavigate();
@@ -172,6 +173,11 @@ const PasanteAyudantiasDashboard = () => {
                 </Dialog>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Availability Schedule */}
+          <div className="mb-8">
+            <AvailabilitySchedule />
           </div>
 
           {/* Recent Activity */}
