@@ -11,22 +11,24 @@ interface TimeSlot {
 
 const AvailabilitySchedule = () => {
   const [schedule, setSchedule] = useState<TimeSlot[]>(() => {
-    const timeSlots = [];
-    for (let hour = 6; hour <= 22; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        timeSlots.push({
-          time: timeString,
-          lunes: false,
-          martes: false,
-          miercoles: false,
-          jueves: false,
-          viernes: false,
-          sabado: false,
-          domingo: false,
-        });
-      }
-    }
+    const timeSlots = [
+      { time: "07:00 - 08:30", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "08:30 - 08:45", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "08:45 - 10:15", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "10:15 - 10:30", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "10:30 - 12:00", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "12:00 - 12:15", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "12:15 - 13:45", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "13:45 - 14:00", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "14:00 - 15:30", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "15:30 - 15:45", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "15:45 - 17:15", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "17:15 - 17:30", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "17:30 - 19:00", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "19:00 - 19:15", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "19:15 - 20:45", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+      { time: "20:45 - 21:00", lunes: false, martes: false, miercoles: false, jueves: false, viernes: false, sabado: false, domingo: false },
+    ];
     return timeSlots;
   });
 
@@ -101,7 +103,7 @@ const AvailabilitySchedule = () => {
       </CardHeader>
       <CardContent>
         <div className="text-sm text-muted-foreground mb-4">
-          Los bloques se muestran en intervalos de <strong>30min</strong>. Si usted selecciona 7:00 se considera que tiene disponibilidad de 7:00 a 7:30
+          Los bloques se muestran en intervalos específicos de clases y descansos. Si usted selecciona un horario se considera que tiene disponibilidad durante todo ese período.
         </div>
         
         <div className="overflow-x-auto">
