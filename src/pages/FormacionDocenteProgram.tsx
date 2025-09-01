@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, ArrowLeft } from "lucide-react";
+import { GraduationCap, ArrowLeft, User, FileText, Info, Settings } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import UnifiedApplicationForm from "@/components/shared/UnifiedApplicationForm";
 
 const FormacionDocenteProgram = () => {
   const navigate = useNavigate();
@@ -32,10 +34,53 @@ const FormacionDocenteProgram = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Programa de Formación Docente</h2>
-          <p className="text-muted-foreground">En construcción...</p>
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-foreground mb-2">Programa de Formación Docente</h2>
+          <p className="text-muted-foreground">Gestiona tus postulaciones y consulta información sobre las becas de formación docente</p>
         </div>
+
+        <Tabs defaultValue="postular" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="postular" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Postular
+            </TabsTrigger>
+            <TabsTrigger value="solicitudes" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Mis Solicitudes
+            </TabsTrigger>
+            <TabsTrigger value="requisitos" className="flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Requisitos
+            </TabsTrigger>
+            <TabsTrigger value="admin" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Administración
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="postular" className="mt-6">
+            <UnifiedApplicationForm programTitle="Beca de Formación Docente" />
+          </TabsContent>
+          
+          <TabsContent value="solicitudes" className="mt-6">
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">En construcción...</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="requisitos" className="mt-6">
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">En construcción...</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="admin" className="mt-6">
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">En construcción...</p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
