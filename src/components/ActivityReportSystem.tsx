@@ -13,18 +13,6 @@ const ActivityReportSystem = () => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
-    // Datos del estudiante
-    nombresApellidos: "",
-    correoUnimetro: "",
-    nivel: "",
-    facultad: "",
-    planEstudios: "",
-    
-    // Datos del supervisor
-    nombreSupervisor: "",
-    correoSupervisor: "",
-    plaza: "",
-    
     // Objetivos y metas
     objetivoGeneral: "",
     meta1: "",
@@ -59,14 +47,6 @@ const ActivityReportSystem = () => {
     setIsOpen(false);
     // Reset form
     setFormData({
-      nombresApellidos: "",
-      correoUnimetro: "",
-      nivel: "",
-      facultad: "",
-      planEstudios: "",
-      nombreSupervisor: "",
-      correoSupervisor: "",
-      plaza: "",
       objetivoGeneral: "",
       meta1: "",
       descripcionAccion1: "",
@@ -118,96 +98,6 @@ const ActivityReportSystem = () => {
             </DialogHeader>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Datos del Estudiante */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-primary">Datos del Estudiante</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombresApellidos">Nombres y Apellidos</Label>
-                    <Input
-                      id="nombresApellidos"
-                      value={formData.nombresApellidos}
-                      onChange={(e) => handleInputChange("nombresApellidos", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="correoUnimetro">Correo Unimetro</Label>
-                    <Input
-                      id="correoUnimetro"
-                      type="email"
-                      value={formData.correoUnimetro}
-                      onChange={(e) => handleInputChange("correoUnimetro", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nivel">Nivel</Label>
-                    <Select value={formData.nivel} onValueChange={(value) => handleInputChange("nivel", value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar nivel" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pregrado">Pregrado</SelectItem>
-                        <SelectItem value="posgrado">Posgrado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="facultad">Facultad</Label>
-                    <Input
-                      id="facultad"
-                      value={formData.facultad}
-                      onChange={(e) => handleInputChange("facultad", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="planEstudios">Plan de Estudios</Label>
-                    <Input
-                      id="planEstudios"
-                      value={formData.planEstudios}
-                      onChange={(e) => handleInputChange("planEstudios", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Datos del Supervisor */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-primary">Datos del Supervisor</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombreSupervisor">Nombre Supervisor</Label>
-                    <Input
-                      id="nombreSupervisor"
-                      value={formData.nombreSupervisor}
-                      onChange={(e) => handleInputChange("nombreSupervisor", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="correoSupervisor">Correo Supervisor</Label>
-                    <Input
-                      id="correoSupervisor"
-                      type="email"
-                      value={formData.correoSupervisor}
-                      onChange={(e) => handleInputChange("correoSupervisor", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="plaza">Plaza</Label>
-                    <Input
-                      id="plaza"
-                      value={formData.plaza}
-                      onChange={(e) => handleInputChange("plaza", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
 
               {/* Objetivos y Metas */}
               <div className="space-y-4">
