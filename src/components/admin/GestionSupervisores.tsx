@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus, Eye, Edit, Users } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -35,10 +36,13 @@ interface EstudianteAsignado {
 
 const GestionSupervisores = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartamento, setFilterDepartamento] = useState("todos");
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null);
   const [formData, setFormData] = useState({
     nombre: "",
     correo: "",
@@ -47,6 +51,23 @@ const GestionSupervisores = () => {
     cargo: "",
     estudiantes: [] as string[]
   });
+
+  const handleEditSupervisor = (supervisor: Supervisor) => {
+    setEditingSupervisor(supervisor);
+    setFormData({
+      nombre: supervisor.nombre,
+      correo: supervisor.email,
+      cedula: supervisor.cedula,
+      departamento: supervisor.departamento,
+      cargo: supervisor.cargo,
+      estudiantes: ["1", "2"] // Simulando estudiantes asignados
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEstudianteClick = (estudianteId: string) => {
+    navigate(`/estudiante/${estudianteId}`);
+  };
 
   // Lista de estudiantes disponibles para asignar
   const estudiantesDisponibles = [
@@ -79,6 +100,16 @@ const GestionSupervisores = () => {
       cargo: "",
       estudiantes: []
     });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Supervisor actualizado",
+      description: "Los datos del supervisor han sido actualizados exitosamente.",
+    });
+    setIsEditModalOpen(false);
+    setEditingSupervisor(null);
   };
 
   // Mock data
@@ -459,7 +490,11 @@ const GestionSupervisores = () => {
                               </TableHeader>
                               <TableBody>
                                 {estudiantesAsignados.map((estudiante) => (
-                                  <TableRow key={estudiante.id}>
+                                  <TableRow 
+                                    key={estudiante.id}
+                                    className="cursor-pointer hover:bg-muted/50"
+                                    onClick={() => handleEstudianteClick(estudiante.id)}
+                                  >
                                     <TableCell className="font-medium">{estudiante.nombre}</TableCell>
                                     <TableCell>{estudiante.carrera}</TableCell>
                                     <TableCell>
@@ -478,10 +513,11 @@ const GestionSupervisores = () => {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditSupervisor(supervisor)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                     </div>
@@ -491,8 +527,143 @@ const GestionSupervisores = () => {
             </TableBody>
           </Table>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+
+        {/* Modal de Edición */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Editar Supervisor</DialogTitle>
+            </DialogHeader>
+            
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nombre">Nombre Completo</Label>
+                  <Input
+                    id="edit-nombre"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange("nombre", e.target.value)}
+                    placeholder="Ingrese el nombre completo"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-correo">Correo Electrónico</Label>
+                  <Input
+                    id="edit-correo"
+                    type="email"
+                    value={formData.correo}
+                    onChange={(e) => handleInputChange("correo", e.target.value)}
+                    placeholder="correo@universidad.edu"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cedula">Cédula</Label>
+                  <Input
+                    id="edit-cedula"
+                    value={formData.cedula}
+                    onChange={(e) => handleInputChange("cedula", e.target.value)}
+                    placeholder="V-12345678"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-departamento">Departamento</Label>
+                  <Select value={formData.departamento} onValueChange={(value) => handleInputChange("departamento", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar departamento" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50">
+                      <SelectItem value="Ingeniería">Ingeniería</SelectItem>
+                      <SelectItem value="Ciencias">Ciencias</SelectItem>
+                      <SelectItem value="Humanidades">Humanidades</SelectItem>
+                      <SelectItem value="Medicina">Medicina</SelectItem>
+                      <SelectItem value="Derecho">Derecho</SelectItem>
+                      <SelectItem value="Administración">Administración</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cargo">Cargo</Label>
+                  <Select value={formData.cargo} onValueChange={(value) => handleInputChange("cargo", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar cargo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50">
+                      <SelectItem value="Profesor Titular">Profesor Titular</SelectItem>
+                      <SelectItem value="Profesor Asociado">Profesor Asociado</SelectItem>
+                      <SelectItem value="Profesor Asistente">Profesor Asistente</SelectItem>
+                      <SelectItem value="Instructor">Instructor</SelectItem>
+                      <SelectItem value="Coordinador">Coordinador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-estudiantes">Estudiantes a Asignar</Label>
+                  <Select value="" onValueChange={(value) => {
+                    if (value && !formData.estudiantes.includes(value)) {
+                      handleInputChange("estudiantes", [...formData.estudiantes, value]);
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar estudiantes" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50 max-h-48 overflow-y-auto">
+                      {estudiantesDisponibles.map((estudiante) => (
+                        <SelectItem 
+                          key={estudiante.id} 
+                          value={estudiante.id}
+                          disabled={formData.estudiantes.includes(estudiante.id)}
+                        >
+                          {estudiante.nombre} - {estudiante.cedula}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Lista de estudiantes seleccionados */}
+              {formData.estudiantes.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Estudiantes Asignados:</Label>
+                  <div className="bg-muted/20 p-3 rounded-lg space-y-2">
+                    {formData.estudiantes.map((estudianteId) => {
+                      const estudiante = estudiantesDisponibles.find(e => e.id === estudianteId);
+                      return (
+                        <div key={estudianteId} className="flex items-center justify-between bg-background p-2 rounded border">
+                          <span className="text-sm">{estudiante?.nombre} - {estudiante?.cedula}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              handleInputChange("estudiantes", formData.estudiantes.filter(id => id !== estudianteId));
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
+                  Actualizar Supervisor
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
   );
 };
 
