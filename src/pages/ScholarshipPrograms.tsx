@@ -16,7 +16,7 @@ const ScholarshipPrograms = () => {
   }, []);
 
   // Show role-specific views
-  if (userRole === "pasante") {
+  if (userRole === "ayudante") {
     return <PasanteAyudantiasDashboard />;
   }
 

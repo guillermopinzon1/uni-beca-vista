@@ -28,7 +28,7 @@ const PasanteModules = () => {
     },
     {
       title: "Comunidad",
-      description: "Conecta con otros pasantes y supervisores para compartir experiencias y conocimientos.",
+      description: "Conecta con otros ayudantes y supervisores para compartir experiencias y conocimientos.",
       icon: Users,
       route: "/comunidad",
       available: false
@@ -51,7 +51,7 @@ const PasanteModules = () => {
               Volver
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-primary">Módulos de Pasante</h1>
+              <h1 className="text-2xl font-bold text-primary">Módulos de Ayudante</h1>
               <p className="text-sm text-muted-foreground">
                 Inicio &gt; Gestión de Becas &gt; Módulos
               </p>
@@ -61,7 +61,7 @@ const PasanteModules = () => {
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <p className="text-sm font-medium text-primary">Ana María Rodríguez</p>
-              <p className="text-xs text-muted-foreground">Pasante</p>
+              <p className="text-xs text-muted-foreground">Ayudante</p>
             </div>
             <Button
               variant="outline"
@@ -81,9 +81,9 @@ const PasanteModules = () => {
           {/* Welcome Card */}
           <Card className="border-orange/20 mb-8">
             <CardHeader>
-              <CardTitle className="text-xl text-primary">Bienvenida al Portal de Pasantes</CardTitle>
+              <CardTitle className="text-xl text-primary">Bienvenida al Portal de Ayudantes</CardTitle>
               <CardDescription>
-                Accede a los diferentes módulos disponibles para gestionar tu experiencia como pasante en el programa de ayudantías.
+                Accede a los diferentes módulos disponibles para gestionar tu experiencia como ayudante en el programa de ayudantías.
               </CardDescription>
             </CardHeader>
           </Card>

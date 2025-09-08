@@ -31,7 +31,7 @@ const Login = () => {
       });
       
       // Navigate based on role
-      if (role === "pasante") {
+      if (role === "ayudante") {
         navigate("/modules");
       } else if (role === "supervisor") {
         navigate("/ayudantias-dashboard");
@@ -112,10 +112,10 @@ const Login = () => {
                       <SelectValue placeholder="Selecciona tu rol" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pasante">
+                      <SelectItem value="ayudante">
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4" />
-                          <span>Pasante</span>
+                          <span>Ayudante</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="supervisor">
