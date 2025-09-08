@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Edit } from "lucide-react";
 
 const EstudianteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+
+  const handleEditarEstudiante = () => {
+    // TODO: Implementar navegación a vista de edición o modal
+    console.log("Editar estudiante:", id);
+  };
 
   // Datos simulados del estudiante - en una app real, esto vendría de una API
   const estudianteData = {
@@ -100,6 +105,13 @@ const EstudianteDetail = () => {
               <p className="text-sm font-medium text-primary">María González</p>
               <p className="text-xs text-muted-foreground">Administrador</p>
             </div>
+            <Button 
+              onClick={handleEditarEstudiante}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar Estudiante
+            </Button>
           </div>
         </div>
       </header>
