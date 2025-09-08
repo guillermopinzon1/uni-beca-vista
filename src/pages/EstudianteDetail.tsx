@@ -2,36 +2,68 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Edit } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Edit, Save, X } from "lucide-react";
+import { useState } from "react";
 
 const EstudianteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-
-  const handleEditarEstudiante = () => {
-    // TODO: Implementar navegación a vista de edición o modal
-    console.log("Editar estudiante:", id);
-  };
-
-  // Datos simulados del estudiante - en una app real, esto vendría de una API
-  const estudianteData = {
-    id: id,
-    // Datos personales
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
     nombreCompleto: "María González Rodríguez",
     cedula: "V-27543123",
     correoElectronico: "maria.gonzalez@unimetro.edu.co",
     telefono: "+57 300 123 4567",
     fechaNacimiento: "1998-03-15",
     estadoCivil: "Soltera",
-    
-    // Datos académicos
     tipoPostulante: "Estudiante regular de pregrado",
     carrera: "Ingeniería de Sistemas",
-    trimestreActual: 6,
-    iaa: 18.2,
-    asignaturasAprobadas: 42,
-    creditosInscritos: 18,
+    trimestreActual: "6",
+    iaa: "18.2",
+    asignaturasAprobadas: "42",
+    creditosInscritos: "18"
+  });
+
+  const handleEditarEstudiante = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelarEdicion = () => {
+    setIsEditing(false);
+    // Resetear datos si fuera necesario
+  };
+
+  const handleGuardarCambios = () => {
+    setIsEditing(false);
+    // Aquí se guardarían los cambios en una app real
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Datos simulados del estudiante - en una app real, esto vendría de una API
+  const estudianteData = {
+    id: id,
+    // Datos personales
+    nombreCompleto: editData.nombreCompleto,
+    cedula: editData.cedula,
+    correoElectronico: editData.correoElectronico,
+    telefono: editData.telefono,
+    fechaNacimiento: editData.fechaNacimiento,
+    estadoCivil: editData.estadoCivil,
+    
+    // Datos académicos
+    tipoPostulante: editData.tipoPostulante,
+    carrera: editData.carrera,
+    trimestreActual: parseInt(editData.trimestreActual),
+    iaa: parseFloat(editData.iaa),
+    asignaturasAprobadas: parseInt(editData.asignaturasAprobadas),
+    creditosInscritos: parseInt(editData.creditosInscritos),
     
     // Datos de la beca
     tipoBeca: "Excelencia Académica",
@@ -105,13 +137,6 @@ const EstudianteDetail = () => {
               <p className="text-sm font-medium text-primary">María González</p>
               <p className="text-xs text-muted-foreground">Administrador</p>
             </div>
-            <Button 
-              onClick={handleEditarEstudiante}
-              className="bg-gradient-primary hover:opacity-90"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar Estudiante
-            </Button>
           </div>
         </div>
       </header>
@@ -120,6 +145,36 @@ const EstudianteDetail = () => {
       <main className="px-6 py-8">
         <div className="max-w-7xl mx-auto space-y-6">
           
+          {/* Botones de acción */}
+          <div className="flex justify-end space-x-3 mb-6">
+            {!isEditing ? (
+              <Button 
+                onClick={handleEditarEstudiante}
+                className="bg-gradient-primary hover:opacity-90"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Información
+              </Button>
+            ) : (
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline"
+                  onClick={handleCancelarEdicion}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleGuardarCambios}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Guardar Cambios
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Resumen del Estudiante */}
           <Card className="border-orange/20">
             <CardHeader>
@@ -162,37 +217,94 @@ const EstudianteDetail = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Nombre Completo</p>
-                    <p className="font-medium">{estudianteData.nombreCompleto}</p>
+                    <Label className="text-sm text-muted-foreground">Nombre Completo</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.nombreCompleto}
+                        onChange={(e) => handleInputChange("nombreCompleto", e.target.value)}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <p className="font-medium">{estudianteData.nombreCompleto}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Cédula de Identidad</p>
-                    <p className="font-medium">{estudianteData.cedula}</p>
+                    <Label className="text-sm text-muted-foreground">Cédula de Identidad</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.cedula}
+                        onChange={(e) => handleInputChange("cedula", e.target.value)}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <p className="font-medium">{estudianteData.cedula}</p>
+                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Correo Electrónico</p>
-                      <p className="font-medium">{estudianteData.correoElectronico}</p>
+                    <div className="flex-1">
+                      <Label className="text-sm text-muted-foreground">Correo Electrónico</Label>
+                      {isEditing ? (
+                        <Input 
+                          value={editData.correoElectronico}
+                          onChange={(e) => handleInputChange("correoElectronico", e.target.value)}
+                          className="mt-1"
+                          type="email"
+                        />
+                      ) : (
+                        <p className="font-medium">{estudianteData.correoElectronico}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Teléfono</p>
-                      <p className="font-medium">{estudianteData.telefono}</p>
+                    <div className="flex-1">
+                      <Label className="text-sm text-muted-foreground">Teléfono</Label>
+                      {isEditing ? (
+                        <Input 
+                          value={editData.telefono}
+                          onChange={(e) => handleInputChange("telefono", e.target.value)}
+                          className="mt-1"
+                        />
+                      ) : (
+                        <p className="font-medium">{estudianteData.telefono}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Fecha de Nacimiento</p>
-                      <p className="font-medium">{new Date(estudianteData.fechaNacimiento).toLocaleDateString('es-ES')}</p>
+                    <div className="flex-1">
+                      <Label className="text-sm text-muted-foreground">Fecha de Nacimiento</Label>
+                      {isEditing ? (
+                        <Input 
+                          value={editData.fechaNacimiento}
+                          onChange={(e) => handleInputChange("fechaNacimiento", e.target.value)}
+                          className="mt-1"
+                          type="date"
+                        />
+                      ) : (
+                        <p className="font-medium">{new Date(estudianteData.fechaNacimiento).toLocaleDateString('es-ES')}</p>
+                      )}
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Estado Civil</p>
-                    <p className="font-medium">{estudianteData.estadoCivil}</p>
+                    <Label className="text-sm text-muted-foreground">Estado Civil</Label>
+                    {isEditing ? (
+                      <Select value={editData.estadoCivil} onValueChange={(value) => handleInputChange("estadoCivil", value)}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Soltero(a)">Soltero(a)</SelectItem>
+                          <SelectItem value="Casado(a)">Casado(a)</SelectItem>
+                          <SelectItem value="Divorciado(a)">Divorciado(a)</SelectItem>
+                          <SelectItem value="Viudo(a)">Viudo(a)</SelectItem>
+                          <SelectItem value="Unión Estable">Unión Estable</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="font-medium">{estudianteData.estadoCivil}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -209,28 +321,92 @@ const EstudianteDetail = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Tipo de Postulante</p>
-                    <p className="font-medium">{estudianteData.tipoPostulante}</p>
+                    <Label className="text-sm text-muted-foreground">Tipo de Postulante</Label>
+                    {isEditing ? (
+                      <Select value={editData.tipoPostulante} onValueChange={(value) => handleInputChange("tipoPostulante", value)}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Estudiante regular de pregrado">Estudiante regular de pregrado</SelectItem>
+                          <SelectItem value="Estudiante regular de postgrado">Estudiante regular de postgrado</SelectItem>
+                          <SelectItem value="Estudiante de nuevo ingreso">Estudiante de nuevo ingreso (bachiller)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="font-medium">{estudianteData.tipoPostulante}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Carrera/Programa de estudios</p>
-                    <p className="font-medium">{estudianteData.carrera}</p>
+                    <Label className="text-sm text-muted-foreground">Carrera/Programa de estudios</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.carrera}
+                        onChange={(e) => handleInputChange("carrera", e.target.value)}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <p className="font-medium">{estudianteData.carrera}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Trimestre actual</p>
-                    <p className="font-medium">{estudianteData.trimestreActual}°</p>
+                    <Label className="text-sm text-muted-foreground">Trimestre actual</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.trimestreActual}
+                        onChange={(e) => handleInputChange("trimestreActual", e.target.value)}
+                        className="mt-1"
+                        type="number"
+                        min="1"
+                        max="15"
+                      />
+                    ) : (
+                      <p className="font-medium">{estudianteData.trimestreActual}°</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Índice Académico Acumulado (IAA)</p>
-                    <p className="font-medium text-primary text-lg">{estudianteData.iaa}</p>
+                    <Label className="text-sm text-muted-foreground">Índice Académico Acumulado (IAA)</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.iaa}
+                        onChange={(e) => handleInputChange("iaa", e.target.value)}
+                        className="mt-1"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="20"
+                      />
+                    ) : (
+                      <p className="font-medium text-primary text-lg">{estudianteData.iaa}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Asignaturas Aprobadas</p>
-                    <p className="font-medium">{estudianteData.asignaturasAprobadas}</p>
+                    <Label className="text-sm text-muted-foreground">Asignaturas Aprobadas</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.asignaturasAprobadas}
+                        onChange={(e) => handleInputChange("asignaturasAprobadas", e.target.value)}
+                        className="mt-1"
+                        type="number"
+                        min="0"
+                      />
+                    ) : (
+                      <p className="font-medium">{estudianteData.asignaturasAprobadas}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Créditos Inscritos este Trimestre</p>
-                    <p className="font-medium">{estudianteData.creditosInscritos}</p>
+                    <Label className="text-sm text-muted-foreground">Créditos Inscritos este Trimestre</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={editData.creditosInscritos}
+                        onChange={(e) => handleInputChange("creditosInscritos", e.target.value)}
+                        className="mt-1"
+                        type="number"
+                        min="0"
+                      />
+                    ) : (
+                      <p className="font-medium">{estudianteData.creditosInscritos}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
