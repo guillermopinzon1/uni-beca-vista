@@ -9,7 +9,7 @@ interface EstudianteSinPlaza {
   apellido: string;
   cedula: string;
   carrera: string;
-  semestre: number;
+  trimestre: number;
   promedio: number;
   email: string;
   telefono: string;
@@ -23,7 +23,7 @@ const estudiantesDummy: EstudianteSinPlaza[] = [
     apellido: "Jiménez",
     cedula: "29.456.789",
     carrera: "Ingeniería en Sistemas",
-    semestre: 6,
+    trimestre: 6,
     promedio: 17.8,
     email: "pedro.jimenez@universidad.edu",
     telefono: "0412-1234567",
@@ -35,7 +35,7 @@ const estudiantesDummy: EstudianteSinPlaza[] = [
     apellido: "Vargas",
     cedula: "28.987.654",
     carrera: "Administración",
-    semestre: 5,
+    trimestre: 5,
     promedio: 16.5,
     email: "elena.vargas@universidad.edu",
     telefono: "0424-7654321",
@@ -47,7 +47,7 @@ const estudiantesDummy: EstudianteSinPlaza[] = [
     apellido: "Silva",
     cedula: "30.234.567",
     carrera: "Contaduría Pública",
-    semestre: 7,
+    trimestre: 7,
     promedio: 18.2,
     email: "roberto.silva@universidad.edu",
     telefono: "0416-9876543",
@@ -59,7 +59,7 @@ const estudiantesDummy: EstudianteSinPlaza[] = [
     apellido: "Morales",
     cedula: "27.678.901",
     carrera: "Ingeniería Industrial",
-    semestre: 8,
+    trimestre: 8,
     promedio: 17.1,
     email: "carmen.morales@universidad.edu",
     telefono: "0414-5432109",
@@ -71,7 +71,7 @@ const estudiantesDummy: EstudianteSinPlaza[] = [
     apellido: "Ramos",
     cedula: "29.123.890",
     carrera: "Derecho",
-    semestre: 4,
+    trimestre: 4,
     promedio: 16.9,
     email: "diego.ramos@universidad.edu",
     telefono: "0426-8765432",
@@ -133,7 +133,7 @@ const BuscarAyudantes = () => {
                   <th className="text-left p-4 font-semibold text-primary">Estudiante</th>
                   <th className="text-left p-4 font-semibold text-primary">Cédula</th>
                   <th className="text-left p-4 font-semibold text-primary">Carrera</th>
-                  <th className="text-center p-4 font-semibold text-primary">Semestre</th>
+                  <th className="text-center p-4 font-semibold text-primary">Trimestre</th>
                   <th className="text-center p-4 font-semibold text-primary">Promedio</th>
                   <th className="text-left p-4 font-semibold text-primary">Contacto</th>
                   <th className="text-center p-4 font-semibold text-primary">CV</th>
@@ -158,7 +158,7 @@ const BuscarAyudantes = () => {
                     <td className="p-4 text-primary">{estudiante.carrera}</td>
                     <td className="p-4 text-center">
                       <Badge variant="outline" className="border-orange/40">
-                        {estudiante.semestre}°
+                        {estudiante.trimestre}°
                       </Badge>
                     </td>
                     <td className="p-4 text-center">
