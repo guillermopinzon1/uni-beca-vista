@@ -173,7 +173,7 @@ const GestionSupervisores = () => {
       </Card>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
@@ -195,14 +195,6 @@ const GestionSupervisores = () => {
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-600">142</p>
               <p className="text-sm text-muted-foreground">Estudiantes Supervisados</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">6.5</p>
-              <p className="text-sm text-muted-foreground">Promedio por Supervisor</p>
             </div>
           </CardContent>
         </Card>
