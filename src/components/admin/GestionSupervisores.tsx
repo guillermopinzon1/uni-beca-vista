@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Plus, Eye, Edit, Users } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 interface Supervisor {
   id: string;
@@ -32,9 +34,52 @@ interface EstudianteAsignado {
 }
 
 const GestionSupervisores = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartamento, setFilterDepartamento] = useState("todos");
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: "",
+    correo: "",
+    cedula: "",
+    departamento: "",
+    cargo: "",
+    estudiantes: [] as string[]
+  });
+
+  // Lista de estudiantes disponibles para asignar
+  const estudiantesDisponibles = [
+    { id: "1", nombre: "María González Rodríguez", cedula: "V-27543123" },
+    { id: "2", nombre: "Carlos López Martínez", cedula: "V-28456789" },
+    { id: "3", nombre: "Ana Sofía Ramírez", cedula: "V-29567890" },
+    { id: "4", nombre: "Luis Fernando Torres", cedula: "V-30678901" },
+    { id: "5", nombre: "Daniela Vásquez Castro", cedula: "V-31789012" },
+    { id: "6", nombre: "Pedro Miguel Santos", cedula: "V-32890123" },
+    { id: "7", nombre: "Isabella Morales Cruz", cedula: "V-33901234" },
+    { id: "8", nombre: "Diego Alejandro Ruiz", cedula: "V-34012345" }
+  ];
+
+  const handleInputChange = (field: string, value: string | string[]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Supervisor creado",
+      description: "El supervisor ha sido creado exitosamente.",
+    });
+    setIsModalOpen(false);
+    setFormData({
+      nombre: "",
+      correo: "",
+      cedula: "",
+      departamento: "",
+      cargo: "",
+      estudiantes: []
+    });
+  };
 
   // Mock data
   const supervisores: Supervisor[] = [
@@ -137,10 +182,145 @@ const GestionSupervisores = () => {
           <h2 className="text-3xl font-bold text-primary">Gestión de Supervisores</h2>
           <p className="text-muted-foreground">Administración de supervisores y estudiantes asignados</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Supervisor
-        </Button>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Supervisor
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Crear Nuevo Supervisor</DialogTitle>
+            </DialogHeader>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nombre">Nombre Completo</Label>
+                  <Input
+                    id="nombre"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange("nombre", e.target.value)}
+                    placeholder="Ingrese el nombre completo"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="correo">Correo Electrónico</Label>
+                  <Input
+                    id="correo"
+                    type="email"
+                    value={formData.correo}
+                    onChange={(e) => handleInputChange("correo", e.target.value)}
+                    placeholder="correo@universidad.edu"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cedula">Cédula</Label>
+                  <Input
+                    id="cedula"
+                    value={formData.cedula}
+                    onChange={(e) => handleInputChange("cedula", e.target.value)}
+                    placeholder="V-12345678"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="departamento">Departamento</Label>
+                  <Select value={formData.departamento} onValueChange={(value) => handleInputChange("departamento", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar departamento" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50">
+                      <SelectItem value="Ingeniería">Ingeniería</SelectItem>
+                      <SelectItem value="Ciencias">Ciencias</SelectItem>
+                      <SelectItem value="Humanidades">Humanidades</SelectItem>
+                      <SelectItem value="Medicina">Medicina</SelectItem>
+                      <SelectItem value="Derecho">Derecho</SelectItem>
+                      <SelectItem value="Administración">Administración</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cargo">Cargo</Label>
+                  <Select value={formData.cargo} onValueChange={(value) => handleInputChange("cargo", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar cargo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50">
+                      <SelectItem value="Profesor Titular">Profesor Titular</SelectItem>
+                      <SelectItem value="Profesor Asociado">Profesor Asociado</SelectItem>
+                      <SelectItem value="Profesor Asistente">Profesor Asistente</SelectItem>
+                      <SelectItem value="Instructor">Instructor</SelectItem>
+                      <SelectItem value="Coordinador">Coordinador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="estudiantes">Estudiantes a Asignar</Label>
+                  <Select value="" onValueChange={(value) => {
+                    if (value && !formData.estudiantes.includes(value)) {
+                      handleInputChange("estudiantes", [...formData.estudiantes, value]);
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar estudiantes" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border z-50 max-h-48 overflow-y-auto">
+                      {estudiantesDisponibles.map((estudiante) => (
+                        <SelectItem 
+                          key={estudiante.id} 
+                          value={estudiante.id}
+                          disabled={formData.estudiantes.includes(estudiante.id)}
+                        >
+                          {estudiante.nombre} - {estudiante.cedula}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Lista de estudiantes seleccionados */}
+              {formData.estudiantes.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Estudiantes Seleccionados:</Label>
+                  <div className="bg-muted/20 p-3 rounded-lg space-y-2">
+                    {formData.estudiantes.map((estudianteId) => {
+                      const estudiante = estudiantesDisponibles.find(e => e.id === estudianteId);
+                      return (
+                        <div key={estudianteId} className="flex items-center justify-between bg-background p-2 rounded border">
+                          <span className="text-sm">{estudiante?.nombre} - {estudiante?.cedula}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              handleInputChange("estudiantes", formData.estudiantes.filter(id => id !== estudianteId));
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
+                  Crear Supervisor
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filtros */}
