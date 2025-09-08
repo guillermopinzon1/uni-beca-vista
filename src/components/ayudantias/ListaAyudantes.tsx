@@ -8,6 +8,7 @@ interface Ayudante {
   nombre: string;
   apellido: string;
   cedula: string;
+  trimestre: number;
   horasRegistradas: number;
   horasPendientes: number;
 }
@@ -18,6 +19,7 @@ const ayudantesDummy: Ayudante[] = [
     nombre: "María",
     apellido: "González",
     cedula: "27.543.123",
+    trimestre: 6,
     horasRegistradas: 45,
     horasPendientes: 8
   },
@@ -26,6 +28,7 @@ const ayudantesDummy: Ayudante[] = [
     nombre: "Carlos",
     apellido: "Rodríguez",
     cedula: "29.876.456",
+    trimestre: 5,
     horasRegistradas: 32,
     horasPendientes: 12
   },
@@ -34,6 +37,7 @@ const ayudantesDummy: Ayudante[] = [
     nombre: "Ana",
     apellido: "Martínez",
     cedula: "28.234.789",
+    trimestre: 7,
     horasRegistradas: 67,
     horasPendientes: 5
   },
@@ -42,6 +46,7 @@ const ayudantesDummy: Ayudante[] = [
     nombre: "Luis",
     apellido: "Hernández", 
     cedula: "26.987.321",
+    trimestre: 8,
     horasRegistradas: 28,
     horasPendientes: 15
   },
@@ -50,6 +55,7 @@ const ayudantesDummy: Ayudante[] = [
     nombre: "Sofia",
     apellido: "López",
     cedula: "30.123.654",
+    trimestre: 4,
     horasRegistradas: 41,
     horasPendientes: 7
   }
@@ -85,6 +91,7 @@ const ListaAyudantes = () => {
                   <th className="text-left p-4 font-semibold text-primary">Nombre</th>
                   <th className="text-left p-4 font-semibold text-primary">Apellido</th>
                   <th className="text-left p-4 font-semibold text-primary">Cédula</th>
+                  <th className="text-center p-4 font-semibold text-primary">Trimestre</th>
                   <th className="text-center p-4 font-semibold text-primary">Horas Registradas</th>
                   <th className="text-center p-4 font-semibold text-primary">Horas Pendientes</th>
                   <th className="text-center p-4 font-semibold text-primary">Acciones</th>
@@ -101,6 +108,11 @@ const ListaAyudantes = () => {
                     <td className="p-4 text-primary font-medium">{ayudante.nombre}</td>
                     <td className="p-4 text-primary font-medium">{ayudante.apellido}</td>
                     <td className="p-4 text-muted-foreground">{ayudante.cedula}</td>
+                    <td className="p-4 text-center">
+                      <Badge variant="outline" className="border-primary/20 text-primary">
+                        {ayudante.trimestre}°
+                      </Badge>
+                    </td>
                     <td className="p-4 text-center">
                       <Badge variant="outline" className="border-orange/40 text-orange">
                         {ayudante.horasRegistradas}h
