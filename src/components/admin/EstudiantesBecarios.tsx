@@ -169,14 +169,6 @@ const EstudiantesBecarios = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">17.8</p>
-              <p className="text-sm text-muted-foreground">Promedio General</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Tabla de estudiantes */}
