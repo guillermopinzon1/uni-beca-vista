@@ -408,50 +408,6 @@ const EstudiantesBecarios = () => {
             </CardContent>
           </Card>
 
-          {/* Estadísticas de Reportes */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{estadisticasReportes.total}</p>
-                  <p className="text-sm text-muted-foreground">Total Reportes</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{estadisticasReportes.completos}</p>
-                  <p className="text-sm text-muted-foreground">Completos</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{estadisticasReportes.enProgreso}</p>
-                  <p className="text-sm text-muted-foreground">En Progreso</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-red-600">{estadisticasReportes.atrasados}</p>
-                  <p className="text-sm text-muted-foreground">Atrasados</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600">{estadisticasReportes.horasTotales}</p>
-                  <p className="text-sm text-muted-foreground">Horas Totales</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Tabla de reportes de actividades */}
           <Card>
             <CardHeader>
