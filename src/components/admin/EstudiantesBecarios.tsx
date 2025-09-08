@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Download, Eye, Edit } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface EstudianteBecario {
   id: string;
@@ -22,9 +23,14 @@ interface EstudianteBecario {
 }
 
 const EstudiantesBecarios = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBeca, setFilterBeca] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
+
+  const handleVerDetalles = (estudianteId: string) => {
+    navigate(`/estudiante/${estudianteId}`);
+  };
 
   // Mock data
   const estudiantes: EstudianteBecario[] = [
@@ -211,7 +217,11 @@ const EstudiantesBecarios = () => {
                   <TableCell className="text-sm">{estudiante.supervisor}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleVerDetalles(estudiante.id)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm">
