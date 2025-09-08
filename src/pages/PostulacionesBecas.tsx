@@ -51,10 +51,10 @@ const PostulacionesBecas = () => {
       icon: BookOpen
     },
     {
-      id: "necesidad",
-      title: "Beca por Necesidad Económica",
-      description: "Apoyo financiero para estudiantes en situación de vulnerabilidad económica.",
-      icon: Heart
+      id: "ayudantia",
+      title: "Beca por Ayudantía",
+      description: "Para estudiantes que deseen trabajar como ayudantes académicos o de investigación en la universidad.",
+      icon: Users
     },
     {
       id: "exoneracion",
