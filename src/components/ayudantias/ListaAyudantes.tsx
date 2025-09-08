@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Eye, Check, X, Clock, Calendar } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Ayudante {
   id: string;
@@ -11,6 +17,16 @@ interface Ayudante {
   trimestre: number;
   horasRegistradas: number;
   horasPendientes: number;
+  reportesHoras: ReporteHoras[];
+}
+
+interface ReporteHoras {
+  id: string;
+  fecha: string;
+  horas: number;
+  descripcion: string;
+  estado: 'pendiente' | 'aprobado' | 'rechazado';
+  notas?: string;
 }
 
 const ayudantesDummy: Ayudante[] = [
@@ -21,7 +37,31 @@ const ayudantesDummy: Ayudante[] = [
     cedula: "27.543.123",
     trimestre: 6,
     horasRegistradas: 45,
-    horasPendientes: 8
+    horasPendientes: 8,
+    reportesHoras: [
+      {
+        id: "r1",
+        fecha: "2024-01-15",
+        horas: 8,
+        descripcion: "Apoyo en clases de laboratorio de química",
+        estado: "pendiente"
+      },
+      {
+        id: "r2",
+        fecha: "2024-01-08",
+        horas: 6,
+        descripcion: "Preparación de material didáctico",
+        estado: "aprobado"
+      },
+      {
+        id: "r3",
+        fecha: "2024-01-01",
+        horas: 4,
+        descripcion: "Tutorías a estudiantes de primer año",
+        estado: "rechazado",
+        notas: "Falta documentación de las actividades realizadas"
+      }
+    ]
   },
   {
     id: "2", 
@@ -30,7 +70,23 @@ const ayudantesDummy: Ayudante[] = [
     cedula: "29.876.456",
     trimestre: 5,
     horasRegistradas: 32,
-    horasPendientes: 12
+    horasPendientes: 12,
+    reportesHoras: [
+      {
+        id: "r4",
+        fecha: "2024-01-12",
+        horas: 12,
+        descripcion: "Asistencia en investigación de física aplicada",
+        estado: "pendiente"
+      },
+      {
+        id: "r5",
+        fecha: "2024-01-05",
+        horas: 5,
+        descripcion: "Organización de biblioteca departamental",
+        estado: "aprobado"
+      }
+    ]
   },
   {
     id: "3",
@@ -39,7 +95,16 @@ const ayudantesDummy: Ayudante[] = [
     cedula: "28.234.789",
     trimestre: 7,
     horasRegistradas: 67,
-    horasPendientes: 5
+    horasPendientes: 5,
+    reportesHoras: [
+      {
+        id: "r6",
+        fecha: "2024-01-10",
+        horas: 5,
+        descripcion: "Apoyo en eventos académicos",
+        estado: "pendiente"
+      }
+    ]
   },
   {
     id: "4",
@@ -48,7 +113,16 @@ const ayudantesDummy: Ayudante[] = [
     cedula: "26.987.321",
     trimestre: 8,
     horasRegistradas: 28,
-    horasPendientes: 15
+    horasPendientes: 15,
+    reportesHoras: [
+      {
+        id: "r7",
+        fecha: "2024-01-14",
+        horas: 15,
+        descripcion: "Desarrollo de material multimedia para clases",
+        estado: "pendiente"
+      }
+    ]
   },
   {
     id: "5",
@@ -57,14 +131,65 @@ const ayudantesDummy: Ayudante[] = [
     cedula: "30.123.654",
     trimestre: 4,
     horasRegistradas: 41,
-    horasPendientes: 7
+    horasPendientes: 7,
+    reportesHoras: [
+      {
+        id: "r8",
+        fecha: "2024-01-13",
+        horas: 7,
+        descripcion: "Monitoreo de estudiantes en prácticas",
+        estado: "pendiente"
+      }
+    ]
   }
 ];
 
 const ListaAyudantes = () => {
+  const { toast } = useToast();
+  const [selectedAyudante, setSelectedAyudante] = useState<Ayudante | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [notas, setNotas] = useState("");
+
   const handleVerHoras = (ayudante: Ayudante) => {
-    // TODO: Implementar modal para ver y aprobar/rechazar horas
-    console.log("Ver horas de:", ayudante.nombre, ayudante.apellido);
+    setSelectedAyudante(ayudante);
+    setIsModalOpen(true);
+    setNotas("");
+  };
+
+  const handleAprobarHoras = (reporteId: string) => {
+    toast({
+      title: "Horas aprobadas",
+      description: "Las horas han sido aprobadas exitosamente.",
+    });
+    setIsModalOpen(false);
+  };
+
+  const handleRechazarHoras = (reporteId: string) => {
+    if (!notas.trim()) {
+      toast({
+        title: "Error",
+        description: "Debe proporcionar una nota para rechazar las horas.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Horas rechazadas",
+      description: "Las horas han sido rechazadas con observaciones.",
+    });
+    setIsModalOpen(false);
+  };
+
+  const getEstadoBadge = (estado: string) => {
+    switch (estado) {
+      case 'aprobado':
+        return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Aprobado</Badge>;
+      case 'rechazado':
+        return <Badge variant="destructive">Rechazado</Badge>;
+      default:
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendiente</Badge>;
+    }
   };
 
   return (
@@ -147,6 +272,107 @@ const ListaAyudantes = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal para ver y gestionar horas */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-primary">
+              Gestión de Horas - {selectedAyudante?.nombre} {selectedAyudante?.apellido}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedAyudante && (
+            <div className="space-y-6">
+              {/* Información del ayudante */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Cédula</p>
+                  <p className="font-medium">{selectedAyudante.cedula}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Trimestre</p>
+                  <p className="font-medium">{selectedAyudante.trimestre}°</p>
+                </div>
+              </div>
+
+              {/* Lista de reportes de horas */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-primary">Reportes de Horas</h3>
+                {selectedAyudante.reportesHoras.map((reporte) => (
+                  <div key={reporte.id} className="border border-orange/20 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>{new Date(reporte.fecha).toLocaleDateString('es-ES')}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{reporte.horas} horas</span>
+                        </div>
+                      </div>
+                      {getEstadoBadge(reporte.estado)}
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Descripción de actividades:</p>
+                      <p className="text-sm">{reporte.descripcion}</p>
+                    </div>
+
+                    {reporte.notas && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Notas del supervisor:</p>
+                        <p className="text-sm bg-muted/50 p-2 rounded">{reporte.notas}</p>
+                      </div>
+                    )}
+
+                    {reporte.estado === 'pendiente' && (
+                      <div className="space-y-3">
+                        <Separator />
+                        <div className="space-y-3">
+                          <Label htmlFor="notas">Notas (opcional para aprobación, requerido para rechazo)</Label>
+                          <Textarea
+                            id="notas"
+                            placeholder="Escriba sus observaciones aquí..."
+                            value={notas}
+                            onChange={(e) => setNotas(e.target.value)}
+                            className="min-h-20"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => handleAprobarHoras(reporte.id)}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="h-4 w-4 mr-2" />
+                            Aprobar Horas
+                          </Button>
+                          <Button 
+                            variant="destructive"
+                            onClick={() => handleRechazarHoras(reporte.id)}
+                            className="flex-1"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Rechazar Horas
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {selectedAyudante.reportesHoras.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No hay reportes de horas registrados</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
