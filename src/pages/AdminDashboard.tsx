@@ -5,7 +5,6 @@ import { useState } from "react";
 import EstudiantesBecarios from "@/components/admin/EstudiantesBecarios";
 import GestionSupervisores from "@/components/admin/GestionSupervisores";
 import GestionPostulaciones from "@/components/admin/GestionPostulaciones";
-import ReporteActividades from "@/components/admin/ReporteActividades";
 import GestionPlazas from "@/components/admin/GestionPlazas";
 import ConfiguracionBecas from "@/components/admin/ConfiguracionBecas";
 
@@ -16,7 +15,7 @@ const AdminDashboard = () => {
 
   const sidebarItems = [
     {
-      title: "Estudiantes Becarios",
+      title: "Estudiantes y Reportes",
       icon: Users,
       onClick: () => setActiveModule("estudiantes-becarios")
     },
@@ -29,11 +28,6 @@ const AdminDashboard = () => {
       title: "Postulaciones",
       icon: FileText,
       onClick: () => setActiveModule("postulaciones")
-    },
-    {
-      title: "Reporte de Actividades",
-      icon: BarChart3,
-      onClick: () => setActiveModule("reporte-actividades")
     },
     {
       title: "Gestión de Plazas",
@@ -118,8 +112,6 @@ const AdminDashboard = () => {
               <GestionSupervisores />
             ) : activeModule === "postulaciones" ? (
               <GestionPostulaciones />
-            ) : activeModule === "reporte-actividades" ? (
-              <ReporteActividades />
             ) : activeModule === "plazas" ? (
               <GestionPlazas />
             ) : activeModule === "configuracion" ? (
