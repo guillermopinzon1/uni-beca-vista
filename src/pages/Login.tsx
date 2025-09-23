@@ -123,7 +123,7 @@ const Login = () => {
                       <SelectItem value="ayudante">
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4" />
-                          <span>Ayudante</span>
+                          <span>Ayudante - Estudiante</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="supervisor">
