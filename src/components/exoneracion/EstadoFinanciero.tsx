@@ -10,7 +10,7 @@ const EstadoFinanciero = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-primary mb-2">Estado Financiero</h1>
         <p className="text-muted-foreground">
-          Resumen de cobertura, pagos pendientes y proyecciones financieras
+          Resumen de cobertura y proyecciones financieras del beneficio
         </p>
       </div>
 
@@ -77,104 +77,6 @@ const EstadoFinanciero = () => {
         </CardContent>
       </Card>
 
-      {/* Subsección: Pagos Pendientes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
-            <span>Pagos Pendientes</span>
-          </CardTitle>
-          <CardDescription>Costos no cubiertos por el beneficio que debes cancelar</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-medium mb-3">Pagos Obligatorios</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                    <div>
-                      <span className="text-sm font-medium">Cuota de inscripción</span>
-                      <p className="text-xs text-gray-600">Vence: 30/09/2024</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-semibold text-red-800">Bs. 45.000</span>
-                      <Badge variant="destructive" className="ml-2 text-xs">Pendiente</Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div>
-                      <span className="text-sm font-medium">Seguro estudiantil</span>
-                      <p className="text-xs text-gray-600">Pagado: 15/09/2024</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-semibold text-green-800">Bs. 12.000</span>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 ml-2 text-xs">Pagado ✓</Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div>
-                      <span className="text-sm font-medium">Constancia de notas</span>
-                      <p className="text-xs text-gray-600">Opcional</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-semibold text-yellow-800">Bs. 8.000</span>
-                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 ml-2 text-xs">Opcional</Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-3">Resumen de Pagos</h4>
-                <div className="space-y-3">
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-blue-800">Total Pendiente</span>
-                      <span className="text-lg font-bold text-blue-900">Bs. 45.000</span>
-                    </div>
-                    <div className="text-xs text-blue-700 space-y-1">
-                      <p>• Cuota de inscripción: Bs. 45.000</p>
-                      <p>• Fecha límite: 30/09/2024</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-green-800">Total Pagado</span>
-                      <span className="text-lg font-bold text-green-900">Bs. 12.000</span>
-                    </div>
-                    <div className="text-xs text-green-700">
-                      <p>• Seguro estudiantil: Bs. 12.000</p>
-                    </div>
-                  </div>
-
-                  <Button className="w-full" variant="outline">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Ir a Sistema de Pagos
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Materias Reprobadas (si aplica) */}
-            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-              <h4 className="font-medium text-red-800 mb-3">Materias Reprobadas - Pagos Adicionales</h4>
-              <div className="text-sm text-red-700">
-                <p className="mb-2">
-                  <strong>Nota:</strong> No tienes materias reprobadas que requieran pago adicional.
-                </p>
-                <p className="text-xs">
-                  Si repruebas alguna materia, deberás pagar el costo completo de reinscripción 
-                  (no cubierto por el beneficio).
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Subsección: Proyección Financiera */}
       <Card>
