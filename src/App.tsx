@@ -26,6 +26,7 @@ import ExcelenciaProgram from "./pages/ExcelenciaProgram";
 import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
 import PostulacionesBecas from "./pages/PostulacionesBecas";
+import MentorDashboard from "./pages/MentorDashboard";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/impacto" element={<ImpactoProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
               <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
+              <Route path="/mentor-dashboard" element={<MentorDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

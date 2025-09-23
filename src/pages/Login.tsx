@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield } from "lucide-react";
+import { User, Shield, GraduationCap } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 
 const Login = () => {
@@ -35,6 +35,8 @@ const Login = () => {
         navigate("/modules");
       } else if (role === "supervisor") {
         navigate("/ayudantias-dashboard");
+      } else if (role === "mentor") {
+        navigate("/mentor-dashboard");
       } else if (role === "admin") {
         navigate("/admin-dashboard");
       }
@@ -122,6 +124,12 @@ const Login = () => {
                         <div className="flex items-center space-x-2">
                           <Shield className="h-4 w-4" />
                           <span>Supervisor</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="mentor">
+                        <div className="flex items-center space-x-2">
+                          <GraduationCap className="h-4 w-4" />
+                          <span>Mentor</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="admin">
