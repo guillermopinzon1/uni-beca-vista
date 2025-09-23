@@ -3,8 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LayoutDashboard, Users, FileText, AlertTriangle, DollarSign, GraduationCap } from "lucide-react";
 import { useState } from "react";
-import DashboardHijo from "@/components/exoneracion/DashboardHijo";
-import DashboardEmpleado from "@/components/exoneracion/DashboardEmpleado";
+import RequisitosBeneficios from "@/components/exoneracion/RequisitosBeneficios";
 import TutoriasObligatorias from "@/components/exoneracion/TutoriasObligatorias";
 import SituacionesEspeciales from "@/components/exoneracion/SituacionesEspeciales";
 import EstadoFinanciero from "@/components/exoneracion/EstadoFinanciero";
@@ -163,7 +162,7 @@ const ExoneracionProgram = () => {
         <main className="flex-1 px-6 py-8">
           <div className="max-w-7xl mx-auto">
             {activeModule === "mi-beneficio" ? (
-              userType === "hijo" ? <DashboardHijo /> : <DashboardEmpleado />
+              <RequisitosBeneficios userType={userType} />
             ) : activeModule === "tutorias" ? (
               <TutoriasObligatorias />
             ) : activeModule === "alineacion" ? (
