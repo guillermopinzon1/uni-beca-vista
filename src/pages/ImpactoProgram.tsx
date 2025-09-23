@@ -27,11 +27,6 @@ const ImpactoProgram = () => {
       onClick: () => setActiveModule("mentoria")
     },
     {
-      title: "Mis Solicitudes",
-      icon: FileText,
-      onClick: () => setActiveModule("solicitudes")
-    },
-    {
       title: "Renovación y Documentos",
       icon: FileText,
       onClick: () => setActiveModule("documentos")
@@ -107,7 +102,6 @@ const ImpactoProgram = () => {
                     activeModule === (
                       item.title === "Mi Beca Impacto" ? "mi-beca" :
                       item.title === "Mentoría" ? "mentoria" :
-                      item.title === "Mis Solicitudes" ? "solicitudes" :
                       item.title === "Renovación y Documentos" ? "documentos" :
                       item.title === "Situaciones Especiales" ? "situaciones" :
                       "institucion"
@@ -138,8 +132,6 @@ const ImpactoProgram = () => {
               <Dashboard />
             ) : activeModule === "mentoria" ? (
               <Mentoria />
-            ) : activeModule === "solicitudes" ? (
-              <ApplicationsList />
             ) : activeModule === "documentos" ? (
               <RenovacionDocumentos />
             ) : activeModule === "situaciones" ? (
