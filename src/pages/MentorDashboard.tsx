@@ -6,8 +6,6 @@ import { useState } from "react";
 import ResumenEstudiantes from "@/components/mentor/ResumenEstudiantes";
 import CalendarioMentoria from "@/components/mentor/CalendarioMentoria";
 import SolicitudesRetiro from "@/components/mentor/SolicitudesRetiro";
-import ReportesMentor from "@/components/mentor/ReportesMentor";
-import ComunicacionMentor from "@/components/mentor/ComunicacionMentor";
 
 const MentorDashboard = () => {
   const navigate = useNavigate();
@@ -29,16 +27,6 @@ const MentorDashboard = () => {
       title: "Solicitudes de Retiro",
       icon: FileText,
       onClick: () => setActiveModule("solicitudes")
-    },
-    {
-      title: "Reportes",
-      icon: BarChart3,
-      onClick: () => setActiveModule("reportes")
-    },
-    {
-      title: "Comunicación",
-      icon: MessageSquare,
-      onClick: () => setActiveModule("comunicacion")
     }
   ];
 
@@ -101,9 +89,7 @@ const MentorDashboard = () => {
                     activeModule === (
                       item.title === "Resumen de Estudiantes" ? "resumen" :
                       item.title === "Calendario de Mentoría" ? "calendario" :
-                      item.title === "Solicitudes de Retiro" ? "solicitudes" :
-                      item.title === "Reportes" ? "reportes" :
-                      "comunicacion"
+                      "solicitudes"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
                       : "bg-background hover:bg-orange/10 hover:border-orange/40"
@@ -133,10 +119,6 @@ const MentorDashboard = () => {
               <CalendarioMentoria />
             ) : activeModule === "solicitudes" ? (
               <SolicitudesRetiro />
-            ) : activeModule === "reportes" ? (
-              <ReportesMentor />
-            ) : activeModule === "comunicacion" ? (
-              <ComunicacionMentor />
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">
