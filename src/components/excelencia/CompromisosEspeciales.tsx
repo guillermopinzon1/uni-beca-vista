@@ -152,31 +152,6 @@ const CompromisosEspeciales = () => {
         </p>
       </div>
 
-      {/* Resumen de cumplimiento */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <Target className="h-5 w-5" />
-            <span>Resumen de Cumplimiento</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                Compromisos completados
-              </span>
-              <span className="font-semibold">
-                {compromisosCompletados}/{compromisosDeportiva.length}
-              </span>
-            </div>
-            <Progress value={progresoGeneral} className="h-3" />
-            <p className="text-sm text-muted-foreground">
-              {progresoGeneral.toFixed(0)}% de cumplimiento general
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Compromisos por Categoría */}
       <Card>
@@ -194,104 +169,20 @@ const CompromisosEspeciales = () => {
             {compromisosDeportiva.map((compromiso, index) => (
               <div 
                 key={index}
-                className={`p-4 rounded-lg border ${getEstadoColor(compromiso.estado)}`}
+                className="p-4 rounded-lg border border-orange/20"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
-                    {getEstadoIcon(compromiso.estado)}
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{compromiso.compromiso}</h3>
-                      <p className="text-sm opacity-75 mt-1">{compromiso.descripcion}</p>
-                      <div className="mt-2 flex items-center space-x-4">
-                        <span className="text-sm">
-                          <strong>Actual:</strong> {compromiso.valorActual}
-                        </span>
-                        <span className="text-sm">
-                          <strong>Requerido:</strong> {compromiso.requerido}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className={getEstadoColor(compromiso.estado)}>
-                    {compromiso.estado === "cumplido" ? "Cumplido" : "Pendiente"}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Timeline de Actividades */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span>Registro de Cumplimiento</span>
-          </CardTitle>
-          <CardDescription>
-            Timeline visual de tus actividades y compromisos cumplidos
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {timelineActividades.map((actividad, index) => (
-              <div key={index} className="flex items-center space-x-4">
-                <div className={`w-3 h-3 rounded-full ${
-                  actividad.estado === "completado" ? "bg-green-500" : "bg-yellow-500"
-                }`}></div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">{actividad.actividad}</h3>
-                      <p className="text-sm text-muted-foreground">{actividad.fecha}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className="text-xs">
-                        {actividad.tipo}
-                      </Badge>
-                      {getEstadoIcon(actividad.estado)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Consecuencias de Incumplimiento */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <TrendingDown className="h-5 w-5" />
-            <span>Consecuencias de Incumplimiento</span>
-          </CardTitle>
-          <CardDescription>
-            Información importante sobre las consecuencias de no cumplir con los compromisos
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {consecuenciasIncumplimiento.map((item, index) => (
-              <Alert key={index} className={getGravedadColor(item.gravedad)}>
-                <div className="flex items-start space-x-3">
-                  {getGravedadIcon(item.gravedad)}
                   <div className="flex-1">
-                    <AlertDescription>
-                      <strong>{item.escenario}:</strong> {item.consecuencia}
-                    </AlertDescription>
+                    <h3 className="font-semibold">{compromiso.compromiso}</h3>
+                    <p className="text-sm opacity-75 mt-1">{compromiso.descripcion}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {item.gravedad === "alta" ? "Alto riesgo" : 
-                     item.gravedad === "media" ? "Riesgo medio" : "Riesgo bajo"}
-                  </Badge>
                 </div>
-              </Alert>
+              </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 };

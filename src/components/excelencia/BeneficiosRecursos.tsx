@@ -204,41 +204,6 @@ const BeneficiosRecursos = () => {
         </CardContent>
       </Card>
 
-      {/* Oportunidades Adicionales */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <Globe className="h-5 w-5" />
-            <span>Oportunidades Adicionales</span>
-          </CardTitle>
-          <CardDescription>
-            Programas y oportunidades especiales disponibles para becarios
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {oportunidadesAdicionales.map((oportunidad, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h3 className="font-semibold">{oportunidad.titulo}</h3>
-                  <p className="text-sm text-muted-foreground">{oportunidad.descripcion}</p>
-                  <div className="mt-2 flex items-center space-x-2">
-                    <Badge variant="outline">
-                      {oportunidad.tipo}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Fecha límite: {oportunidad.fechaLimite}
-                    </span>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  Más información
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
