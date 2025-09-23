@@ -22,6 +22,7 @@ import PostulacionDetail from "./pages/PostulacionDetail";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
 import ImpactoProgram from "./pages/ImpactoProgram";
+import ExoneracionProgram from "./pages/ExoneracionProgram";
 import ExcelenciaProgram from "./pages/ExcelenciaProgram";
 import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
@@ -56,7 +57,8 @@ const App = () => (
               <Route path="/postulaciones" element={<PostulacionesList />} />
               <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
               <Route path="/reportes" element={<Reportes />} />
-              <Route path="/impacto" element={<ImpactoProgram />} />
+        <Route path="/impacto" element={<ImpactoProgram />} />
+        <Route path="/exoneracion" element={<ExoneracionProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
               <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
               <Route path="/mentor-dashboard" element={<MentorDashboard />} />
