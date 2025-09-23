@@ -1,31 +1,44 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap, ArrowLeft, LayoutDashboard, FileText, Info } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, RefreshCw, FileText, Gift, Target } from "lucide-react";
 import { useState } from "react";
 import Dashboard from "@/components/excelencia/Dashboard";
-import ApplicationsList from "@/components/excelencia/ApplicationsList";
-import InformacionAyuda from "@/components/excelencia/InformacionAyuda";
+import RenovacionAnual from "@/components/excelencia/RenovacionAnual";
+import ActividadesReportes from "@/components/excelencia/ActividadesReportes";
+import BeneficiosRecursos from "@/components/excelencia/BeneficiosRecursos";
+import CompromisosEspeciales from "@/components/excelencia/CompromisosEspeciales";
 
 const ExcelenciaProgram = () => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [activeModule, setActiveModule] = useState<string | null>("dashboard");
+  const [activeModule, setActiveModule] = useState<string | null>("mi-beca");
 
   const sidebarItems = [
     {
-      title: "Mi Dashboard",
+      title: "Mi Beca Activa",
       icon: LayoutDashboard,
-      onClick: () => setActiveModule("dashboard")
+      onClick: () => setActiveModule("mi-beca")
     },
     {
-      title: "Mis Solicitudes",
+      title: "Renovación Anual",
+      icon: RefreshCw,
+      onClick: () => setActiveModule("renovacion")
+    },
+    {
+      title: "Actividades y Reportes",
       icon: FileText,
-      onClick: () => setActiveModule("solicitudes")
+      onClick: () => setActiveModule("actividades")
     },
     {
-      title: "Información y Ayuda",
-      icon: Info,
-      onClick: () => setActiveModule("informacion")
+      title: "Beneficios y Recursos",
+      icon: Gift,
+      onClick: () => setActiveModule("beneficios")
+    },
+    {
+      title: "Compromisos Especiales",
+      icon: Target,
+      onClick: () => setActiveModule("compromisos")
     }
   ];
 
@@ -53,9 +66,19 @@ const ExcelenciaProgram = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-primary">María González</p>
-              <p className="text-xs text-muted-foreground">Estudiante</p>
+            <div className="flex flex-col items-end space-y-2">
+              <div className="flex items-center space-x-3">
+                <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                  Becario Activo - Excelencia Deportiva
+                </Badge>
+                <Badge variant="outline" className="border-orange/40 text-primary">
+                  25% Cobertura
+                </Badge>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-primary">Carlos Mendoza</p>
+                <p className="text-xs text-muted-foreground">Estudiante - Natación</p>
+              </div>
             </div>
           </div>
         </div>
@@ -76,9 +99,11 @@ const ExcelenciaProgram = () => {
                   onClick={item.onClick}
                   className={`w-12 h-12 flex items-center justify-center rounded-lg border border-orange/20 transition-all duration-200 ${
                     activeModule === (
-                      item.title === "Mi Dashboard" ? "dashboard" :
-                      item.title === "Mis Solicitudes" ? "solicitudes" :
-                      "informacion"
+                      item.title === "Mi Beca Activa" ? "mi-beca" :
+                      item.title === "Renovación Anual" ? "renovacion" :
+                      item.title === "Actividades y Reportes" ? "actividades" :
+                      item.title === "Beneficios y Recursos" ? "beneficios" :
+                      "compromisos"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
                       : "bg-background hover:bg-orange/10 hover:border-orange/40"
@@ -102,12 +127,16 @@ const ExcelenciaProgram = () => {
         {/* Main Content */}
         <main className="flex-1 px-6 py-8">
           <div className="max-w-7xl mx-auto">
-            {activeModule === "dashboard" ? (
+            {activeModule === "mi-beca" ? (
               <Dashboard />
-            ) : activeModule === "solicitudes" ? (
-              <ApplicationsList />
-            ) : activeModule === "informacion" ? (
-              <InformacionAyuda />
+            ) : activeModule === "renovacion" ? (
+              <RenovacionAnual />
+            ) : activeModule === "actividades" ? (
+              <ActividadesReportes />
+            ) : activeModule === "beneficios" ? (
+              <BeneficiosRecursos />
+            ) : activeModule === "compromisos" ? (
+              <CompromisosEspeciales />
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">
