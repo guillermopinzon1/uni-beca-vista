@@ -28,6 +28,9 @@ import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
 import PostulacionesBecas from "./pages/PostulacionesBecas";
 import MentorDashboard from "./pages/MentorDashboard";
+import DirectorAreaDashboard from "./pages/DirectorAreaDashboard";
+import CapitalHumanoDashboard from "./pages/CapitalHumanoDashboard";
+import SupervisorLaboralDashboard from "./pages/SupervisorLaboralDashboard";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +65,9 @@ const App = () => (
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
               <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
               <Route path="/mentor-dashboard" element={<MentorDashboard />} />
+              <Route path="/director-area-dashboard" element={<DirectorAreaDashboard />} />
+              <Route path="/capital-humano-dashboard" element={<CapitalHumanoDashboard />} />
+              <Route path="/supervisor-laboral-dashboard" element={<SupervisorLaboralDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

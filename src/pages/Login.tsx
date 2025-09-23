@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, GraduationCap } from "lucide-react";
+import { User, Shield, GraduationCap, Briefcase, Award } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 
 const Login = () => {
@@ -39,6 +39,12 @@ const Login = () => {
         navigate("/mentor-dashboard");
       } else if (role === "admin") {
         navigate("/admin-dashboard");
+      } else if (role === "director-area") {
+        navigate("/director-area-dashboard");
+      } else if (role === "capital-humano") {
+        navigate("/capital-humano-dashboard");
+      } else if (role === "supervisor-laboral") {
+        navigate("/supervisor-laboral-dashboard");
       }
     } else {
       toast({
@@ -136,6 +142,24 @@ const Login = () => {
                         <div className="flex items-center space-x-2">
                           <Shield className="h-4 w-4" />
                           <span>Administrador</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="director-area">
+                        <div className="flex items-center space-x-2">
+                          <Award className="h-4 w-4" />
+                          <span>Director de Área</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="capital-humano">
+                        <div className="flex items-center space-x-2">
+                          <Briefcase className="h-4 w-4" />
+                          <span>Capital Humano</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="supervisor-laboral">
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4" />
+                          <span>Supervisor Laboral</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
