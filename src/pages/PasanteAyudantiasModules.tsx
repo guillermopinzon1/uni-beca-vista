@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const PasanteAyudantiasModules = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("horario-disponibilidad");
+  const [activeWeek, setActiveWeek] = useState<string>("semana-1");
   const [formData, setFormData] = useState({
     fecha: "",
     horas: "",
@@ -31,11 +33,6 @@ const PasanteAyudantiasModules = () => {
       title: "Horario de Disponibilidad",
       icon: Calendar,
       onClick: () => setActiveModule("horario-disponibilidad")
-    },
-    {
-      title: "Horas Registradas",
-      icon: Clock,
-      onClick: () => setActiveModule("horas-registradas")
     },
     {
       title: "Sistema de Reporte de Actividades",
@@ -87,7 +84,151 @@ const PasanteAyudantiasModules = () => {
       case "horario-disponibilidad":
         return <AvailabilitySchedule />;
       
-      case "horas-registradas":
+
+      case "reporte-actividades":
+        return (
+          <Card className="border-orange/20">
+            <CardHeader>
+              <CardTitle className="text-xl text-primary">Sistema de Reporte de Actividades</CardTitle>
+              <CardDescription>
+                Completa el reporte detallado de tus actividades como ayudante
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
+                <TabsList className="grid grid-cols-6 lg:grid-cols-12 mb-6">
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <TabsTrigger key={i + 1} value={`semana-${i + 1}`} className="text-xs">
+                      S{i + 1}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                
+                {Array.from({ length: 12 }, (_, i) => (
+                  <TabsContent key={i + 1} value={`semana-${i + 1}`}>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Registro de Horas */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-primary">Registro de Horas - Semana {i + 1}</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="fecha">Fecha</Label>
+                            <Input
+                              id="fecha"
+                              type="date"
+                              value={formData.fecha}
+                              onChange={(e) => setFormData({...formData, fecha: e.target.value})}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="horas">Horas trabajadas</Label>
+                            <Input
+                              id="horas"
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              max="8"
+                              placeholder="Ej: 4.5"
+                              value={formData.horas}
+                              onChange={(e) => setFormData({...formData, horas: e.target.value})}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Objetivos y Metas */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-primary">Objetivos y Metas</h3>
+                        <div className="space-y-2">
+                          <Label htmlFor="objetivos">Objetivos del período</Label>
+                          <Textarea
+                            id="objetivos"
+                            placeholder="Describe los objetivos planteados para este período..."
+                            value={formData.objetivos}
+                            onChange={(e) => setFormData({...formData, objetivos: e.target.value})}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="metas">Metas específicas</Label>
+                          <Textarea
+                            id="metas"
+                            placeholder="Detalla las metas específicas alcanzadas..."
+                            value={formData.metas}
+                            onChange={(e) => setFormData({...formData, metas: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Programación de Actividades */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-primary">Programación de Actividades por Período</h3>
+                        <div className="space-y-2">
+                          <Label htmlFor="actividades">Actividades programadas y ejecutadas</Label>
+                          <Textarea
+                            id="actividades"
+                            placeholder="Describe las actividades programadas y su estado de ejecución..."
+                            value={formData.actividades}
+                            onChange={(e) => setFormData({...formData, actividades: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Reporte Semanal */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-primary">Reporte Semanal de Actividades</h3>
+                        <div className="space-y-2">
+                          <Label htmlFor="reporteSemanal">Actividades realizadas esta semana</Label>
+                          <Textarea
+                            id="reporteSemanal"
+                            placeholder="Detalla las actividades específicas realizadas durante la semana..."
+                            value={formData.reporteSemanal}
+                            onChange={(e) => setFormData({...formData, reporteSemanal: e.target.value})}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="descripcion">Descripción de actividades</Label>
+                          <Textarea
+                            id="descripcion"
+                            placeholder="Describe las actividades realizadas..."
+                            value={formData.descripcion}
+                            onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Observaciones */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-primary">Observaciones</h3>
+                        <div className="space-y-2">
+                          <Label htmlFor="observaciones">Observaciones generales</Label>
+                          <Textarea
+                            id="observaciones"
+                            placeholder="Incluye cualquier observación adicional, dificultades encontradas, sugerencias de mejora..."
+                            value={formData.observaciones}
+                            onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90">
+                        Enviar Reporte Semana {i + 1}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </CardContent>
+          </Card>
+        );
+
+      case "actividades-recientes":
         return (
           <div className="space-y-6">
             {/* Stats Cards */}
@@ -108,203 +249,60 @@ const PasanteAyudantiasModules = () => {
               ))}
             </div>
 
-            {/* Register Hours Form */}
+            {/* Recent Activities */}
             <Card className="border-orange/20">
               <CardHeader>
-                <CardTitle className="text-xl text-primary">Registrar Horas</CardTitle>
+                <CardTitle className="text-xl text-primary">Actividades Recientes</CardTitle>
                 <CardDescription>
-                  Registra las horas trabajadas en tu ayudantía
+                  Últimas horas registradas y su estado de aprobación
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fecha">Fecha</Label>
-                      <Input
-                        id="fecha"
-                        type="date"
-                        value={formData.fecha}
-                        onChange={(e) => setFormData({...formData, fecha: e.target.value})}
-                        required
-                      />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">15 Enero 2025 - 4 horas</p>
+                      <p className="text-sm text-muted-foreground">Revisión de materiales académicos</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="horas">Horas trabajadas</Label>
-                      <Input
-                        id="horas"
-                        type="number"
-                        step="0.5"
-                        min="0.5"
-                        max="8"
-                        placeholder="Ej: 4.5"
-                        value={formData.horas}
-                        onChange={(e) => setFormData({...formData, horas: e.target.value})}
-                        required
-                      />
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      <span className="text-sm">Aprobado</span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="descripcion">Descripción de actividades</Label>
-                    <Textarea
-                      id="descripcion"
-                      placeholder="Describe las actividades realizadas..."
-                      value={formData.descripcion}
-                      onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                      required
-                    />
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">14 Enero 2025 - 3.5 horas</p>
+                      <p className="text-sm text-muted-foreground">Apoyo en laboratorio de física</p>
+                    </div>
+                    <div className="flex items-center text-yellow-600">
+                      <Clock className="h-4 w-4 mr-1" />
+                      <span className="text-sm">Pendiente</span>
+                    </div>
                   </div>
-                  <Button type="submit" className="bg-gradient-primary hover:opacity-90">
-                    Registrar Horas
-                  </Button>
-                </form>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">13 Enero 2025 - 4 horas</p>
+                      <p className="text-sm text-muted-foreground">Preparación de clases prácticas</p>
+                    </div>
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      <span className="text-sm">Aprobado</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">12 Enero 2025 - 3 horas</p>
+                      <p className="text-sm text-muted-foreground">Tutoría a estudiantes</p>
+                    </div>
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      <span className="text-sm">Aprobado</span>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        );
-
-      case "reporte-actividades":
-        return (
-          <Card className="border-orange/20">
-            <CardHeader>
-              <CardTitle className="text-xl text-primary">Sistema de Reporte de Actividades</CardTitle>
-              <CardDescription>
-                Completa el reporte detallado de tus actividades como ayudante
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Objetivos y Metas */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary">Objetivos y Metas</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="objetivos">Objetivos del período</Label>
-                    <Textarea
-                      id="objetivos"
-                      placeholder="Describe los objetivos planteados para este período..."
-                      value={formData.objetivos}
-                      onChange={(e) => setFormData({...formData, objetivos: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="metas">Metas específicas</Label>
-                    <Textarea
-                      id="metas"
-                      placeholder="Detalla las metas específicas alcanzadas..."
-                      value={formData.metas}
-                      onChange={(e) => setFormData({...formData, metas: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Programación de Actividades */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary">Programación de Actividades por Período</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="actividades">Actividades programadas y ejecutadas</Label>
-                    <Textarea
-                      id="actividades"
-                      placeholder="Describe las actividades programadas y su estado de ejecución..."
-                      value={formData.actividades}
-                      onChange={(e) => setFormData({...formData, actividades: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Reporte Semanal */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary">Reporte Semanal de Actividades</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="reporteSemanal">Actividades realizadas esta semana</Label>
-                    <Textarea
-                      id="reporteSemanal"
-                      placeholder="Detalla las actividades específicas realizadas durante la semana..."
-                      value={formData.reporteSemanal}
-                      onChange={(e) => setFormData({...formData, reporteSemanal: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Observaciones */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-primary">Observaciones</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="observaciones">Observaciones generales</Label>
-                    <Textarea
-                      id="observaciones"
-                      placeholder="Incluye cualquier observación adicional, dificultades encontradas, sugerencias de mejora..."
-                      value={formData.observaciones}
-                      onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90">
-                  Enviar Reporte
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        );
-
-      case "actividades-recientes":
-        return (
-          <Card className="border-orange/20">
-            <CardHeader>
-              <CardTitle className="text-xl text-primary">Actividades Recientes</CardTitle>
-              <CardDescription>
-                Últimas horas registradas y su estado de aprobación
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">15 Enero 2025 - 4 horas</p>
-                    <p className="text-sm text-muted-foreground">Revisión de materiales académicos</p>
-                  </div>
-                  <div className="flex items-center text-green-600">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Aprobado</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">14 Enero 2025 - 3.5 horas</p>
-                    <p className="text-sm text-muted-foreground">Apoyo en laboratorio de física</p>
-                  </div>
-                  <div className="flex items-center text-yellow-600">
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Pendiente</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">13 Enero 2025 - 4 horas</p>
-                    <p className="text-sm text-muted-foreground">Preparación de clases prácticas</p>
-                  </div>
-                  <div className="flex items-center text-green-600">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Aprobado</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">12 Enero 2025 - 3 horas</p>
-                    <p className="text-sm text-muted-foreground">Tutoría a estudiantes</p>
-                  </div>
-                  <div className="flex items-center text-green-600">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Aprobado</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         );
 
       default:

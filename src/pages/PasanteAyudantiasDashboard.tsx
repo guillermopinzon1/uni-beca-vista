@@ -30,11 +30,11 @@ const PasanteAyudantiasDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/pasante-ayudantias-modules")}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
+              Ir a Gestión de Actividades
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Mi Ayudantía</h1>
