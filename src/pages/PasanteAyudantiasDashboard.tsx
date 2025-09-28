@@ -1,35 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Clock, CheckCircle, TrendingUp, Plus, Calendar } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import AvailabilitySchedule from "@/components/AvailabilitySchedule";
-import ActivityReportSystem from "@/components/ActivityReportSystem";
+import { ArrowLeft, Clock, CheckCircle, FileText } from "lucide-react";
 
 const PasanteAyudantiasDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    fecha: "",
-    horas: "",
-    descripcion: ""
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Horas registradas",
-      description: "Las horas han sido enviadas para aprobación.",
-    });
-    setIsOpen(false);
-    setFormData({ fecha: "", horas: "", descripcion: "" });
-  };
 
   const stats = [
     {
@@ -101,89 +76,26 @@ const PasanteAyudantiasDashboard = () => {
 
           {/* Actions Section */}
           <div className="flex justify-center mb-8">
-            {/* Register Hours Card */}
+            {/* Activity Report System Card */}
             <Card className="border-orange/20 w-full max-w-md">
               <CardHeader>
                 <CardTitle className="text-xl text-primary flex items-center">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Registrar Horas
+                  <FileText className="h-5 w-5 mr-2" />
+                  Sistema de Reporte de Actividades
                 </CardTitle>
                 <CardDescription>
-                  Registra las horas trabajadas en tu ayudantía
+                  Completa el reporte detallado de tus actividades como ayudante
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full bg-gradient-primary hover:opacity-90">
-                      Registrar Horas Trabajadas
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Registrar Horas de Ayudantía</DialogTitle>
-                      <DialogDescription>
-                        Ingresa los detalles de las horas trabajadas
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="fecha">Fecha</Label>
-                        <Input
-                          id="fecha"
-                          type="date"
-                          value={formData.fecha}
-                          onChange={(e) => setFormData({...formData, fecha: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="horas">Horas trabajadas</Label>
-                        <Input
-                          id="horas"
-                          type="number"
-                          step="0.5"
-                          min="0.5"
-                          max="8"
-                          placeholder="Ej: 4.5"
-                          value={formData.horas}
-                          onChange={(e) => setFormData({...formData, horas: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="descripcion">Descripción de actividades</Label>
-                        <Textarea
-                          id="descripcion"
-                          placeholder="Describe las actividades realizadas..."
-                          value={formData.descripcion}
-                          onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-4">
-                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="flex-1">
-                          Cancelar
-                        </Button>
-                        <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
-                          Registrar
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                <Button 
+                  onClick={() => navigate("/pasante-ayudantias-modules")} 
+                  className="w-full bg-gradient-primary hover:opacity-90"
+                >
+                  Ir a Gestión de Actividades
+                </Button>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Availability Schedule */}
-          <div className="mb-8">
-            <AvailabilitySchedule />
-          </div>
-
-          {/* Activity Report System */}
-          <div className="mb-8">
-            <ActivityReportSystem />
           </div>
 
           {/* Recent Activity */}
