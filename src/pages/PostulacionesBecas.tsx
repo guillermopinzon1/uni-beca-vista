@@ -10,10 +10,10 @@ import {
   BookOpen, 
   Home,
   LogOut,
-  Heart,
   CreditCard,
   ArrowLeft
 } from "lucide-react";
+import ProgramaExcelenciaTabs from "@/components/excelencia/ProgramaExcelenciaTabs";
 
 const PostulacionesBecas = () => {
   const navigate = useNavigate();
@@ -34,15 +34,9 @@ const PostulacionesBecas = () => {
   const programs = [
     {
       id: "excelencia",
-      title: "Beca de Excelencia Académica",
-      description: "Para estudiantes con alto rendimiento académico que demuestren excelencia en sus estudios.",
+      title: "Programa de Excelencia",
+      description: "Para estudiantes destacados en diferentes áreas: académica, deportiva, artística, emprendimiento y compromiso cívico.",
       icon: Trophy
-    },
-    {
-      id: "impacto",
-      title: "Beca de Impacto Social",
-      description: "Dirigida a estudiantes comprometidos con proyectos de impacto social y comunitario.",
-      icon: Users
     },
     {
       id: "formacion",
@@ -129,7 +123,11 @@ const PostulacionesBecas = () => {
           </Button>
 
           {/* Application Form */}
-          <UnifiedApplicationForm programTitle={program?.title || ""} />
+          {selectedProgram === "excelencia" ? (
+            <ProgramaExcelenciaTabs />
+          ) : (
+            <UnifiedApplicationForm programTitle={program?.title || ""} />
+          )}
         </main>
       </div>
     );
@@ -192,7 +190,7 @@ const PostulacionesBecas = () => {
         </div>
 
         {/* Programs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {programs.map((program) => (
             <Card 
               key={program.id}
