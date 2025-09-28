@@ -46,15 +46,9 @@ const PostulacionesBecas = () => {
     },
     {
       id: "ayudantia",
-      title: "Beca por Ayudantía",
+      title: "Programa de Ayudantía",
       description: "Para estudiantes que deseen trabajar como ayudantes académicos o de investigación en la universidad.",
       icon: Users
-    },
-    {
-      id: "exoneracion",
-      title: "Exoneración de Matrícula",
-      description: "Programa de exoneración total o parcial de costos de matrícula para estudiantes destacados.",
-      icon: CreditCard
     }
   ];
 
