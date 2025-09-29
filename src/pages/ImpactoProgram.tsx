@@ -23,26 +23,6 @@ const ImpactoProgram = () => {
       onClick: () => setActiveModule("portal-institucional")
     },
     {
-      title: "Gestión de Convocatorias",
-      icon: FileText,
-      onClick: () => setActiveModule("convocatorias")
-    },
-    {
-      title: "Nominaciones Recibidas",
-      icon: Users,
-      onClick: () => setActiveModule("nominaciones")
-    },
-    {
-      title: "Integración con PDU",
-      icon: AlertTriangle,
-      onClick: () => setActiveModule("pdu-resultados")
-    },
-    {
-      title: "Instituciones Aliadas",
-      icon: Building,
-      onClick: () => setActiveModule("instituciones")
-    },
-    {
       title: "Acceso al Reglamento",
       icon: FileText,
       onClick: () => setActiveModule("reglamento")
@@ -65,28 +45,20 @@ const ImpactoProgram = () => {
               Volver al Inicio
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-primary">Programa de Impacto</h1>
+              <h1 className="text-2xl font-bold text-primary">Portal Instituciones Aliadas - Programa Impacto</h1>
               <p className="text-sm text-muted-foreground">
-                Inicio &gt; Gestión de Becas &gt; Impacto
+                Acceso exclusivo para instituciones autorizadas
               </p>
             </div>
           </div>
           
           <div className="flex items-center space-x-3">
-            <div className="flex flex-col items-end space-y-2">
-              <div className="flex items-center space-x-3">
-                <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
-                  Becario Impacto - 100% Exoneración
-                </Badge>
-                <Badge variant="outline" className="border-orange/40 text-primary">
-                  Nominado por FEP
-                </Badge>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-primary">Ana María González</p>
-                <p className="text-xs text-muted-foreground">Estudiante - Ing. Sistemas</p>
-              </div>
-            </div>
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+              Convocatoria Cerrada
+            </Badge>
+            <Badge variant="outline" className="border-red-200 text-red-600">
+              Solo Instituciones Aliadas
+            </Badge>
           </div>
         </div>
       </header>
@@ -108,10 +80,6 @@ const ImpactoProgram = () => {
                     activeModule === (
                       item.title === "Mi Beca Impacto" ? "mi-beca" :
                       item.title === "Portal Institucional" ? "portal-institucional" :
-                      item.title === "Gestión de Convocatorias" ? "convocatorias" :
-                      item.title === "Nominaciones Recibidas" ? "nominaciones" :
-                      item.title === "Integración con PDU" ? "pdu-resultados" :
-                      item.title === "Instituciones Aliadas" ? "instituciones" :
                       "reglamento"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
@@ -176,26 +144,6 @@ const ImpactoProgram = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : activeModule === "convocatorias" ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Módulo de Gestión de Convocatorias - En desarrollo</p>
-                <p className="text-sm text-muted-foreground mt-2">Funciones: Abrir/cerrar convocatorias, definir fechas, establecer cupos</p>
-              </div>
-            ) : activeModule === "nominaciones" ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Módulo de Nominaciones Recibidas - En desarrollo</p>
-                <p className="text-sm text-muted-foreground mt-2">Ver todas las postulaciones de instituciones, validar documentación</p>
-              </div>
-            ) : activeModule === "pdu-resultados" ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Módulo de Integración PDU - En desarrollo</p>
-                <p className="text-sm text-muted-foreground mt-2">Exportar listas, importar resultados, seguimiento de candidatos</p>
-              </div>
-            ) : activeModule === "instituciones" ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Módulo de Instituciones Aliadas - En desarrollo</p>
-                <p className="text-sm text-muted-foreground mt-2">Gestión de credenciales, límites de cupos, control de accesos</p>
               </div>
             ) : activeModule === "reglamento" ? (
               <div className="flex justify-center">
