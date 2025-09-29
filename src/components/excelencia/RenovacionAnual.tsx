@@ -54,13 +54,6 @@ const RenovacionAnual = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Renovación Anual</h2>
-        <p className="text-muted-foreground">
-          Gestiona el proceso de renovación de tu beca de excelencia
-        </p>
-      </div>
 
       {/* Requisitos a Cumplir */}
       <Card>
