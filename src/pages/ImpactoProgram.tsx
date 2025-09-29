@@ -38,11 +38,11 @@ const ImpactoProgram = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={() => navigate(-1)}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Inicio
+              Volver
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Portal Instituciones Aliadas - Programa Impacto</h1>
