@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, Calendar, FileText, Activity } from "lucide-react";
+import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useState } from "react";
 import AvailabilitySchedule from "@/components/AvailabilitySchedule";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,16 @@ const PasanteAyudantiasModules = () => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("horario-disponibilidad");
   const [activeWeek, setActiveWeek] = useState<string>("semana-1");
+  const [completedWeeks, setCompletedWeeks] = useState<Set<number>>(new Set([1])); // Week 1 is always available
+  const [weeklyDeadlines] = useState<Record<number, Date>>(() => {
+    const deadlines: Record<number, Date> = {};
+    const now = new Date();
+    for (let i = 1; i <= 12; i++) {
+      // Each week has a deadline 7 days after the previous one
+      deadlines[i] = new Date(now.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
+    }
+    return deadlines;
+  });
   const [formData, setFormData] = useState({
     fecha: "",
     horas: "",
@@ -43,8 +54,36 @@ const PasanteAyudantiasModules = () => {
       title: "Actividades Recientes",
       icon: Activity,
       onClick: () => setActiveModule("actividades-recientes")
+    },
+    {
+      title: "Acceso al Reglamento",
+      icon: FileText,
+      onClick: () => setActiveModule("reglamento")
     }
   ];
+
+  const isWeekAvailable = (weekNumber: number): boolean => {
+    if (weekNumber === 1) return true; // First week is always available
+    if (completedWeeks.has(weekNumber - 1)) return true; // Available if previous week is completed
+    return false;
+  };
+
+  const isWeekExpired = (weekNumber: number): boolean => {
+    const deadline = weeklyDeadlines[weekNumber];
+    if (!deadline) return false;
+    return new Date() > deadline && !completedWeeks.has(weekNumber);
+  };
+
+  const handleWeekSubmit = (weekNumber: number) => {
+    const newCompletedWeeks = new Set(completedWeeks);
+    newCompletedWeeks.add(weekNumber);
+    setCompletedWeeks(newCompletedWeeks);
+    
+    toast({
+      title: "Reporte enviado",
+      description: `Reporte de la semana ${weekNumber} registrado exitosamente.`,
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,19 +136,82 @@ const PasanteAyudantiasModules = () => {
             <CardContent>
               <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
                 <TabsList className="grid grid-cols-6 lg:grid-cols-12 mb-6">
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <TabsTrigger key={i + 1} value={`semana-${i + 1}`} className="text-xs">
-                      S{i + 1}
-                    </TabsTrigger>
-                  ))}
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const weekNumber = i + 1;
+                    const isAvailable = isWeekAvailable(weekNumber);
+                    const isExpired = isWeekExpired(weekNumber);
+                    const isCompleted = completedWeeks.has(weekNumber);
+                    
+                    return (
+                      <TabsTrigger 
+                        key={weekNumber} 
+                        value={`semana-${weekNumber}`} 
+                        className={`text-xs ${
+                          !isAvailable 
+                            ? 'opacity-40 cursor-not-allowed' 
+                            : isExpired 
+                              ? 'text-red-500 bg-red-50' 
+                              : isCompleted 
+                                ? 'text-green-600 bg-green-50' 
+                                : ''
+                        }`}
+                        disabled={!isAvailable}
+                      >
+                        S{weekNumber}
+                        {isCompleted && ' ✓'}
+                        {isExpired && ' ✗'}
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
                 
-                {Array.from({ length: 12 }, (_, i) => (
-                  <TabsContent key={i + 1} value={`semana-${i + 1}`}>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      {/* Registro de Horas */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-primary">Registro de Horas - Semana {i + 1}</h3>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const weekNumber = i + 1;
+                  const isAvailable = isWeekAvailable(weekNumber);
+                  const isExpired = isWeekExpired(weekNumber);
+                  const isCompleted = completedWeeks.has(weekNumber);
+                  const deadline = weeklyDeadlines[weekNumber];
+                  
+                  return (
+                    <TabsContent key={weekNumber} value={`semana-${weekNumber}`}>
+                      {!isAvailable ? (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">
+                            Esta semana no está disponible. Completa la semana anterior primero.
+                          </p>
+                        </div>
+                      ) : isExpired ? (
+                        <div className="text-center py-8 bg-red-50 rounded-lg border border-red-200">
+                          <p className="text-red-600 font-medium">
+                            ⚠️ Esta semana ha expirado
+                          </p>
+                          <p className="text-red-500 text-sm mt-2">
+                            No se registró el reporte a tiempo. La oportunidad se ha perdido.
+                          </p>
+                        </div>
+                      ) : (
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          handleWeekSubmit(weekNumber);
+                        }} className="space-y-6">
+                        {/* Week Status */}
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-semibold text-primary">Semana {weekNumber}</h3>
+                            <div className="text-sm text-muted-foreground">
+                              {deadline && (
+                                <span>Límite: {deadline.toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          </div>
+                          {isCompleted && (
+                            <p className="text-green-600 text-sm mt-2">✓ Semana completada</p>
+                          )}
+                        </div>
+
+                        {/* Registro de Horas */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-primary">Registro de Horas - Semana {weekNumber}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="fecha">Fecha</Label>
@@ -217,12 +319,18 @@ const PasanteAyudantiasModules = () => {
                         </div>
                       </div>
 
-                      <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90">
-                        Enviar Reporte Semana {i + 1}
-                      </Button>
-                    </form>
-                  </TabsContent>
-                ))}
+                          <Button 
+                            type="submit" 
+                            className="w-full bg-gradient-primary hover:opacity-90"
+                            disabled={isCompleted}
+                          >
+                            {isCompleted ? `Semana ${weekNumber} Completada ✓` : `Enviar Reporte Semana ${weekNumber}`}
+                          </Button>
+                        </form>
+                      )}
+                    </TabsContent>
+                  );
+                })}
               </Tabs>
             </CardContent>
           </Card>
@@ -302,6 +410,13 @@ const PasanteAyudantiasModules = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case "reglamento":
+        return (
+          <div className="flex justify-center">
+            <ReglamentoAccess becaType="ayudantia" />
           </div>
         );
 

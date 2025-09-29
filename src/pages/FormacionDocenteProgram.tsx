@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap, ArrowLeft, User, FileText, Info, Settings } from "lucide-react";
+import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UnifiedApplicationForm from "@/components/shared/UnifiedApplicationForm";
 
@@ -40,7 +41,7 @@ const FormacionDocenteProgram = () => {
         </div>
 
         <Tabs defaultValue="postular" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="postular" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Postular
@@ -56,6 +57,10 @@ const FormacionDocenteProgram = () => {
             <TabsTrigger value="admin" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Administración
+            </TabsTrigger>
+            <TabsTrigger value="reglamento" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Reglamento
             </TabsTrigger>
           </TabsList>
           
@@ -78,6 +83,12 @@ const FormacionDocenteProgram = () => {
           <TabsContent value="admin" className="mt-6">
             <div className="text-center py-8">
               <p className="text-muted-foreground">En construcción...</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="reglamento" className="mt-6">
+            <div className="flex justify-center">
+              <ReglamentoAccess becaType="formacion-docente" />
             </div>
           </TabsContent>
         </Tabs>

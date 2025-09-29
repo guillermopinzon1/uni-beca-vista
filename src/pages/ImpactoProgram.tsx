@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LayoutDashboard, Users, FileText, AlertTriangle, Building } from "lucide-react";
+import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useState } from "react";
 import Dashboard from "@/components/impacto/Dashboard";
 import ApplicationsList from "@/components/impacto/ApplicationsList";
@@ -40,6 +41,11 @@ const ImpactoProgram = () => {
       title: "Mi Institución Aliada",
       icon: Building,
       onClick: () => setActiveModule("institucion")
+    },
+    {
+      title: "Acceso al Reglamento",
+      icon: FileText,
+      onClick: () => setActiveModule("reglamento")
     }
   ];
 
@@ -104,7 +110,8 @@ const ImpactoProgram = () => {
                       item.title === "Mentoría" ? "mentoria" :
                       item.title === "Renovación y Documentos" ? "documentos" :
                       item.title === "Situaciones Especiales" ? "situaciones" :
-                      "institucion"
+                      item.title === "Mi Institución Aliada" ? "institucion" :
+                      "reglamento"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
                       : "bg-background hover:bg-orange/10 hover:border-orange/40"
@@ -138,6 +145,10 @@ const ImpactoProgram = () => {
               <SituacionesEspeciales />
             ) : activeModule === "institucion" ? (
               <InstitucionAliada />
+            ) : activeModule === "reglamento" ? (
+              <div className="flex justify-center">
+                <ReglamentoAccess becaType="impacto" />
+              </div>
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">

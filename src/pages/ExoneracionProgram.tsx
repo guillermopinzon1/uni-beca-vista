@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LayoutDashboard, Users, FileText, AlertTriangle, DollarSign, GraduationCap } from "lucide-react";
+import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useState } from "react";
 import RequisitosBeneficios from "@/components/exoneracion/RequisitosBeneficios";
 import TutoriasObligatorias from "@/components/exoneracion/TutoriasObligatorias";
@@ -37,6 +38,11 @@ const ExoneracionProgram = () => {
       title: "Estado Financiero",
       icon: DollarSign,
       onClick: () => setActiveModule("financiero")
+    },
+    {
+      title: "Acceso al Reglamento",
+      icon: FileText,
+      onClick: () => setActiveModule("reglamento")
     }
   ];
 
@@ -60,6 +66,11 @@ const ExoneracionProgram = () => {
       title: "Estado Financiero",
       icon: DollarSign,
       onClick: () => setActiveModule("financiero")
+    },
+    {
+      title: "Acceso al Reglamento",
+      icon: FileText,
+      onClick: () => setActiveModule("reglamento")
     }
   ];
 
@@ -137,7 +148,8 @@ const ExoneracionProgram = () => {
                       item.title === "Tutorías Obligatorias DDBE" ? "tutorias" :
                       item.title === "Alineación Carrera-Puesto" ? "alineacion" :
                       item.title === "Situaciones Especiales" ? "situaciones" :
-                      "financiero"
+                      item.title === "Estado Financiero" ? "financiero" :
+                      "reglamento"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
                       : "bg-background hover:bg-orange/10 hover:border-orange/40"
@@ -171,6 +183,10 @@ const ExoneracionProgram = () => {
               <SituacionesEspeciales />
             ) : activeModule === "financiero" ? (
               <EstadoFinanciero />
+            ) : activeModule === "reglamento" ? (
+              <div className="flex justify-center">
+                <ReglamentoAccess becaType="exoneracion" />
+              </div>
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">

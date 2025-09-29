@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LayoutDashboard, RefreshCw, FileText, Gift, Target } from "lucide-react";
 import { useState } from "react";
+import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import Dashboard from "@/components/excelencia/Dashboard";
 import RenovacionAnual from "@/components/excelencia/RenovacionAnual";
 import ActividadesReportes from "@/components/excelencia/ActividadesReportes";
@@ -39,6 +40,11 @@ const ExcelenciaProgram = () => {
       title: "Compromisos Especiales",
       icon: Target,
       onClick: () => setActiveModule("compromisos")
+    },
+    {
+      title: "Acceso al Reglamento",
+      icon: FileText,
+      onClick: () => setActiveModule("reglamento")
     }
   ];
 
@@ -103,7 +109,8 @@ const ExcelenciaProgram = () => {
                       item.title === "Renovación Anual" ? "renovacion" :
                       item.title === "Actividades y Reportes" ? "actividades" :
                       item.title === "Beneficios y Recursos" ? "beneficios" :
-                      "compromisos"
+                      item.title === "Compromisos Especiales" ? "compromisos" :
+                      "reglamento"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
                       : "bg-background hover:bg-orange/10 hover:border-orange/40"
@@ -137,6 +144,10 @@ const ExcelenciaProgram = () => {
               <BeneficiosRecursos />
             ) : activeModule === "compromisos" ? (
               <CompromisosEspeciales />
+            ) : activeModule === "reglamento" ? (
+              <div className="flex justify-center">
+                <ReglamentoAccess becaType="excelencia" />
+              </div>
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">
