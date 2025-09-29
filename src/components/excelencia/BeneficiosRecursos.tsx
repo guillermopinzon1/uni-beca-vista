@@ -20,57 +20,133 @@ import {
 } from "lucide-react";
 
 const BeneficiosRecursos = ({ scholarshipType }: { scholarshipType?: string }) => {
-  const beneficiosActivos = [
-    {
-      titulo: "Cobertura Económica",
-      descripcion: "25% de descuento en matrícula",
-      icono: <DollarSign className="h-6 w-6" />,
-      valor: "25%",
-      activo: true
-    },
-    {
-      titulo: "Seguro Deportivo",
-      descripcion: "Seguro deportivo incluido",
-      icono: <Shield className="h-6 w-6" />,
-      valor: "Incluido",
-      activo: true
-    },
-    {
-      titulo: "Instalaciones Deportivas",
-      descripcion: "Acceso completo a instalaciones deportivas",
-      icono: <Dumbbell className="h-6 w-6" />,
-      valor: "Acceso total",
-      activo: true
-    },
-    {
-      titulo: "Uniforme de Competencia",
-      descripcion: "Uniforme oficial de competencia",
-      icono: <Shirt className="h-6 w-6" />,
-      valor: "Incluido",
-      activo: true
-    },
-    {
-      titulo: "Transporte",
-      descripcion: "Transporte a competencias nacionales",
-      icono: <Bus className="h-6 w-6" />,
-      valor: "Nacional",
-      activo: true
-    },
-    {
-      titulo: "Prioridad Académica",
-      descripcion: "Prioridad en inscripción de materias",
-      icono: <BookOpen className="h-6 w-6" />,
-      valor: "Prioridad",
-      activo: true
-    },
-    {
-      titulo: "Mención Honorífica",
-      descripcion: "Mención honorífica al graduarse",
-      icono: <GraduationCap className="h-6 w-6" />,
-      valor: "Al graduarse",
-      activo: true
-    }
-  ];
+  
+  const getBenefitsData = () => {
+    const commonBenefits = [
+      {
+        titulo: "Cobertura Económica",
+        descripcion: scholarshipType === 'academica' ? "15%, 25% o 50% según estudio socioeconómico" : "15%, 25% o 50% según estudio socioeconómico",
+        icono: <DollarSign className="h-6 w-6" />,
+        valor: "Variable",
+        activo: true
+      },
+      {
+        titulo: "Acompañamiento Integral",
+        descripcion: "Seguimiento trimestral obligatorio",
+        icono: <Users className="h-6 w-6" />,
+        valor: "Incluido",
+        activo: true
+      },
+      {
+        titulo: "Prioridad Académica",
+        descripcion: "Prioridad en inscripción de materias",
+        icono: <BookOpen className="h-6 w-6" />,
+        valor: "Prioridad",
+        activo: true
+      }
+    ];
+
+    const specificBenefits = {
+      academica: [
+        {
+          titulo: "Reconocimiento Lista del Rector",
+          descripcion: "Posibilidad de obtener reconocimientos académicos",
+          icono: <Star className="h-6 w-6" />,
+          valor: "Elegible",
+          activo: true
+        },
+        {
+          titulo: "Acceso a Investigación",
+          descripcion: "Participación en proyectos de investigación",
+          icono: <GraduationCap className="h-6 w-6" />,
+          valor: "Disponible",
+          activo: true
+        }
+      ],
+      deportiva: [
+        {
+          titulo: "Seguro Deportivo",
+          descripcion: "Seguro deportivo incluido",
+          icono: <Shield className="h-6 w-6" />,
+          valor: "Incluido",
+          activo: true
+        },
+        {
+          titulo: "Instalaciones Deportivas",
+          descripcion: "Acceso completo a instalaciones deportivas",
+          icono: <Dumbbell className="h-6 w-6" />,
+          valor: "Acceso total",
+          activo: true
+        },
+        {
+          titulo: "Uniforme de Competencia",
+          descripcion: "Uniforme oficial de competencia",
+          icono: <Shirt className="h-6 w-6" />,
+          valor: "Incluido",
+          activo: true
+        },
+        {
+          titulo: "Transporte",
+          descripcion: "Transporte a competencias nacionales",
+          icono: <Bus className="h-6 w-6" />,
+          valor: "Nacional",
+          activo: true
+        }
+      ],
+      artistica: [
+        {
+          titulo: "Acceso a Espacios Culturales",
+          descripcion: "Uso de auditorios y salas de ensayo",
+          icono: <Globe className="h-6 w-6" />,
+          valor: "Completo",
+          activo: true
+        },
+        {
+          titulo: "Participación en Eventos",
+          descripcion: "Presentaciones en eventos institucionales",
+          icono: <Calendar className="h-6 w-6" />,
+          valor: "Garantizada",
+          activo: true
+        }
+      ],
+      civico: [
+        {
+          titulo: "Red de Contactos Sociales",
+          descripcion: "Conexión con organizaciones comunitarias",
+          icono: <Users className="h-6 w-6" />,
+          valor: "Activa",
+          activo: true
+        },
+        {
+          titulo: "Certificaciones de Impacto",
+          descripcion: "Documentación oficial de trabajo comunitario",
+          icono: <GraduationCap className="h-6 w-6" />,
+          valor: "Incluidas",
+          activo: true
+        }
+      ],
+      emprendimiento: [
+        {
+          titulo: "Incubadora de Emprendimientos",
+          descripcion: "Acceso a la incubadora de startups UNIMET",
+          icono: <Star className="h-6 w-6" />,
+          valor: "Garantizado",
+          activo: true
+        },
+        {
+          titulo: "Mentoría Empresarial",
+          descripcion: "Acompañamiento de emprendedores exitosos",
+          icono: <Users className="h-6 w-6" />,
+          valor: "Personalizada",
+          activo: true
+        }
+      ]
+    };
+
+    return [...commonBenefits, ...(specificBenefits[scholarshipType as keyof typeof specificBenefits] || specificBenefits.deportiva)];
+  };
+
+  const beneficiosActivos = getBenefitsData();
 
   const contactosApoyo = [
     {
@@ -116,7 +192,7 @@ const BeneficiosRecursos = ({ scholarshipType }: { scholarshipType?: string }) =
       <div>
         <h2 className="text-3xl font-bold text-foreground mb-2">Beneficios y Recursos</h2>
         <p className="text-muted-foreground">
-          Todos los beneficios activos y recursos de apoyo disponibles para ti
+          Todos los beneficios activos y recursos de apoyo disponibles para tu beca de excelencia {scholarshipType === 'academica' ? 'académica' : scholarshipType === 'artistica' ? 'artística' : scholarshipType === 'civico' ? 'cívica' : scholarshipType === 'emprendimiento' ? 'de emprendimiento' : 'deportiva'}
         </p>
       </div>
 
@@ -128,7 +204,7 @@ const BeneficiosRecursos = ({ scholarshipType }: { scholarshipType?: string }) =
             <span>Mis Beneficios Activos</span>
           </CardTitle>
           <CardDescription>
-            Beneficios que tienes disponibles como becario de excelencia deportiva
+            Beneficios que tienes disponibles como becario de excelencia {scholarshipType === 'academica' ? 'académica' : scholarshipType === 'artistica' ? 'artística' : scholarshipType === 'civico' ? 'cívica' : scholarshipType === 'emprendimiento' ? 'de emprendimiento' : 'deportiva'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -198,7 +274,7 @@ const BeneficiosRecursos = ({ scholarshipType }: { scholarshipType?: string }) =
             </Button>
             <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-1">
               <HelpCircle className="h-5 w-5" />
-              <span className="text-sm">FAQs Excelencia Deportiva</span>
+              <span className="text-sm">FAQs Excelencia {scholarshipType === 'academica' ? 'Académica' : scholarshipType === 'artistica' ? 'Artística' : scholarshipType === 'civico' ? 'Cívica' : scholarshipType === 'emprendimiento' ? 'Emprendimiento' : 'Deportiva'}</span>
             </Button>
           </div>
         </CardContent>

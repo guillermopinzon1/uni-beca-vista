@@ -15,43 +15,154 @@ import {
 } from "lucide-react";
 
 const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }) => {
-  const compromisosDeportiva = [
-    {
-      compromiso: "Participación en Selección",
-      estado: "cumplido",
-      descripcion: "Mantener participación activa en selección de natación",
-      valorActual: "Activo",
-      requerido: "Activo"
-    },
-    {
-      compromiso: "Competencias mínimas",
-      estado: "cumplido", 
-      descripcion: "Participar en mínimo 3 competencias por período",
-      valorActual: "3/3",
-      requerido: "3"
-    },
-    {
-      compromiso: "Eventos UNIMET",
-      estado: "cumplido",
-      descripcion: "Asistir a eventos institucionales",
-      valorActual: "2/2",
-      requerido: "2"
-    },
-    {
-      compromiso: "Actividades comunitarias",
-      estado: "pendiente",
-      descripcion: "Participar en actividades de impacto comunitario",
-      valorActual: "1/2",
-      requerido: "2"
-    },
-    {
-      compromiso: "Calificación deportiva",
-      estado: "cumplido",
-      descripcion: "Mantener calificación ≥18 en selección deportiva",
-      valorActual: "19/20",
-      requerido: "≥18"
-    }
-  ];
+  
+  const getCommitmentsData = () => {
+    const commonCommitments = [
+      {
+        compromiso: "Mantener IAA requerido",
+        estado: "cumplido",
+        descripcion: `Mantener IAA ≥${scholarshipType === 'academica' ? '16.50' : '15.00'} puntos`,
+        valorActual: scholarshipType === 'academica' ? "17.2" : "15.8",
+        requerido: scholarshipType === 'academica' ? "≥16.50" : "≥15.00"
+      },
+      {
+        compromiso: "15 créditos mínimos por trimestre",
+        estado: "cumplido", 
+        descripcion: "Inscribir y aprobar mínimo 15 créditos por período",
+        valorActual: "18 créditos",
+        requerido: "≥15"
+      },
+      {
+        compromiso: "Acompañamiento integral",
+        estado: "cumplido",
+        descripcion: "Participar en seguimiento trimestral obligatorio",
+        valorActual: "Al día",
+        requerido: "Obligatorio"
+      },
+      {
+        compromiso: "Conducta ejemplar",
+        estado: "cumplido",
+        descripcion: "Cumplir código de ética y evitar sanciones disciplinarias",
+        valorActual: "Sin sanciones",
+        requerido: "Sin sanciones"
+      }
+    ];
+
+    const specificCommitments = {
+      academica: [
+        {
+          compromiso: "Excelencia académica sostenida",
+          estado: "cumplido",
+          descripcion: "Mantener rendimiento académico superior",
+          valorActual: "Lista del Rector",
+          requerido: "Alto rendimiento"
+        },
+        {
+          compromiso: "Participación en investigación",
+          estado: "pendiente",
+          descripcion: "Colaborar en al menos 1 proyecto de investigación",
+          valorActual: "0/1",
+          requerido: "1 proyecto"
+        }
+      ],
+      deportiva: [
+        {
+          compromiso: "Participación en Selección",
+          estado: "cumplido",
+          descripcion: "Mantener participación activa en selección deportiva",
+          valorActual: "Activo",
+          requerido: "Activo"
+        },
+        {
+          compromiso: "Competencias mínimas",
+          estado: "cumplido", 
+          descripcion: "Participar en mínimo 3 competencias por período",
+          valorActual: "3/3",
+          requerido: "3"
+        },
+        {
+          compromiso: "Calificación deportiva",
+          estado: "cumplido",
+          descripcion: "Mantener calificación ≥18 en selección deportiva",
+          valorActual: "19/20",
+          requerido: "≥18"
+        }
+      ],
+      artistica: [
+        {
+          compromiso: "Participación en selección cultural",
+          estado: "cumplido",
+          descripcion: "Mantener participación activa en selección artística",
+          valorActual: "Activo",
+          requerido: "Activo"
+        },
+        {
+          compromiso: "Presentaciones mínimas",
+          estado: "cumplido",
+          descripcion: "Participar en mínimo 2 eventos culturales por período",
+          valorActual: "3/2",
+          requerido: "2"
+        },
+        {
+          compromiso: "Calificación artística",
+          estado: "cumplido",
+          descripcion: "Mantener calificación ≥18 en selección cultural",
+          valorActual: "18.5/20",
+          requerido: "≥18"
+        }
+      ],
+      civico: [
+        {
+          compromiso: "Proyectos de impacto social",
+          estado: "cumplido",
+          descripcion: "Liderar o participar en proyectos comunitarios",
+          valorActual: "2 proyectos activos",
+          requerido: "≥1 proyecto"
+        },
+        {
+          compromiso: "Horas de servicio comunitario",
+          estado: "pendiente",
+          descripcion: "Completar mínimo 40 horas de servicio por período",
+          valorActual: "25/40",
+          requerido: "40 horas"
+        },
+        {
+          compromiso: "Evidencias de impacto",
+          estado: "cumplido",
+          descripcion: "Documentar el impacto de actividades comunitarias",
+          valorActual: "Documentado",
+          requerido: "Evidencias"
+        }
+      ],
+      emprendimiento: [
+        {
+          compromiso: "Proyecto en incubadora",
+          estado: "cumplido",
+          descripcion: "Mantener startup activo en incubadora UNIMET",
+          valorActual: "Proyecto activo",
+          requerido: "Activo"
+        },
+        {
+          compromiso: "Milestones trimestrales",
+          estado: "pendiente",
+          descripcion: "Cumplir objetivos trimestrales del proyecto",
+          valorActual: "2/3",
+          requerido: "3 milestones"
+        },
+        {
+          compromiso: "Competencias de emprendimiento",
+          estado: "cumplido",
+          descripcion: "Participar en competencias internas",
+          valorActual: "1er lugar último trimestre",
+          requerido: "Participación"
+        }
+      ]
+    };
+
+    return [...commonCommitments, ...(specificCommitments[scholarshipType as keyof typeof specificCommitments] || specificCommitments.deportiva)];
+  };
+
+  const compromisosEspecificos = getCommitmentsData();
 
   const timelineActividades = [
     {
@@ -139,8 +250,8 @@ const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }
     }
   };
 
-  const compromisosCompletados = compromisosDeportiva.filter(c => c.estado === "cumplido").length;
-  const progresoGeneral = (compromisosCompletados / compromisosDeportiva.length) * 100;
+  const compromisosCompletados = compromisosEspecificos.filter(c => c.estado === "cumplido").length;
+  const progresoGeneral = (compromisosCompletados / compromisosEspecificos.length) * 100;
 
   return (
     <div className="space-y-6">
@@ -148,7 +259,7 @@ const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }
       <div>
         <h2 className="text-3xl font-bold text-foreground mb-2">Compromisos Especiales</h2>
         <p className="text-muted-foreground">
-          Seguimiento de tus compromisos específicos como becario de excelencia deportiva
+          Seguimiento de tus compromisos específicos como becario de excelencia {scholarshipType === 'academica' ? 'académica' : scholarshipType === 'artistica' ? 'artística' : scholarshipType === 'civico' ? 'cívica' : scholarshipType === 'emprendimiento' ? 'de emprendimiento' : 'deportiva'}
         </p>
       </div>
 
@@ -158,23 +269,30 @@ const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }
         <CardHeader>
           <CardTitle className="text-xl flex items-center space-x-2">
             <Users className="h-5 w-5" />
-            <span>Compromisos Deportivos</span>
+            <span>Compromisos de Excelencia {scholarshipType === 'academica' ? 'Académica' : scholarshipType === 'artistica' ? 'Artística' : scholarshipType === 'civico' ? 'Cívica' : scholarshipType === 'emprendimiento' ? 'Emprendimiento' : 'Deportiva'}</span>
           </CardTitle>
           <CardDescription>
-            Compromisos específicos para tu categoría de Excelencia Deportiva
+            Compromisos específicos para tu categoría de Excelencia {scholarshipType === 'academica' ? 'Académica' : scholarshipType === 'artistica' ? 'Artística' : scholarshipType === 'civico' ? 'Cívica' : scholarshipType === 'emprendimiento' ? 'Emprendimiento' : 'Deportiva'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {compromisosDeportiva.map((compromiso, index) => (
+            {compromisosEspecificos.map((compromiso, index) => (
               <div 
                 key={index}
-                className="p-4 rounded-lg border border-orange/20"
+                className={`p-4 rounded-lg border ${getEstadoColor(compromiso.estado)}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-semibold">{compromiso.compromiso}</h3>
+                    <div className="flex items-center space-x-2">
+                      {getEstadoIcon(compromiso.estado)}
+                      <h3 className="font-semibold">{compromiso.compromiso}</h3>
+                    </div>
                     <p className="text-sm opacity-75 mt-1">{compromiso.descripcion}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm font-medium">Actual: {compromiso.valorActual}</span>
+                      <span className="text-sm text-muted-foreground">Requerido: {compromiso.requerido}</span>
+                    </div>
                   </div>
                 </div>
               </div>
