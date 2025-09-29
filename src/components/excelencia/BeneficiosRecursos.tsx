@@ -19,7 +19,7 @@ import {
   Star
 } from "lucide-react";
 
-const BeneficiosRecursos = () => {
+const BeneficiosRecursos = ({ scholarshipType }: { scholarshipType?: string }) => {
   const beneficiosActivos = [
     {
       titulo: "Cobertura Económica",

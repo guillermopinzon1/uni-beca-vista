@@ -11,17 +11,70 @@ import {
   AlertCircle
 } from "lucide-react";
 
-const RenovacionAnual = () => {
+const RenovacionAnual = ({ scholarshipType }: { scholarshipType?: string }) => {
+  // Get IAA requirement based on scholarship type
+  const getIAARequirement = () => {
+    if (scholarshipType === 'academica') return '16.50';
+    return '15.00'; // For deportiva, artistica, civico, emprendimiento
+  };
+
   const renovacionData = {
-    fechaProximaRenovacion: "2025-07-15",
-    diasRestantes: 45,
     documentos: [
-      { nombre: "IAA mínimo 15.0", estado: "completado", valor: "15.8", automatico: true },
-      { nombre: "12 créditos mínimos", estado: "completado", valor: "Completado", automatico: true },
-      { nombre: "Certificación del Director de Deportes", estado: "pendiente", automatico: false },
-      { nombre: "Carta de continuidad en selección", estado: "pendiente", automatico: false },
-      { nombre: "Sin sanciones disciplinarias", estado: "completado", valor: "Verificado", automatico: true },
-      { nombre: "Actualización de datos personales", estado: "opcional", automatico: false }
+      { 
+        nombre: `IAA mínimo ${getIAARequirement()}`, 
+        estado: "completado", 
+        valor: scholarshipType === 'academica' ? "16.8" : "15.2", 
+        automatico: true 
+      },
+      { 
+        nombre: "15 créditos mínimos por trimestre", 
+        estado: "completado", 
+        valor: "18 créditos inscritos", 
+        automatico: true 
+      },
+      { 
+        nombre: "Sin sanciones disciplinarias", 
+        estado: "completado", 
+        valor: "Verificado", 
+        automatico: true 
+      },
+      { 
+        nombre: "Participación en acompañamiento integral", 
+        estado: "pendiente", 
+        automatico: false,
+        descripcion: "Seguimiento trimestral obligatorio"
+      },
+      { 
+        nombre: "Cumplimiento de Carta Compromiso", 
+        estado: "completado", 
+        valor: "Al día", 
+        automatico: false 
+      },
+      // Specific requirements based on scholarship type
+      ...(scholarshipType === 'deportiva' ? [{
+        nombre: "Participación activa en selección deportiva",
+        estado: "pendiente",
+        automatico: false,
+        descripcion: "Aval del entrenador requerido"
+      }] : []),
+      ...(scholarshipType === 'artistica' ? [{
+        nombre: "Participación activa en selección artística",
+        estado: "pendiente", 
+        automatico: false,
+        descripcion: "Aval del director del área requerido"
+      }] : []),
+      ...(scholarshipType === 'civico' ? [{
+        nombre: "Evidencias de impacto social",
+        estado: "pendiente",
+        automatico: false,
+        descripcion: "Documentar participación en proyectos comunitarios"
+      }] : []),
+      ...(scholarshipType === 'emprendimiento' ? [{
+        nombre: "Proyecto en Incubadora de Emprendimientos",
+        estado: "completado",
+        automatico: false,
+        valor: "Proyecto activo"
+      }] : [])
     ]
   };
 

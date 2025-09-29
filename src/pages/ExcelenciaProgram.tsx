@@ -216,13 +216,13 @@ const ExcelenciaProgram = () => {
                 </div>
               </div>
             ) : activeModule === "renovacion" ? (
-              <RenovacionAnual />
+              <RenovacionAnual scholarshipType={selectedScholarshipType} />
             ) : activeModule === "actividades" ? (
-              <ActividadesReportes />
+              <ActividadesReportes scholarshipType={selectedScholarshipType} />
             ) : activeModule === "beneficios" ? (
-              <BeneficiosRecursos />
+              <BeneficiosRecursos scholarshipType={selectedScholarshipType} />
             ) : activeModule === "compromisos" ? (
-              <CompromisosEspeciales />
+              <CompromisosEspeciales scholarshipType={selectedScholarshipType} />
             ) : activeModule === "reglamento" ? (
               <div className="flex justify-center">
                 <ReglamentoAccess becaType="excelencia" />

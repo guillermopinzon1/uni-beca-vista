@@ -13,7 +13,7 @@ import {
   Award
 } from "lucide-react";
 
-const ActividadesReportes = () => {
+const ActividadesReportes = ({ scholarshipType }: { scholarshipType?: string }) => {
   const competenciasLogros = [
     {
       tipo: "competencia",

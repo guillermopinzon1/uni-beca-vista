@@ -14,7 +14,7 @@ import {
   TrendingDown
 } from "lucide-react";
 
-const CompromisosEspeciales = () => {
+const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }) => {
   const compromisosDeportiva = [
     {
       compromiso: "Participación en Selección",
