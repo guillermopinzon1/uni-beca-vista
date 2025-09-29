@@ -13,7 +13,7 @@ import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import PasanteModules from "./pages/PasanteModules";
-import PasanteAyudantiasDashboard from "./pages/PasanteAyudantiasDashboard";
+
 import PasanteAyudantiasModules from "./pages/PasanteAyudantiasModules";
 import EstudianteDetail from "./pages/EstudianteDetail";
 import ScholarshipPrograms from "./pages/ScholarshipPrograms";
@@ -51,7 +51,7 @@ const App = () => (
           <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/modules" element={<PasanteModules />} />
-          <Route path="/pasante-ayudantias-dashboard" element={<PasanteAyudantiasDashboard />} />
+          
           <Route path="/pasante-ayudantias-modules" element={<PasanteAyudantiasModules />} />
           <Route path="/estudiante/:id" element={<EstudianteDetail />} />
               <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
