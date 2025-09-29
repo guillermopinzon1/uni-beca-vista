@@ -26,6 +26,9 @@ import ImpactoProgram from "./pages/ImpactoProgram";
 import ExoneracionProgram from "./pages/ExoneracionProgram";
 import ExcelenciaProgram from "./pages/ExcelenciaProgram";
 import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
+import FormacionDocenteAdmin from "./pages/FormacionDocenteAdmin";
+import ExoneracionStudent from "./pages/ExoneracionStudent";
+import ExoneracionCapitalHumano from "./pages/ExoneracionCapitalHumano";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
 import PostulacionesBecas from "./pages/PostulacionesBecas";
 import MentorDashboard from "./pages/MentorDashboard";
@@ -66,6 +69,9 @@ const App = () => (
         <Route path="/exoneracion" element={<ExoneracionProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
               <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
+              <Route path="/formacion-docente-admin" element={<FormacionDocenteAdmin />} />
+              <Route path="/exoneracion-student" element={<ExoneracionStudent />} />
+              <Route path="/exoneracion-capital-humano" element={<ExoneracionCapitalHumano />} />
               <Route path="/mentor-dashboard" element={<MentorDashboard />} />
               <Route path="/director-area-dashboard" element={<DirectorAreaDashboard />} />
               <Route path="/capital-humano-dashboard" element={<CapitalHumanoDashboard />} />
