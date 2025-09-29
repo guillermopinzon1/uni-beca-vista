@@ -73,11 +73,7 @@ const ReglamentoAccess: React.FC<ReglamentoAccessProps> = ({ becaType }) => {
             Reglamento del Programa de Beneficios Socioeconómicos y Becas de la Universidad Metropolitana 2025
           </p>
           <div className="flex gap-2">
-            <Button onClick={handleView} className="flex-1">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Ver Reglamento
-            </Button>
-            <Button onClick={handleDownload} variant="outline" className="flex-1">
+            <Button onClick={handleDownload} className="w-full">
               <Download className="h-4 w-4 mr-2" />
               Descargar PDF
             </Button>
