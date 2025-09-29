@@ -25,7 +25,7 @@ import NotFound from "./pages/NotFound";
 import ImpactoProgram from "./pages/ImpactoProgram";
 import ExoneracionProgram from "./pages/ExoneracionProgram";
 import ExcelenciaProgram from "./pages/ExcelenciaProgram";
-import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
+
 import FormacionDocenteAdmin from "./pages/FormacionDocenteAdmin";
 import ExoneracionStudent from "./pages/ExoneracionStudent";
 import ExoneracionCapitalHumano from "./pages/ExoneracionCapitalHumano";
@@ -68,7 +68,7 @@ const App = () => (
         <Route path="/impacto" element={<ImpactoProgram />} />
         <Route path="/exoneracion" element={<ExoneracionProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
-              <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
+              
               <Route path="/formacion-docente-admin" element={<FormacionDocenteAdmin />} />
               <Route path="/exoneracion-student" element={<ExoneracionStudent />} />
               <Route path="/exoneracion-capital-humano" element={<ExoneracionCapitalHumano />} />

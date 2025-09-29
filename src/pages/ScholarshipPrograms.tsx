@@ -54,14 +54,6 @@ const ScholarshipPrograms = () => {
       available: true
     },
     {
-      id: 4,
-      title: "Beca Formación Docente",
-      description: "Programa especializado para la formación y desarrollo de futuros profesores universitarios.",
-      icon: BookOpen,
-      route: "/formacion-docente",
-      available: true
-    },
-    {
       id: 5,
       title: "Exoneración de Matrícula",
       description: "Programa de exoneración total o parcial de costos de matrícula para estudiantes destacados.",
