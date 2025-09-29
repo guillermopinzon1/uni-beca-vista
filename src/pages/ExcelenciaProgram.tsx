@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, FileText, Gift, Target, GraduationCap, Trophy, Palette, Heart, Lightbulb } from "lucide-react";
+import { ArrowLeft, FileText, Gift, Target, GraduationCap, Trophy, Palette, Heart, Lightbulb } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
-import RenovacionAnual from "@/components/excelencia/RenovacionAnual";
 import ActividadesReportes from "@/components/excelencia/ActividadesReportes";
 import BeneficiosRecursos from "@/components/excelencia/BeneficiosRecursos";
 import CompromisosEspeciales from "@/components/excelencia/CompromisosEspeciales";
@@ -17,11 +16,6 @@ const ExcelenciaProgram = () => {
   const [selectedScholarshipType, setSelectedScholarshipType] = useState<string | null>(null);
 
    const sidebarItems = [
-    {
-      title: "Renovación Anual",
-      icon: RefreshCw,
-      onClick: () => setActiveModule("renovacion")
-    },
     {
       title: "Actividades y Reportes",
       icon: FileText,
@@ -149,7 +143,6 @@ const ExcelenciaProgram = () => {
                     onClick={item.onClick}
                     className={`w-12 h-12 flex items-center justify-center rounded-lg border border-orange/20 transition-all duration-200 ${
                       activeModule === (
-                        item.title === "Renovación Anual" ? "renovacion" :
                         item.title === "Actividades y Reportes" ? "actividades" :
                         item.title === "Beneficios y Recursos" ? "beneficios" :
                         item.title === "Compromisos Especiales" ? "compromisos" :
@@ -215,8 +208,6 @@ const ExcelenciaProgram = () => {
                   ))}
                 </div>
               </div>
-            ) : activeModule === "renovacion" ? (
-              <RenovacionAnual scholarshipType={selectedScholarshipType} />
             ) : activeModule === "actividades" ? (
               <ActividadesReportes scholarshipType={selectedScholarshipType} />
             ) : activeModule === "beneficios" ? (
