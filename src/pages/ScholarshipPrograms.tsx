@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen, CreditCard } from "lucide-react";
-import PasanteAyudantiasModules from "./PasanteAyudantiasModules";
+
 import AspiranteScholarshipPrograms from "./AspiranteScholarshipPrograms";
 
 const ScholarshipPrograms = () => {
@@ -15,10 +15,6 @@ const ScholarshipPrograms = () => {
     setUserRole(role);
   }, []);
 
-  // Show role-specific views
-  if (userRole === "ayudante") {
-    return <PasanteAyudantiasModules />;
-  }
 
   if (userRole === "aspirante") {
     return <AspiranteScholarshipPrograms />;
@@ -34,7 +30,7 @@ const ScholarshipPrograms = () => {
       title: "Ayudantía",
       description: "Gestiona tu postulación y seguimiento como ayudante académico o de investigación.",
       icon: UserCheck,
-      route: "/pasante-ayudantias-modules",
+      route: "/ayudantias-dashboard",
       available: true
     },
     {
@@ -53,14 +49,6 @@ const ScholarshipPrograms = () => {
       route: "/excelencia",
       available: true
     },
-    {
-      id: 5,
-      title: "Exoneración de Matrícula",
-      description: "Programa de exoneración total o parcial de costos de matrícula para estudiantes destacados.",
-      icon: CreditCard,
-      route: "/exoneracion",
-      available: true
-    }
   ];
 
   return (

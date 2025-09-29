@@ -12,9 +12,6 @@ import Requisitos from "./pages/Requisitos";
 import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import PasanteModules from "./pages/PasanteModules";
-
-import PasanteAyudantiasModules from "./pages/PasanteAyudantiasModules";
 import EstudianteDetail from "./pages/EstudianteDetail";
 import ScholarshipPrograms from "./pages/ScholarshipPrograms";
 import Profile from "./pages/Profile";
@@ -23,18 +20,10 @@ import PostulacionDetail from "./pages/PostulacionDetail";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
 import ImpactoProgram from "./pages/ImpactoProgram";
-import ExoneracionProgram from "./pages/ExoneracionProgram";
 import ExcelenciaProgram from "./pages/ExcelenciaProgram";
-
-import FormacionDocenteAdmin from "./pages/FormacionDocenteAdmin";
-import ExoneracionStudent from "./pages/ExoneracionStudent";
-import ExoneracionCapitalHumano from "./pages/ExoneracionCapitalHumano";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
 import PostulacionesBecas from "./pages/PostulacionesBecas";
-import MentorDashboard from "./pages/MentorDashboard";
-import DirectorAreaDashboard from "./pages/DirectorAreaDashboard";
 import CapitalHumanoDashboard from "./pages/CapitalHumanoDashboard";
-import SupervisorLaboralDashboard from "./pages/SupervisorLaboralDashboard";
 
 const queryClient = new QueryClient();
 
@@ -53,9 +42,6 @@ const App = () => (
               <Route path="/modules" element={<ModuleSelection />} />
           <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/modules" element={<PasanteModules />} />
-          
-          <Route path="/pasante-ayudantias-modules" element={<PasanteAyudantiasModules />} />
           <Route path="/estudiante/:id" element={<EstudianteDetail />} />
               <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
               <Route path="/aspirante-scholarship-programs" element={<AspiranteScholarshipPrograms />} />
@@ -66,16 +52,8 @@ const App = () => (
               <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
               <Route path="/reportes" element={<Reportes />} />
         <Route path="/impacto" element={<ImpactoProgram />} />
-        <Route path="/exoneracion" element={<ExoneracionProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
-              
-              <Route path="/formacion-docente-admin" element={<FormacionDocenteAdmin />} />
-              <Route path="/exoneracion-student" element={<ExoneracionStudent />} />
-              <Route path="/exoneracion-capital-humano" element={<ExoneracionCapitalHumano />} />
-              <Route path="/mentor-dashboard" element={<MentorDashboard />} />
-              <Route path="/director-area-dashboard" element={<DirectorAreaDashboard />} />
               <Route path="/capital-humano-dashboard" element={<CapitalHumanoDashboard />} />
-              <Route path="/supervisor-laboral-dashboard" element={<SupervisorLaboralDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
