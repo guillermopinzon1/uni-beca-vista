@@ -328,11 +328,11 @@ const PasanteAyudantiasModules = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/pasante-ayudantias-dashboard")}
+              onClick={() => navigate("/scholarship-programs")}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Dashboard
+              Volver a Becas
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Gestión de Ayudantía</h1>
