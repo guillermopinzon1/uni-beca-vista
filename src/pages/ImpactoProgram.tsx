@@ -14,33 +14,33 @@ import InstitucionAliada from "@/components/impacto/InstitucionAliada";
 const ImpactoProgram = () => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [activeModule, setActiveModule] = useState<string | null>("mi-beca");
+  const [activeModule, setActiveModule] = useState<string | null>("portal-institucional");
 
   const sidebarItems = [
     {
-      title: "Mi Beca Impacto",
+      title: "Portal Institucional",
       icon: LayoutDashboard,
-      onClick: () => setActiveModule("mi-beca")
+      onClick: () => setActiveModule("portal-institucional")
     },
     {
-      title: "Mentoría",
-      icon: Users,
-      onClick: () => setActiveModule("mentoria")
-    },
-    {
-      title: "Renovación y Documentos",
+      title: "Gestión de Convocatorias",
       icon: FileText,
-      onClick: () => setActiveModule("documentos")
+      onClick: () => setActiveModule("convocatorias")
     },
     {
-      title: "Situaciones Especiales",
+      title: "Nominaciones Recibidas",
+      icon: Users,
+      onClick: () => setActiveModule("nominaciones")
+    },
+    {
+      title: "Integración con PDU",
       icon: AlertTriangle,
-      onClick: () => setActiveModule("situaciones")
+      onClick: () => setActiveModule("pdu-resultados")
     },
     {
-      title: "Mi Institución Aliada",
+      title: "Instituciones Aliadas",
       icon: Building,
-      onClick: () => setActiveModule("institucion")
+      onClick: () => setActiveModule("instituciones")
     },
     {
       title: "Acceso al Reglamento",
@@ -107,10 +107,11 @@ const ImpactoProgram = () => {
                   className={`w-12 h-12 flex items-center justify-center rounded-lg border border-orange/20 transition-all duration-200 ${
                     activeModule === (
                       item.title === "Mi Beca Impacto" ? "mi-beca" :
-                      item.title === "Mentoría" ? "mentoria" :
-                      item.title === "Renovación y Documentos" ? "documentos" :
-                      item.title === "Situaciones Especiales" ? "situaciones" :
-                      item.title === "Mi Institución Aliada" ? "institucion" :
+                      item.title === "Portal Institucional" ? "portal-institucional" :
+                      item.title === "Gestión de Convocatorias" ? "convocatorias" :
+                      item.title === "Nominaciones Recibidas" ? "nominaciones" :
+                      item.title === "Integración con PDU" ? "pdu-resultados" :
+                      item.title === "Instituciones Aliadas" ? "instituciones" :
                       "reglamento"
                     ) 
                       ? "bg-orange/10 border-orange/40" 
@@ -135,16 +136,67 @@ const ImpactoProgram = () => {
         {/* Main Content */}
         <main className="flex-1 px-6 py-8">
           <div className="max-w-7xl mx-auto">
-            {activeModule === "mi-beca" ? (
-              <Dashboard />
-            ) : activeModule === "mentoria" ? (
-              <Mentoria />
-            ) : activeModule === "documentos" ? (
-              <RenovacionDocumentos />
-            ) : activeModule === "situaciones" ? (
-              <SituacionesEspeciales />
-            ) : activeModule === "institucion" ? (
-              <InstitucionAliada />
+            {activeModule === "portal-institucional" ? (
+              <div className="space-y-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <h2 className="text-xl font-bold text-red-800 mb-4">
+                    🔒 Portal Exclusivo para Instituciones Aliadas
+                  </h2>
+                  <div className="space-y-4 text-red-700">
+                    <p className="font-medium">
+                      El Programa Impacto es de CONVOCATORIA CERRADA
+                    </p>
+                    <div className="space-y-2">
+                      <p>• NO es una beca pública donde estudiantes regulares pueden postularse</p>
+                      <p>• Solo instituciones autorizadas pueden nominar estudiantes vulnerables</p>
+                      <p>• Máximo 30 nominaciones por institución</p>
+                      <p>• Acceso controlado con usuario y contraseña</p>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Instituciones Aliadas Autorizadas:</h3>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Fe y Alegría</li>
+                        <li>Mano Amiga</li>
+                        <li>Colegios asociados (casos especiales)</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
+                      <h4 className="font-semibold text-yellow-800">Proceso del Programa:</h4>
+                      <ol className="list-decimal list-inside mt-2 space-y-1 text-yellow-700">
+                        <li>DDBE abre convocatoria (fechas específicas)</li>
+                        <li>Instituciones acceden con credenciales</li>
+                        <li>Cargan estudiantes nominados (máx. 30)</li>
+                        <li>Sistema consolida nominaciones</li>
+                        <li>Envío a Admisiones para PDU</li>
+                        <li>Comité de Becas toma decisión final</li>
+                        <li>Seguimiento se transfiere al módulo de acompañamiento</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : activeModule === "convocatorias" ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Módulo de Gestión de Convocatorias - En desarrollo</p>
+                <p className="text-sm text-muted-foreground mt-2">Funciones: Abrir/cerrar convocatorias, definir fechas, establecer cupos</p>
+              </div>
+            ) : activeModule === "nominaciones" ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Módulo de Nominaciones Recibidas - En desarrollo</p>
+                <p className="text-sm text-muted-foreground mt-2">Ver todas las postulaciones de instituciones, validar documentación</p>
+              </div>
+            ) : activeModule === "pdu-resultados" ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Módulo de Integración PDU - En desarrollo</p>
+                <p className="text-sm text-muted-foreground mt-2">Exportar listas, importar resultados, seguimiento de candidatos</p>
+              </div>
+            ) : activeModule === "instituciones" ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Módulo de Instituciones Aliadas - En desarrollo</p>
+                <p className="text-sm text-muted-foreground mt-2">Gestión de credenciales, límites de cupos, control de accesos</p>
+              </div>
             ) : activeModule === "reglamento" ? (
               <div className="flex justify-center">
                 <ReglamentoAccess becaType="impacto" />
@@ -152,10 +204,10 @@ const ImpactoProgram = () => {
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">
-                  Bienvenido al Programa de Impacto
+                  Portal de Instituciones Aliadas - Programa Impacto
                 </h2>
                 <p className="text-muted-foreground">
-                  Utiliza el menú lateral para navegar entre los diferentes módulos
+                  Utiliza el menú lateral para navegar entre los diferentes módulos administrativos
                 </p>
               </div>
             )}
