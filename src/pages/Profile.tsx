@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchProfile } from "@/lib/api";
 import { 
   GraduationCap, 
   LogOut, 
@@ -16,26 +19,63 @@ import {
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { tokens, logoutAndNavigateHome } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<null | {
+    id: string;
+    email: string;
+    nombre: string;
+    apellido?: string;
+    telefono?: string;
+    cedula?: string;
+    role: string;
+    carrera?: string | null;
+    semestre?: number | null;
+    activo: boolean;
+    emailVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>(null);
 
   const handleLogout = () => {
-    navigate("/login");
+    logoutAndNavigateHome();
   };
 
-  // Mock user data based on the provided structure
-  const userData = {
-    id: 1,
-    nombre: "Juan Carlos",
-    apellido: "Pérez González",
-    cedula: "V-12345678",
-    carnet: "20180001",
-    telefono: "+58-212-1234567",
-    email: "juan.perez@unimet.edu.ve",
-    tipo_usuario: "estudiante",
-    activo: true,
-    ultimo_acceso: "2025-01-13T10:30:00Z",
-    creado_en: "2025-01-01T08:00:00Z",
-    actualizado_en: "2025-01-13T10:30:00Z"
-  };
+  useEffect(() => {
+    const run = async () => {
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
+      const accessToken = tokens?.accessToken || stored?.accessToken;
+      if (!accessToken) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetchProfile(accessToken);
+        setProfile(res.data);
+      } catch (e: any) {
+        setError(e?.message || 'No se pudo cargar el perfil');
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, [tokens?.accessToken]);
+
+  const userData = useMemo(() => {
+    return {
+      id: profile?.id || '-',
+      nombre: profile?.nombre || '-',
+      apellido: profile?.apellido || '-',
+      cedula: profile?.cedula || '-',
+      telefono: profile?.telefono || '-',
+      email: profile?.email || '-',
+      tipo_usuario: profile?.role || '-',
+      activo: profile?.activo ?? false,
+      ultimo_acceso: profile?.updatedAt || new Date().toISOString(),
+      creado_en: profile?.createdAt || new Date().toISOString(),
+      actualizado_en: profile?.updatedAt || new Date().toISOString(),
+    };
+  }, [profile]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('es-ES', {

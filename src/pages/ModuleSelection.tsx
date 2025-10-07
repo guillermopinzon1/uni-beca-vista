@@ -1,13 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { GraduationCap, LogOut, User } from "lucide-react";
 
 const ModuleSelection = () => {
   const navigate = useNavigate();
+  const { logoutAndNavigateHome } = useAuth();
 
   const handleLogout = () => {
-    navigate("/");
+  logoutAndNavigateHome();
   };
 
   const modules = [

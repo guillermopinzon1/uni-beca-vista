@@ -16,7 +16,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { loginSuccess } = useAuth();
+  const { loginSuccess, logoutAndNavigateHome } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +143,7 @@ const Login = () => {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() => navigate("/")}
+                  onClick={logoutAndNavigateHome}
                   className="mt-4"
                 >
                   Volver al Inicio

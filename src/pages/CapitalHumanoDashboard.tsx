@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { Search, CheckCircle, AlertTriangle, Users, Clock, FileText, Briefcase }
 
 const CapitalHumanoDashboard = () => {
   const navigate = useNavigate();
+  const { logoutAndNavigateHome } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Mock data for employees with children beneficiaries
@@ -92,7 +94,7 @@ const CapitalHumanoDashboard = () => {
             <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
-                onClick={() => navigate("/")}
+                onClick={logoutAndNavigateHome}
                 className="border-orange/20 hover:bg-orange/5"
               >
                 ← Volver al Inicio

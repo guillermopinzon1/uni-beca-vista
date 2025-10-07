@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import EstudiantesBecarios from "@/components/admin/EstudiantesBecarios";
 import GestionSupervisores from "@/components/admin/GestionSupervisores";
 import GestionPostulaciones from "@/components/admin/GestionPostulaciones";
@@ -10,6 +11,7 @@ import ConfiguracionBecas from "@/components/admin/ConfiguracionBecas";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { logoutAndNavigateHome } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("estudiantes-becarios");
 
@@ -50,7 +52,7 @@ const AdminDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={logoutAndNavigateHome}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

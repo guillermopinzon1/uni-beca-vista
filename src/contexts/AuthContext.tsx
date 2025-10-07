@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { logoutSession } from '@/lib/api';
 
 interface AuthUser {
   id: string;
   email: string;
   nombre: string;
-  apellido: string;
+  apellido?: string;
   role: string;
   activo: boolean;
 }
@@ -22,6 +23,7 @@ interface AuthContextType {
   tokens: AuthTokens | null;
   loginSuccess: (user: AuthUser, tokens: AuthTokens) => void;
   logout: () => void;
+  logoutAndNavigateHome: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,13 +67,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   };
 
+  const logoutAndNavigateHome = async () => {
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+    try {
+      if (accessToken) await logoutSession(accessToken);
+    } catch {}
+    logout();
+    navigate('/');
+  };
+
   // Nota: Se desactiva auto-logout en cambios de ruta para evitar cerrar sesión inesperadamente.
   // Si necesitas lógica específica de seguridad por ruta, agrégala aquí con condiciones explícitas.
 
   // Auto-logout por navegación deshabilitado.
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, tokens, loginSuccess, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, user, tokens, loginSuccess, logout, logoutAndNavigateHome }}>
       {children}
     </AuthContext.Provider>
   );

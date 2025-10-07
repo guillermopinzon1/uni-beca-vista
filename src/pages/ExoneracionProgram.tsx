@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, LayoutDashboard, Users, FileText, AlertTriangle, DollarSign, GraduationCap } from "lucide-react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useState } from "react";
@@ -12,6 +13,7 @@ import AlineacionCarrera from "@/components/exoneracion/AlineacionCarrera";
 
 const ExoneracionProgram = () => {
   const navigate = useNavigate();
+  const { logoutAndNavigateHome } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("mi-beneficio");
   
@@ -85,7 +87,7 @@ const ExoneracionProgram = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+            onClick={logoutAndNavigateHome}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

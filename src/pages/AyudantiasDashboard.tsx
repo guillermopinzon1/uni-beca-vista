@@ -1,5 +1,6 @@
 
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import BuscarAyudantes from "@/components/ayudantias/BuscarAyudantes";
 
 const AyudantiasDashboard = () => {
   const navigate = useNavigate();
+  const { logoutAndNavigateHome } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("lista-ayudantes");
 
@@ -34,7 +36,7 @@ const AyudantiasDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={logoutAndNavigateHome}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
