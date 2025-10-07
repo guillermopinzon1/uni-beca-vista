@@ -1,24 +1,18 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, Search, Clock } from "lucide-react";
+import { ArrowLeft, Users, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import ListaAyudantes from "@/components/ayudantias/ListaAyudantes";
 import BuscarAyudantes from "@/components/ayudantias/BuscarAyudantes";
-import MisHoras from "@/components/ayudantias/MisHoras";
 
 const AyudantiasDashboard = () => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [activeModule, setActiveModule] = useState<string | null>("mis-horas");
+  const [activeModule, setActiveModule] = useState<string | null>("lista-ayudantes");
 
   const sidebarItems = [
-    {
-      title: "Mis Horas",
-      icon: Clock,
-      onClick: () => setActiveModule("mis-horas")
-    },
     {
       title: "Lista de Ayudantes",
       icon: Users,
@@ -96,9 +90,7 @@ const AyudantiasDashboard = () => {
         {/* Main Content */}
         <main className="flex-1 px-6 py-8">
           <div className="max-w-7xl mx-auto">
-            {activeModule === "mis-horas" ? (
-              <MisHoras />
-            ) : activeModule === "lista-ayudantes" ? (
+            {activeModule === "lista-ayudantes" ? (
               <ListaAyudantes />
             ) : activeModule === "buscar-ayudantes" ? (
               <BuscarAyudantes />

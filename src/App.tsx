@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Requisitos from "./pages/Requisitos";
 import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
+import Ayudantias from "./pages/Ayudantias";
 import AdminDashboard from "./pages/AdminDashboard";
 import EstudianteDetail from "./pages/EstudianteDetail";
 import ScholarshipPrograms from "./pages/ScholarshipPrograms";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/modules" element={<ModuleSelection />} />
+          <Route path="/ayudantias" element={<Ayudantias />} />
           <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/estudiante/:id" element={<EstudianteDetail />} />
