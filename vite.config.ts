@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "localhost",
-    port: 3000,
+    port: 8080,
     // Para HTTPS local, genera certificados con mkcert y descomenta:
     // https: {
     //   key: fs.readFileSync(path.resolve(__dirname, 'certs/localhost-key.pem')),
