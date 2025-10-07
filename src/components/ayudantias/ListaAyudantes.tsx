@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,8 +6,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Eye, Check, X, Clock, Calendar } from "lucide-react";
+import { Eye, Check, X, Clock, Calendar, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { fetchUsers } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface UsuarioAyudante {
+  id: string;
+  email: string;
+  nombre: string;
+  apellido: string;
+  cedula?: string;
+  telefono?: string;
+  carrera?: string;
+  semestre?: number;
+}
+
+interface ReporteHoras {
+  id: string;
+  fecha: string;
+  horas: number;
+  descripcion: string;
+  estado: 'pendiente' | 'aprobado' | 'rechazado';
+  notas?: string;
+}
 
 interface Ayudante {
   id: string;
@@ -29,128 +51,71 @@ interface ReporteHoras {
   notas?: string;
 }
 
-const ayudantesDummy: Ayudante[] = [
-  {
-    id: "1",
-    nombre: "María",
-    apellido: "González",
-    cedula: "27.543.123",
-    trimestre: 6,
-    horasRegistradas: 45,
-    horasPendientes: 8,
-    reportesHoras: [
-      {
-        id: "r1",
-        fecha: "2024-01-15",
-        horas: 8,
-        descripcion: "Apoyo en clases de laboratorio de química",
-        estado: "pendiente"
-      },
-      {
-        id: "r2",
-        fecha: "2024-01-08",
-        horas: 6,
-        descripcion: "Preparación de material didáctico",
-        estado: "aprobado"
-      },
-      {
-        id: "r3",
-        fecha: "2024-01-01",
-        horas: 4,
-        descripcion: "Tutorías a estudiantes de primer año",
-        estado: "rechazado",
-        notas: "Falta documentación de las actividades realizadas"
-      }
-    ]
-  },
-  {
-    id: "2", 
-    nombre: "Carlos",
-    apellido: "Rodríguez",
-    cedula: "29.876.456",
-    trimestre: 5,
-    horasRegistradas: 32,
-    horasPendientes: 12,
-    reportesHoras: [
-      {
-        id: "r4",
-        fecha: "2024-01-12",
-        horas: 12,
-        descripcion: "Asistencia en investigación de física aplicada",
-        estado: "pendiente"
-      },
-      {
-        id: "r5",
-        fecha: "2024-01-05",
-        horas: 5,
-        descripcion: "Organización de biblioteca departamental",
-        estado: "aprobado"
-      }
-    ]
-  },
-  {
-    id: "3",
-    nombre: "Ana",
-    apellido: "Martínez",
-    cedula: "28.234.789",
-    trimestre: 7,
-    horasRegistradas: 67,
-    horasPendientes: 5,
-    reportesHoras: [
-      {
-        id: "r6",
-        fecha: "2024-01-10",
-        horas: 5,
-        descripcion: "Apoyo en eventos académicos",
-        estado: "pendiente"
-      }
-    ]
-  },
-  {
-    id: "4",
-    nombre: "Luis",
-    apellido: "Hernández", 
-    cedula: "26.987.321",
-    trimestre: 8,
-    horasRegistradas: 28,
-    horasPendientes: 15,
-    reportesHoras: [
-      {
-        id: "r7",
-        fecha: "2024-01-14",
-        horas: 15,
-        descripcion: "Desarrollo de material multimedia para clases",
-        estado: "pendiente"
-      }
-    ]
-  },
-  {
-    id: "5",
-    nombre: "Sofia",
-    apellido: "López",
-    cedula: "30.123.654",
-    trimestre: 4,
-    horasRegistradas: 41,
-    horasPendientes: 7,
-    reportesHoras: [
-      {
-        id: "r8",
-        fecha: "2024-01-13",
-        horas: 7,
-        descripcion: "Monitoreo de estudiantes en prácticas",
-        estado: "pendiente"
-      }
-    ]
-  }
-];
+const ayudantesDummy: never[] = [];
 
 const ListaAyudantes = () => {
   const { toast } = useToast();
+  const { tokens } = useAuth();
+  const [usuarios, setUsuarios] = useState<UsuarioAyudante[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedAyudante, setSelectedAyudante] = useState<Ayudante | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notas, setNotas] = useState("");
 
-  const handleVerHoras = (ayudante: Ayudante) => {
+  const loadUsuarios = async () => {
+    const stored = (() => {
+      try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; }
+    })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar usuarios', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchUsers(accessToken);
+      const mapped = res.data.usuarios
+        .filter(u => !u.role || u.role === 'ayudante')
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          nombre: u.nombre,
+          apellido: u.apellido,
+          cedula: u.cedula,
+          telefono: u.telefono,
+          carrera: u.carrera,
+          semestre: u.semestre,
+        }));
+      setUsuarios(mapped);
+    } catch (e: any) {
+      setError(e?.message || 'No se pudieron cargar los usuarios');
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los usuarios', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsuarios();
+  }, [tokens?.accessToken]);
+
+  const buildAyudanteFromUsuario = (u: UsuarioAyudante): Ayudante => {
+    return {
+      id: u.id,
+      nombre: u.nombre,
+      apellido: u.apellido,
+      cedula: u.cedula || '-',
+      trimestre: typeof u.semestre === 'number' ? u.semestre : 0,
+      horasRegistradas: 0,
+      horasPendientes: 0,
+      reportesHoras: [],
+    };
+  };
+
+  const handleVerHoras = (u: UsuarioAyudante) => {
+    const ayudante = buildAyudanteFromUsuario(u);
     setSelectedAyudante(ayudante);
     setIsModalOpen(true);
     setNotas("");
@@ -173,7 +138,6 @@ const ListaAyudantes = () => {
       });
       return;
     }
-    
     toast({
       title: "Horas rechazadas",
       description: "Las horas han sido rechazadas con observaciones.",
@@ -199,9 +163,21 @@ const ListaAyudantes = () => {
           <h2 className="text-2xl font-bold text-primary">Lista de Ayudantes</h2>
           <p className="text-muted-foreground">Gestiona los estudiantes ayudantes y sus horas registradas</p>
         </div>
-        <Badge variant="secondary" className="text-orange">
-          {ayudantesDummy.length} ayudantes activos
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-orange">
+            {usuarios.length} ayudantes activos
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadUsuarios}
+            disabled={loading}
+            className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Recargar
+          </Button>
+        </div>
       </div>
 
       <Card className="border border-orange/20">
@@ -213,52 +189,40 @@ const ListaAyudantes = () => {
             <table className="w-full">
               <thead className="bg-muted/50 border-b border-orange/20">
                 <tr>
+                  <th className="text-left p-4 font-semibold text-primary">Email</th>
                   <th className="text-left p-4 font-semibold text-primary">Nombre</th>
                   <th className="text-left p-4 font-semibold text-primary">Apellido</th>
                   <th className="text-left p-4 font-semibold text-primary">Cédula</th>
-                  <th className="text-center p-4 font-semibold text-primary">Trimestre</th>
-                  <th className="text-center p-4 font-semibold text-primary">Horas Registradas</th>
-                  <th className="text-center p-4 font-semibold text-primary">Horas Pendientes</th>
+                  <th className="text-left p-4 font-semibold text-primary">Teléfono</th>
+                  <th className="text-left p-4 font-semibold text-primary">Carrera</th>
+                  <th className="text-center p-4 font-semibold text-primary">Semestre</th>
                   <th className="text-center p-4 font-semibold text-primary">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {ayudantesDummy.map((ayudante, index) => (
+                {usuarios.map((u, index) => (
                   <tr 
-                    key={ayudante.id} 
+                    key={u.id} 
                     className={`border-b border-orange/10 hover:bg-orange/5 transition-colors ${
                       index % 2 === 0 ? 'bg-background' : 'bg-muted/20'
                     }`}
                   >
-                    <td className="p-4 text-primary font-medium">{ayudante.nombre}</td>
-                    <td className="p-4 text-primary font-medium">{ayudante.apellido}</td>
-                    <td className="p-4 text-muted-foreground">{ayudante.cedula}</td>
+                    <td className="p-4 text-primary font-medium">{u.email}</td>
+                    <td className="p-4 text-primary font-medium">{u.nombre}</td>
+                    <td className="p-4 text-primary font-medium">{u.apellido}</td>
+                    <td className="p-4 text-muted-foreground">{u.cedula || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{u.telefono || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{u.carrera || '-'}</td>
                     <td className="p-4 text-center">
                       <Badge variant="outline" className="border-primary/20 text-primary">
-                        {ayudante.trimestre}°
+                        {u.semestre ?? '-'}
                       </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Badge variant="outline" className="border-orange/40 text-orange">
-                        {ayudante.horasRegistradas}h
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      {ayudante.horasPendientes > 0 ? (
-                        <Badge variant="destructive" className="bg-orange/10 text-orange border-orange/40">
-                          {ayudante.horasPendientes}h
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-muted-foreground">
-                          0h
-                        </Badge>
-                      )}
                     </td>
                     <td className="p-4 text-center">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleVerHoras(ayudante)}
+                        onClick={() => handleVerHoras(u)}
                         className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
                       >
                         <Eye className="h-4 w-4 mr-2" />

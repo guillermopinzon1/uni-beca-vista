@@ -4,33 +4,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, GraduationCap, Briefcase, Award } from "lucide-react";
+import { Shield } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
+import { loginUser } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { loginSuccess } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (email && password && role) {
+    try {
+      // Validación de dominio de email
+      if (!email.endsWith("@unimet.edu.ve")) {
+        throw new Error("El correo debe ser del dominio @unimet.edu.ve");
+      }
+
+      const result = await loginUser({ email, password });
+
+      // Guardar en contexto + localStorage
+      loginSuccess(result.data.user, result.data.tokens);
+
       toast({
         title: "Inicio de sesión exitoso",
-        description: "Bienvenido al Sistema de Gestión de Becas",
+        description: result.message || "Bienvenido al Sistema de Gestión de Becas",
       });
-      
-      // Navigate based on role
+
+      // Navegar según el rol que retorna el backend
+      const role = result.data.user.role;
       if (role === "ayudante") {
         navigate("/modules");
       } else if (role === "supervisor") {
@@ -45,16 +54,18 @@ const Login = () => {
         navigate("/capital-humano-dashboard");
       } else if (role === "supervisor-laboral") {
         navigate("/supervisor-laboral-dashboard");
+      } else {
+        navigate("/");
       }
-    } else {
+    } catch (err: any) {
       toast({
-        title: "Error",
-        description: "Por favor complete todos los campos",
+        title: "Error de inicio de sesión",
+        description: err?.message || "Credenciales inválidas",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -113,58 +124,7 @@ const Login = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Tipo de Usuario</Label>
-                  <Select onValueChange={setRole}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona tu rol" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ayudante">
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4" />
-                          <span>Ayudante - Estudiante</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="supervisor">
-                        <div className="flex items-center space-x-2">
-                          <Shield className="h-4 w-4" />
-                          <span>Supervisor</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="mentor">
-                        <div className="flex items-center space-x-2">
-                          <GraduationCap className="h-4 w-4" />
-                          <span>Mentor</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="admin">
-                        <div className="flex items-center space-x-2">
-                          <Shield className="h-4 w-4" />
-                          <span>Administrador</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="director-area">
-                        <div className="flex items-center space-x-2">
-                          <Award className="h-4 w-4" />
-                          <span>Director de Área</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="capital-humano">
-                        <div className="flex items-center space-x-2">
-                          <Briefcase className="h-4 w-4" />
-                          <span>Capital Humano</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="supervisor-laboral">
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4" />
-                          <span>Supervisor Laboral</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* El rol ahora lo determina el backend a partir del email */}
                 <Button
                   type="submit"
                   className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"

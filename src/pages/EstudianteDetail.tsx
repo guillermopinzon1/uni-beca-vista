@@ -7,11 +7,31 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Edit, Save, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchUserById } from "@/lib/api";
 
 const EstudianteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { tokens } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<null | {
+    id: string;
+    email: string;
+    nombre: string;
+    apellido?: string;
+    cedula?: string;
+    telefono?: string;
+    role: string;
+    carrera?: string | null;
+    semestre?: number | null;
+    activo: boolean;
+    emailVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     nombreCompleto: "María González Rodríguez",
@@ -46,42 +66,63 @@ const EstudianteDetail = () => {
     setEditData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Datos simulados del estudiante - en una app real, esto vendría de una API
-  const estudianteData = {
-    id: id,
-    // Datos personales
-    nombreCompleto: editData.nombreCompleto,
-    cedula: editData.cedula,
-    correoElectronico: editData.correoElectronico,
-    telefono: editData.telefono,
-    fechaNacimiento: editData.fechaNacimiento,
-    estadoCivil: editData.estadoCivil,
-    
-    // Datos académicos
-    tipoPostulante: editData.tipoPostulante,
-    carrera: editData.carrera,
-    trimestreActual: parseInt(editData.trimestreActual),
-    iaa: parseFloat(editData.iaa),
-    asignaturasAprobadas: parseInt(editData.asignaturasAprobadas),
-    creditosInscritos: parseInt(editData.creditosInscritos),
-    
-    // Datos de la beca
-    tipoBeca: "Excelencia Académica",
-    estadoPostulacion: "Aprobada",
-    fechaPostulacion: "2024-01-15",
-    
-    // Documentos
-    documentos: [
-      { nombre: "Fotocopia de Cédula de Identidad", estado: "Aprobado" },
-      { nombre: "Flujograma de carrera", estado: "Aprobado" },
-      { nombre: "Histórico de notas", estado: "Aprobado" },
-      { nombre: "Plan de carrera avalado", estado: "Aprobado" },
-      { nombre: "Currículum deportivo", estado: "No aplica" }
-    ],
+  useEffect(() => {
+    const run = async () => {
+      if (!id) return;
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
+      const accessToken = tokens?.accessToken || stored?.accessToken;
+      if (!accessToken) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetchUserById(accessToken, id);
+        setUser(res.data);
+      } catch (e: any) {
+        setError(e?.message || 'No se pudo cargar el usuario');
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, [id, tokens?.accessToken]);
 
-    // Información adicional
-    observaciones: "Estudiante ejemplar con excelente rendimiento académico y participación en actividades extracurriculares."
-  };
+  const estudianteData = useMemo(() => {
+    const nombreCompleto = user ? `${user.nombre}${user.apellido ? ' ' + user.apellido : ''}` : editData.nombreCompleto;
+    return {
+      id: id,
+      // Datos personales
+      nombreCompleto,
+      cedula: user?.cedula || editData.cedula,
+      correoElectronico: user?.email || editData.correoElectronico,
+      telefono: user?.telefono || editData.telefono,
+      fechaNacimiento: editData.fechaNacimiento, // no provisto por el endpoint
+      estadoCivil: editData.estadoCivil, // no provisto por el endpoint
+      
+      // Datos académicos
+      tipoPostulante: editData.tipoPostulante, // no provisto por el endpoint
+      carrera: (user?.carrera as string) || editData.carrera,
+      trimestreActual: typeof user?.semestre === 'number' ? user?.semestre : parseInt(editData.trimestreActual),
+      iaa: parseFloat(editData.iaa), // no provisto por el endpoint
+      asignaturasAprobadas: parseInt(editData.asignaturasAprobadas), // no provisto por el endpoint
+      creditosInscritos: parseInt(editData.creditosInscritos), // no provisto por el endpoint
+      
+      // Datos de la beca (no provistos por el endpoint, dejamos placeholders)
+      tipoBeca: "-",
+      estadoPostulacion: user?.activo ? 'Aprobada' : 'Suspendida',
+      fechaPostulacion: "2024-01-15",
+      
+      // Documentos (placeholder)
+      documentos: [
+        { nombre: "Fotocopia de Cédula de Identidad", estado: "Aprobado" },
+        { nombre: "Flujograma de carrera", estado: "Aprobado" },
+        { nombre: "Histórico de notas", estado: "Aprobado" },
+        { nombre: "Plan de carrera avalado", estado: "Aprobado" },
+      ],
+      
+      // Información adicional (placeholder)
+      observaciones: ""
+    };
+  }, [user, editData, id]);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {

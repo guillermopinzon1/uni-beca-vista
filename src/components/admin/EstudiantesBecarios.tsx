@@ -4,10 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Download, Eye, Calendar, Clock, FileText, BarChart3 } from "lucide-react";
-import { useState } from "react";
+import { Search, Filter, Download, Eye, Calendar, Clock, FileText, BarChart3, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchUsers } from "@/lib/api";
 
 interface EstudianteBecario {
   id: string;
@@ -40,10 +43,14 @@ interface ReporteActividad {
 
 const EstudiantesBecarios = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { tokens } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBeca, setFilterBeca] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [activeTab, setActiveTab] = useState("estudiantes");
+  const [loading, setLoading] = useState(false);
+  const [usuarios, setUsuarios] = useState<Array<{ id: string; nombre: string; apellido?: string; cedula?: string; carrera?: string; semestre?: number }>>([]);
   
   // Estados para reportes de actividades
   const [searchTermReportes, setSearchTermReportes] = useState("");
@@ -54,45 +61,36 @@ const EstudiantesBecarios = () => {
     navigate(`/estudiante/${estudianteId}`);
   };
 
-  // Mock data para estudiantes
-  const estudiantes: EstudianteBecario[] = [
-    {
-      id: "1",
-      nombre: "Ana García López",
-      cedula: "V-12345678",
-      carrera: "Ingeniería de Sistemas",
-      semestre: 8,
-      promedio: 18.5,
-      tipoBeca: "Excelencia Académica",
-      estado: "Activo",
-      supervisor: "Dr. Carlos Mendoza",
-      fechaInicio: "2024-09-01"
-    },
-    {
-      id: "2",
-      nombre: "Carlos Rodríguez Pérez",
-      cedula: "V-23456789",
-      carrera: "Administración",
-      semestre: 6,
-      promedio: 17.2,
-      tipoBeca: "Ayudantía",
-      estado: "Activo",
-      supervisor: "Prof. Ana Martínez",
-      fechaInicio: "2024-09-01"
-    },
-    {
-      id: "3",
-      nombre: "María González Silva",
-      cedula: "V-34567890",
-      carrera: "Psicología",
-      semestre: 7,
-      promedio: 18.8,
-      tipoBeca: "Impacto Social",
-      estado: "Suspendido",
-      supervisor: "Dra. Laura Vásquez",
-      fechaInicio: "2024-09-01"
+  // Carga de usuarios desde backend (reemplaza mock)
+  const loadUsuarios = async () => {
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar usuarios', variant: 'destructive' });
+      return;
     }
-  ];
+    setLoading(true);
+    try {
+      const res = await fetchUsers(accessToken);
+      const mapped = res.data.usuarios.map(u => ({
+        id: u.id,
+        nombre: u.nombre,
+        apellido: (u as any).apellido,
+        cedula: u.cedula,
+        carrera: u.carrera,
+        semestre: u.semestre,
+      }));
+      setUsuarios(mapped);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los usuarios', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsuarios();
+  }, [tokens?.accessToken]);
 
   // Mock data para reportes de actividades
   const reportes: ReporteActividad[] = [
@@ -176,7 +174,22 @@ const EstudiantesBecarios = () => {
     return "bg-red-500";
   };
 
-  const filteredEstudiantes = estudiantes.filter(estudiante => {
+  const estudiantesFromApi: EstudianteBecario[] = useMemo(() => {
+    return usuarios.map(u => ({
+      id: u.id,
+      nombre: u.apellido ? `${u.nombre} ${u.apellido}` : u.nombre,
+      cedula: u.cedula || '-',
+      carrera: u.carrera || '-',
+      semestre: typeof u.semestre === 'number' ? u.semestre : 0,
+      promedio: 0,
+      tipoBeca: '-',
+      estado: 'Activo',
+      supervisor: '-',
+      fechaInicio: ''
+    }));
+  }, [usuarios]);
+
+  const filteredEstudiantes = estudiantesFromApi.filter(estudiante => {
     const matchesSearch = 
       estudiante.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       estudiante.cedula.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -309,6 +322,16 @@ const EstudiantesBecarios = () => {
                 <Badge variant="secondary" className="text-orange">
                   {filteredEstudiantes.length} estudiantes encontrados
                 </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadUsuarios}
+                  disabled={loading}
+                  className="ml-2 border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Recargar
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
