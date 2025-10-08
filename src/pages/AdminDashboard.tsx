@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings } from "lucide-react";
+import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, Cog } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import EstudiantesBecarios from "@/components/admin/EstudiantesBecarios";
@@ -8,6 +8,7 @@ import GestionSupervisores from "@/components/admin/GestionSupervisores";
 import GestionPostulaciones from "@/components/admin/GestionPostulaciones";
 import GestionPlazas from "@/components/admin/GestionPlazas";
 import ConfiguracionBecas from "@/components/admin/ConfiguracionBecas";
+import ConfiguracionSistema from "@/components/admin/ConfiguracionSistema";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -40,6 +41,11 @@ const AdminDashboard = () => {
       title: "Configuración de Becas",
       icon: Settings,
       onClick: () => setActiveModule("configuracion")
+    },
+    {
+      title: "Configuración del Sistema",
+      icon: Cog,
+      onClick: () => setActiveModule("sistema")
     }
   ];
 
@@ -118,6 +124,8 @@ const AdminDashboard = () => {
               <GestionPlazas />
             ) : activeModule === "configuracion" ? (
               <ConfiguracionBecas />
+            ) : activeModule === "sistema" ? (
+              <ConfiguracionSistema />
             ) : (
               <div className="text-center py-16">
                 <h2 className="text-2xl font-bold text-primary mb-4">

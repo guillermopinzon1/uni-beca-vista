@@ -182,10 +182,10 @@ const Profile = () => {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Carnet</label>
+                      <label className="text-sm font-medium text-muted-foreground">ID Usuario</label>
                       <div className="flex items-center gap-2">
                         <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-foreground">{userData.carnet}</span>
+                        <span className="text-foreground text-xs">{userData.id}</span>
                       </div>
                     </div>
                     <div className="space-y-2">
