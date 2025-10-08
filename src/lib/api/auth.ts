@@ -51,54 +51,69 @@ export async function loginUser(body: LoginRequestBody): Promise<LoginSuccessRes
   return payload as LoginSuccessResponse;
 }
 
-export async function logoutSession(accessToken: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/v1/auth/logout`, {
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: true;
+  message: string;
+  timestamp: string;
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  const response = await fetch(`${API_BASE}/v1/auth/forgot-password`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ email }),
   });
-  // Backend puede responder 200/204; si falla, no bloqueamos la salida local
-}
 
-export interface ProfileResponse {
-  success: true;
-  data: {
-    id: string;
-    email: string;
-    nombre: string;
-    apellido?: string;
-    telefono?: string;
-    cedula?: string;
-    role: string;
-    departamento?: string | null;
-    cargo?: string | null;
-    carrera?: string | null;
-    semestre?: number | null;
-    activo: boolean;
-    emailVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
-
-export async function fetchProfile(accessToken: string): Promise<ProfileResponse> {
-  const response = await fetch(`${API_BASE}/v1/auth/profile`, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
   const payload = isJson ? await response.json() : null;
+
   if (!response.ok) {
-    const message = payload?.message || `Error obteniendo perfil (${response.status})`;
+    const message = payload?.message || `Error solicitando recuperación (${response.status})`;
     throw new Error(message);
   }
-  return payload as ProfileResponse;
+
+  return payload as ForgotPasswordResponse;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  nuevaPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: true;
+  message: string;
+  timestamp: string;
+}
+
+export async function resetPassword(token: string, nuevaPassword: string): Promise<ResetPasswordResponse> {
+  const response = await fetch(`${API_BASE}/v1/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, nuevaPassword }),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error restableciendo contraseña (${response.status})`;
+    throw new Error(message);
+  }
+
+  return payload as ResetPasswordResponse;
 }
 
 

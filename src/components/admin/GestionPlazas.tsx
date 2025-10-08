@@ -4,11 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Edit, Users, Building, MapPin } from "lucide-react";
-import { useState } from "react";
+import { Search, Plus, Edit, Users, Building, MapPin, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchPlazas, createPlaza, fetchUsers } from "@/lib/api";
 
 interface Plaza {
   id: string;
@@ -36,14 +39,166 @@ interface AyudanteEnPlaza {
 }
 
 const GestionPlazas = () => {
+  const { toast } = useToast();
+  const { tokens } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartamento, setFilterDepartamento] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [selectedPlaza, setSelectedPlaza] = useState<Plaza | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [plazas, setPlazas] = useState<Plaza[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [supervisores, setSupervisores] = useState<Array<{id: string, nombre: string, apellido?: string, email: string}>>([]);
+  const [loadingSupervisores, setLoadingSupervisores] = useState(false);
 
-  // Mock data
-  const plazas: Plaza[] = [
+  console.log('GestionPlazas component rendering');
+  const [formData, setFormData] = useState({
+    materia: "",
+    codigo: "",
+    departamento: "",
+    ubicacion: "",
+    profesor: "",
+    capacidad: 1,
+    ocupadas: 0,
+    horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
+    estado: "Activa",
+    tipoAyudantia: "academica",
+    descripcionActividades: "",
+    requisitosEspeciales: [""],
+    horasSemana: 10,
+    periodoAcademico: "2025-1",
+    fechaInicio: "",
+    fechaFin: "",
+    supervisorResponsable: "",
+    observaciones: ""
+  });
+  const [creating, setCreating] = useState(false);
+
+  const loadPlazas = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar plazas', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetchPlazas(accessToken, { 
+        departamento: filterDepartamento !== 'todos' ? filterDepartamento : undefined,
+        estado: filterEstado !== 'todos' ? filterEstado : undefined,
+        search: searchTerm || undefined,
+        limit: 20,
+        offset: 0
+      });
+      const mapped = res.data.plazas.map(p => ({
+        id: p.id,
+        nombre: p.materia,
+        departamento: p.departamento,
+        ubicacion: p.ubicacion,
+        supervisor: p.supervisor.nombre + (p.supervisor.apellido ? ` ${p.supervisor.apellido}` : ''),
+        capacidadMaxima: p.capacidad,
+        ayudantesActuales: p.ocupadas,
+        tipoActividad: p.tipoAyudantia,
+        horarios: p.horario.map(h => `${h.dia} ${h.horaInicio}-${h.horaFin}`),
+        estado: p.estado as "Activa" | "Inactiva" | "Completa",
+        descripcion: p.descripcionActividades,
+        requisitos: p.requisitosEspeciales,
+        fechaCreacion: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : 'N/A'
+      }));
+      setPlazas(mapped);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar las plazas', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePlaza = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para crear plazas', variant: 'destructive' });
+      return;
+    }
+    
+    setCreating(true);
+    try {
+      // Filtrar requisitos vacíos
+      const requisitos = formData.requisitosEspeciales.filter(req => req.trim() !== '');
+      
+      const plazaData = {
+        ...formData,
+        requisitosEspeciales: requisitos,
+        fechaInicio: formData.fechaInicio || new Date().toISOString().split('T')[0],
+        fechaFin: formData.fechaFin || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      };
+      
+      await createPlaza(accessToken, plazaData);
+      toast({ title: 'Éxito', description: 'Plaza creada exitosamente' });
+      setIsCreating(false);
+      setFormData({
+        materia: "",
+        codigo: "",
+        departamento: "",
+        ubicacion: "",
+        profesor: "",
+        capacidad: 1,
+        ocupadas: 0,
+        horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
+        estado: "Activa",
+        tipoAyudantia: "academica",
+        descripcionActividades: "",
+        requisitosEspeciales: [""],
+        horasSemana: 10,
+        periodoAcademico: "2025-1",
+        fechaInicio: "",
+        fechaFin: "",
+        supervisorResponsable: "",
+        observaciones: ""
+      });
+      await loadPlazas();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudo crear la plaza', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const loadSupervisores = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      console.log('No access token for loading supervisores');
+      return;
+    }
+    
+    setLoadingSupervisores(true);
+    try {
+      console.log('Loading supervisores...');
+      const res = await fetchUsers(accessToken, { role: 'supervisor' });
+      console.log('Supervisores response:', res);
+      const mapped = res.data.usuarios.map(u => ({
+        id: u.id,
+        nombre: u.nombre,
+        apellido: u.apellido,
+        email: u.email
+      }));
+      setSupervisores(mapped);
+      console.log('Supervisores loaded:', mapped);
+    } catch (e: any) {
+      console.error('Error loading supervisores:', e);
+      setSupervisores([]);
+    } finally {
+      setLoadingSupervisores(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tokens?.accessToken) {
+      loadPlazas();
+      loadSupervisores();
+    }
+  }, [tokens?.accessToken, filterDepartamento, filterEstado, searchTerm]);
+
+  // Mock data (temporal)
+  const plazasMock: Plaza[] = [
     {
       id: "1",
       nombre: "Laboratorio de Sistemas",
@@ -182,55 +337,229 @@ const GestionPlazas = () => {
               Nueva Plaza
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Crear Nueva Plaza</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="nombre">Nombre de la Plaza</Label>
-                  <Input id="nombre" placeholder="Ej: Laboratorio de Química" />
+                  <Label htmlFor="materia">Materia *</Label>
+                  <Input 
+                    id="materia" 
+                    value={formData.materia}
+                    onChange={(e) => setFormData({...formData, materia: e.target.value})}
+                    placeholder="Ej: Cálculo I" 
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="departamento">Departamento</Label>
-                  <Select>
+                  <Label htmlFor="codigo">Código *</Label>
+                  <Input 
+                    id="codigo" 
+                    value={formData.codigo}
+                    onChange={(e) => setFormData({...formData, codigo: e.target.value})}
+                    placeholder="Ej: MAT-101-A" 
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="departamento">Departamento *</Label>
+                  <Input 
+                    id="departamento" 
+                    value={formData.departamento}
+                    onChange={(e) => setFormData({...formData, departamento: e.target.value})}
+                    placeholder="Ej: Matemáticas" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="profesor">Profesor *</Label>
+                  <Input 
+                    id="profesor" 
+                    value={formData.profesor}
+                    onChange={(e) => setFormData({...formData, profesor: e.target.value})}
+                    placeholder="Ej: Dr. Juan Pérez" 
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="ubicacion">Ubicación *</Label>
+                <Input 
+                  id="ubicacion" 
+                  value={formData.ubicacion}
+                  onChange={(e) => setFormData({...formData, ubicacion: e.target.value})}
+                  placeholder="Ej: Edificio A, Piso 3, Oficina 301" 
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="capacidad">Capacidad *</Label>
+                  <Input 
+                    id="capacidad" 
+                    type="number" 
+                    value={formData.capacidad}
+                    onChange={(e) => setFormData({...formData, capacidad: parseInt(e.target.value) || 1})}
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="horasSemana">Horas/Semana *</Label>
+                  <Input 
+                    id="horasSemana" 
+                    type="number" 
+                    value={formData.horasSemana}
+                    onChange={(e) => setFormData({...formData, horasSemana: parseInt(e.target.value) || 10})}
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tipoAyudantia">Tipo de Ayudantía *</Label>
+                  <Select value={formData.tipoAyudantia} onValueChange={(value) => setFormData({...formData, tipoAyudantia: value})}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar departamento" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ingenieria">Ingeniería</SelectItem>
-                      <SelectItem value="administracion">Administración</SelectItem>
-                      <SelectItem value="servicios">Servicios Académicos</SelectItem>
+                      <SelectItem value="academica">Académica</SelectItem>
                       <SelectItem value="investigacion">Investigación</SelectItem>
+                      <SelectItem value="administrativa">Administrativa</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="ubicacion">Ubicación</Label>
-                  <Input id="ubicacion" placeholder="Ej: Edificio A, Piso 2" />
+                  <Label htmlFor="fechaInicio">Fecha Inicio *</Label>
+                  <Input 
+                    id="fechaInicio" 
+                    type="date" 
+                    value={formData.fechaInicio}
+                    onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="capacidad">Capacidad Máxima</Label>
-                  <Input id="capacidad" type="number" placeholder="Ej: 5" />
+                  <Label htmlFor="fechaFin">Fecha Fin *</Label>
+                  <Input 
+                    id="fechaFin" 
+                    type="date" 
+                    value={formData.fechaFin}
+                    onChange={(e) => setFormData({...formData, fechaFin: e.target.value})}
+                  />
                 </div>
               </div>
+              
               <div>
-                <Label htmlFor="supervisor">Supervisor</Label>
-                <Input id="supervisor" placeholder="Nombre del supervisor" />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="supervisorResponsable">Supervisor Responsable *</Label>
+                  {supervisores.length === 0 && !loadingSupervisores && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={loadSupervisores}
+                    >
+                      Recargar
+                    </Button>
+                  )}
+                </div>
+                <Select 
+                  value={formData.supervisorResponsable} 
+                  onValueChange={(value) => setFormData({...formData, supervisorResponsable: value})}
+                  disabled={loadingSupervisores}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      loadingSupervisores 
+                        ? "Cargando supervisores..." 
+                        : supervisores.length === 0 
+                          ? "No hay supervisores disponibles" 
+                          : "Seleccionar supervisor"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supervisores && supervisores.length > 0 ? supervisores.map((supervisor) => (
+                      <SelectItem key={supervisor.id} value={supervisor.id}>
+                        {supervisor.nombre} {supervisor.apellido || ''} ({supervisor.email})
+                      </SelectItem>
+                    )) : (
+                      <SelectItem value="" disabled>
+                        No hay supervisores disponibles
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {supervisores.length === 0 && !loadingSupervisores && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    No se encontraron supervisores. Haz clic en "Recargar" para intentar nuevamente.
+                  </p>
+                )}
               </div>
+              
               <div>
-                <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea id="descripcion" placeholder="Descripción de las actividades..." rows={3} />
+                <Label htmlFor="descripcionActividades">Descripción de Actividades *</Label>
+                <Textarea 
+                  id="descripcionActividades" 
+                  value={formData.descripcionActividades}
+                  onChange={(e) => setFormData({...formData, descripcionActividades: e.target.value})}
+                  placeholder="Apoyo en clases de cálculo, preparación de material didáctico..." 
+                />
               </div>
+              
+              <div>
+                <Label>Requisitos Especiales</Label>
+                {formData.requisitosEspeciales.map((req, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <Input 
+                      value={req}
+                      onChange={(e) => {
+                        const newReqs = [...formData.requisitosEspeciales];
+                        newReqs[index] = e.target.value;
+                        setFormData({...formData, requisitosEspeciales: newReqs});
+                      }}
+                      placeholder={`Requisito ${index + 1}`}
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const newReqs = formData.requisitosEspeciales.filter((_, i) => i !== index);
+                        setFormData({...formData, requisitosEspeciales: newReqs});
+                      }}
+                    >
+                      -
+                    </Button>
+                  </div>
+                ))}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setFormData({...formData, requisitosEspeciales: [...formData.requisitosEspeciales, ""]})}
+                >
+                  + Agregar Requisito
+                </Button>
+              </div>
+              
+              <div>
+                <Label htmlFor="observaciones">Observaciones</Label>
+                <Textarea 
+                  id="observaciones" 
+                  value={formData.observaciones}
+                  onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
+                  placeholder="Plaza prioritaria para el período..." 
+                />
+              </div>
+              
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreating(false)}>
+                <Button variant="outline" onClick={() => setIsCreating(false)} disabled={creating}>
                   Cancelar
                 </Button>
-                <Button onClick={() => setIsCreating(false)}>
-                  Crear Plaza
+                <Button onClick={handleCreatePlaza} disabled={creating}>
+                  {creating ? "Creando..." : "Crear Plaza"}
                 </Button>
               </div>
             </div>
@@ -325,7 +654,18 @@ const GestionPlazas = () => {
       {/* Tabla de plazas */}
       <Card>
         <CardHeader>
-          <CardTitle>Plazas de Ayudantía ({filteredPlazas.length})</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Plazas de Ayudantía ({filteredPlazas.length})</CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadPlazas}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Recargar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -341,7 +681,23 @@ const GestionPlazas = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPlazas.map((plaza) => (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Cargando plazas...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredPlazas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No se encontraron plazas
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredPlazas.map((plaza) => (
                 <TableRow key={plaza.id}>
                   <TableCell>
                     <div>
@@ -465,7 +821,8 @@ const GestionPlazas = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

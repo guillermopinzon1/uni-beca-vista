@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Users, Calendar, FileText, MessageSquare, BarChart3, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import ResumenEstudiantes from "@/components/mentor/ResumenEstudiantes";
@@ -10,7 +9,6 @@ import SolicitudesRetiro from "@/components/mentor/SolicitudesRetiro";
 
 const MentorDashboard = () => {
   const navigate = useNavigate();
-  const { logoutAndNavigateHome } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("resumen");
 
@@ -41,7 +39,7 @@ const MentorDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-            onClick={logoutAndNavigateHome}
+              onClick={() => navigate("/")}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

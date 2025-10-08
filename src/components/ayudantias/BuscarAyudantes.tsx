@@ -1,7 +1,14 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, UserPlus, GraduationCap } from "lucide-react";
+import { GraduationCap, RefreshCw } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { API_BASE } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface EstudianteSinPlaza {
   id: string;
@@ -16,70 +23,39 @@ interface EstudianteSinPlaza {
   tieneCV: boolean;
 }
 
-const estudiantesDummy: EstudianteSinPlaza[] = [
-  {
-    id: "1",
-    nombre: "Pedro",
-    apellido: "Jiménez",
-    cedula: "29.456.789",
-    carrera: "Ingeniería en Sistemas",
-    trimestre: 6,
-    promedio: 17.8,
-    email: "pedro.jimenez@universidad.edu",
-    telefono: "0412-1234567",
-    tieneCV: true
-  },
-  {
-    id: "2",
-    nombre: "Elena",
-    apellido: "Vargas",
-    cedula: "28.987.654",
-    carrera: "Administración",
-    trimestre: 5,
-    promedio: 16.5,
-    email: "elena.vargas@universidad.edu",
-    telefono: "0424-7654321",
-    tieneCV: true
-  },
-  {
-    id: "3",
-    nombre: "Roberto",
-    apellido: "Silva",
-    cedula: "30.234.567",
-    carrera: "Contaduría Pública",
-    trimestre: 7,
-    promedio: 18.2,
-    email: "roberto.silva@universidad.edu",
-    telefono: "0416-9876543",
-    tieneCV: false
-  },
-  {
-    id: "4",
-    nombre: "Carmen",
-    apellido: "Morales",
-    cedula: "27.678.901",
-    carrera: "Ingeniería Industrial",
-    trimestre: 8,
-    promedio: 17.1,
-    email: "carmen.morales@universidad.edu",
-    telefono: "0414-5432109",
-    tieneCV: true
-  },
-  {
-    id: "5",
-    nombre: "Diego",
-    apellido: "Ramos",
-    cedula: "29.123.890",
-    carrera: "Derecho",
-    trimestre: 4,
-    promedio: 16.9,
-    email: "diego.ramos@universidad.edu",
-    telefono: "0426-8765432",
-    tieneCV: true
-  }
-];
+interface DisponibilidadItem {
+  id?: string;
+  usuarioId?: string;
+  disponibilidad?: {
+    lunes?: string[];
+    martes?: string[];
+    miercoles?: string[];
+    jueves?: string[];
+    viernes?: string[];
+    sabado?: string[];
+    domingo?: string[];
+  };
+  usuario?: {
+    id?: string;
+    email?: string;
+    nombre?: string;
+    apellido?: string;
+    role?: string;
+    carrera?: string | null;
+    semestre?: number | null;
+  };
+}
 
 const BuscarAyudantes = () => {
+  const { tokens } = useAuth();
+  const { toast } = useToast();
+  const [disponibilidades, setDisponibilidades] = useState<DisponibilidadItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [limit, setLimit] = useState(20);
+  const [offset, setOffset] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDisp, setSelectedDisp] = useState<DisponibilidadItem | null>(null);
+  const [mensajeCorreo, setMensajeCorreo] = useState("");
   const handleVerCV = (estudiante: EstudianteSinPlaza) => {
     if (!estudiante.tieneCV) {
       alert("Este estudiante no ha subido su CV");
@@ -106,16 +82,64 @@ const BuscarAyudantes = () => {
     return "outline";
   };
 
+  const loadDisponibilidades = async (customOffset?: number) => {
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar disponibilidades', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const resp = await fetch(`${API_BASE}/v1/disponibilidad?limit=${limit}&offset=${customOffset ?? offset}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => null);
+        throw new Error(err?.message || `Error ${resp.status}`);
+      }
+      const data = await resp.json();
+      const items: DisponibilidadItem[] = data?.data?.disponibilidades || data?.data || [];
+      setDisponibilidades(items);
+      if (typeof (data?.data?.limit) === 'number') setLimit(data.data.limit);
+      if (typeof (data?.data?.offset) === 'number') setOffset(data.data.offset);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar las disponibilidades', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDisponibilidades(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokens?.accessToken]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-primary">Buscar Ayudantes</h2>
-          <p className="text-muted-foreground">Encuentra estudiantes sin plaza y propón su incorporación como ayudantes</p>
+          <p className="text-muted-foreground">Estudiantes sin plaza disponibles por su disponibilidad horaria</p>
         </div>
+        <div className="flex items-center gap-2">
         <Badge variant="secondary" className="text-orange">
-          {estudiantesDummy.length} estudiantes disponibles
+            {disponibilidades.length} registros
         </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadDisponibilidades()}
+            disabled={loading}
+            className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Recargar
+          </Button>
+        </div>
       </div>
 
       <Card className="border border-orange/20">
@@ -130,75 +154,48 @@ const BuscarAyudantes = () => {
             <table className="w-full">
               <thead className="bg-muted/50 border-b border-orange/20">
                 <tr>
-                  <th className="text-left p-4 font-semibold text-primary">Estudiante</th>
-                  <th className="text-left p-4 font-semibold text-primary">Cédula</th>
+                  <th className="text-left p-4 font-semibold text-primary">Email</th>
+                  <th className="text-left p-4 font-semibold text-primary">Nombre</th>
+                  <th className="text-left p-4 font-semibold text-primary">Apellido</th>
+                  <th className="text-left p-4 font-semibold text-primary">Rol</th>
                   <th className="text-left p-4 font-semibold text-primary">Carrera</th>
-                  <th className="text-center p-4 font-semibold text-primary">Trimestre</th>
-                  <th className="text-center p-4 font-semibold text-primary">Promedio</th>
-                  <th className="text-left p-4 font-semibold text-primary">Contacto</th>
-                  <th className="text-center p-4 font-semibold text-primary">CV</th>
+                  <th className="text-left p-4 font-semibold text-primary">Semestre</th>
                   <th className="text-center p-4 font-semibold text-primary">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {estudiantesDummy.map((estudiante, index) => (
+                {disponibilidades.map((d, index) => (
                   <tr 
-                    key={estudiante.id} 
+                    key={(d.id || d.usuarioId || index).toString()}
                     className={`border-b border-orange/10 hover:bg-orange/5 transition-colors ${
                       index % 2 === 0 ? 'bg-background' : 'bg-muted/20'
                     }`}
                   >
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium text-primary">{estudiante.nombre} {estudiante.apellido}</p>
-                        <p className="text-sm text-muted-foreground">{estudiante.email}</p>
-                      </div>
-                    </td>
-                    <td className="p-4 text-muted-foreground">{estudiante.cedula}</td>
-                    <td className="p-4 text-primary">{estudiante.carrera}</td>
-                    <td className="p-4 text-center">
-                      <Badge variant="outline" className="border-orange/40">
-                        {estudiante.trimestre}°
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Badge 
-                        variant={getPromedioVariant(estudiante.promedio)}
-                        className={`${getPromedioColor(estudiante.promedio)} border-orange/40`}
-                      >
-                        {estudiante.promedio}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-sm text-muted-foreground">{estudiante.telefono}</p>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleVerCV(estudiante)}
-                        disabled={!estudiante.tieneCV}
-                        className={`${estudiante.tieneCV 
-                          ? 'hover:bg-orange/10 text-orange' 
-                          : 'text-muted-foreground cursor-not-allowed'
-                        }`}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </td>
+                    <td className="p-4 text-primary font-medium">{d.usuario?.email || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{d.usuario?.nombre || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{d.usuario?.apellido || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{d.usuario?.role || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{d.usuario?.carrera ?? '-'}</td>
+                    <td className="p-4 text-muted-foreground">{d.usuario?.semestre ?? '-'}</td>
                     <td className="p-4 text-center">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleProponer(estudiante)}
                         className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+                        onClick={() => { setSelectedDisp(d); setIsModalOpen(true); }}
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Proponer
+                        Ver Horas
                       </Button>
                     </td>
                   </tr>
                 ))}
+                {disponibilidades.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                      {loading ? 'Cargando...' : 'Sin registros de disponibilidad'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -206,8 +203,57 @@ const BuscarAyudantes = () => {
       </Card>
 
       <div className="text-center text-sm text-muted-foreground">
-        <p>Tip: Los estudiantes con promedio verde (≥18) tienen prioridad para ayudantías académicas</p>
+        <p>Tip: Usa los filtros de disponibilidad (próximamente) para afinar la búsqueda.</p>
       </div>
+
+      {/* Modal Ver Horas / Disponibilidad */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-primary">
+              Disponibilidad - {selectedDisp?.usuario?.nombre} {selectedDisp?.usuario?.apellido}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedDisp?.disponibilidad ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                {Object.entries(selectedDisp.disponibilidad).map(([dia, horas]) => (
+                  <div key={dia}>
+                    <p className="text-muted-foreground capitalize">{dia}</p>
+                    <p className="font-medium">{(horas as string[]).length > 0 ? (horas as string[]).join(', ') : '-'}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mensaje-correo">¿Desea enviarle algún mensaje al correo del postulado?</Label>
+                <Textarea
+                  id="mensaje-correo"
+                  placeholder="Escriba un mensaje para el estudiante..."
+                  value={mensajeCorreo}
+                  onChange={(e) => setMensajeCorreo(e.target.value)}
+                  className="min-h-24"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    toast({ title: 'Propuesta enviada', description: mensajeCorreo ? 'Mensaje incluido en la propuesta.' : 'Se ha propuesto al ayudante.' });
+                  }}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  Proponer
+                </Button>
+      </div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No hay disponibilidad cargada para este usuario.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

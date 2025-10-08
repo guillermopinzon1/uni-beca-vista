@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, Calendar, FileText, Activity } from "lucide-react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AvailabilitySchedule from "@/components/AvailabilitySchedule";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,14 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { API_BASE } from "@/lib/api";
 
 const PasanteAyudantiasModules = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, tokens } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("horario-disponibilidad");
   const [activeWeek, setActiveWeek] = useState<string>("semana-1");
-  const [completedWeeks, setCompletedWeeks] = useState<Set<number>>(new Set([1])); // Week 1 is always available
+  const [completedWeeks, setCompletedWeeks] = useState<Set<number>>(new Set());
   const [weeklyDeadlines] = useState<Record<number, Date>>(() => {
     const deadlines: Record<number, Date> = {};
     const now = new Date();
@@ -38,6 +41,45 @@ const PasanteAyudantiasModules = () => {
     reporteSemanal: "",
     observaciones: ""
   });
+  const [loadingReportes, setLoadingReportes] = useState(false);
+  const [reportes, setReportes] = useState<Array<{ id: string; fecha: string; horasTrabajadas: number; descripcionActividades?: string; estado?: string }>>([]);
+
+  const loadReportes = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken || !user?.id) return;
+    setLoadingReportes(true);
+    try {
+      const resp = await fetch(`${API_BASE}/v1/ayudantias/${user.id}/reportes?limit=20&offset=0`, {
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const items = data?.data?.reportes || data?.data || [];
+      const mapped = items.map((r: any) => ({
+        id: r.id,
+        fecha: r.fecha,
+        horasTrabajadas: r.horasTrabajadas,
+        descripcionActividades: r.descripcionActividades || r.actividadesRealizadas,
+        estado: r.estado,
+        semana: r.semana || r.weekNumber,
+      }));
+      setReportes(mapped);
+      
+      // Actualizar semanas completadas basado en los reportes del backend
+      const semanasCompletadas = new Set<number>();
+      mapped.forEach((r: any) => {
+        if (r.semana && r.estado !== 'cancelado') {
+          semanasCompletadas.add(parseInt(r.semana));
+        }
+      });
+      setCompletedWeeks(semanasCompletadas);
+    } catch {}
+    finally { setLoadingReportes(false); }
+  };
+
+  useEffect(() => { loadReportes(); // cargar al entrar
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokens?.accessToken, user?.id]);
 
   const sidebarItems = [
     {
@@ -74,15 +116,46 @@ const PasanteAyudantiasModules = () => {
     return new Date() > deadline && !completedWeeks.has(weekNumber);
   };
 
-  const handleWeekSubmit = (weekNumber: number) => {
-    const newCompletedWeeks = new Set(completedWeeks);
-    newCompletedWeeks.add(weekNumber);
-    setCompletedWeeks(newCompletedWeeks);
-    
-    toast({
-      title: "Reporte enviado",
-      description: `Reporte de la semana ${weekNumber} registrado exitosamente.`,
-    });
+  const handleWeekSubmit = async (weekNumber: number) => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken || !user?.id) {
+        toast({ title: 'Sin sesión', description: 'Inicia sesión para enviar reportes', variant: 'destructive' });
+        return;
+      }
+      const body = {
+        semana: weekNumber,
+        periodoAcademico: '2025-1',
+        fecha: formData.fecha,
+        horasTrabajadas: parseFloat(formData.horas),
+        objetivosPeriodo: formData.objetivos,
+        metasEspecificas: formData.metas,
+        actividadesProgramadas: formData.actividades,
+        actividadesRealizadas: formData.reporteSemanal,
+        descripcionActividades: formData.descripcion,
+        observaciones: formData.observaciones,
+      };
+      const resp = await fetch(`${API_BASE}/v1/ayudantias/${user.id}/reportes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => null);
+        throw new Error(err?.message || `Error ${resp.status}`);
+      }
+      const newCompletedWeeks = new Set(completedWeeks);
+      newCompletedWeeks.add(weekNumber);
+      setCompletedWeeks(newCompletedWeeks);
+      toast({ title: 'Reporte enviado', description: `Semana ${weekNumber} registrada exitosamente.` });
+      await loadReportes();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudo enviar el reporte', variant: 'destructive' });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -367,46 +440,24 @@ const PasanteAyudantiasModules = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">15 Enero 2025 - 4 horas</p>
-                      <p className="text-sm text-muted-foreground">Revisión de materiales académicos</p>
+                  {loadingReportes && (
+                    <div className="text-sm text-muted-foreground">Cargando...</div>
+                  )}
+                  {!loadingReportes && reportes.length === 0 && (
+                    <div className="text-sm text-muted-foreground">Sin actividades registradas</div>
+                  )}
+                  {!loadingReportes && reportes.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{new Date(r.fecha).toLocaleDateString('es-VE')} - {r.horasTrabajadas} horas</p>
+                        <p className="text-sm text-muted-foreground">{r.descripcionActividades || 'Reporte semanal'}</p>
+                      </div>
+                      <div className={`flex items-center ${r.estado === 'aprobado' ? 'text-green-600' : r.estado === 'pendiente' ? 'text-yellow-600' : 'text-muted-foreground'}`}>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        <span className="text-sm">{r.estado ? r.estado.charAt(0).toUpperCase() + r.estado.slice(1) : 'Registrado'}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      <span className="text-sm">Aprobado</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">14 Enero 2025 - 3.5 horas</p>
-                      <p className="text-sm text-muted-foreground">Apoyo en laboratorio de física</p>
-                    </div>
-                    <div className="flex items-center text-yellow-600">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span className="text-sm">Pendiente</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">13 Enero 2025 - 4 horas</p>
-                      <p className="text-sm text-muted-foreground">Preparación de clases prácticas</p>
-                    </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      <span className="text-sm">Aprobado</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium">12 Enero 2025 - 3 horas</p>
-                      <p className="text-sm text-muted-foreground">Tutoría a estudiantes</p>
-                    </div>
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      <span className="text-sm">Aprobado</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

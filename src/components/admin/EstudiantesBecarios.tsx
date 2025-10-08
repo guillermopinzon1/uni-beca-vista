@@ -71,7 +71,7 @@ const EstudiantesBecarios = () => {
     }
     setLoading(true);
     try {
-      const res = await fetchUsers(accessToken);
+      const res = await fetchUsers(accessToken, { role: 'ayudante' });
       const mapped = res.data.usuarios.map(u => ({
         id: u.id,
         nombre: u.nombre,

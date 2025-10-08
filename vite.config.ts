@@ -6,21 +6,14 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "localhost",
-    port: 8080,
+    host: "::",
+    port: 3000,
     // Para HTTPS local, genera certificados con mkcert y descomenta:
     // https: {
-    //   key: fs.readFileSync(path.resolve(__dirname, 'certs/localhost-key.pem')),
-    //   cert: fs.readFileSync(path.resolve(__dirname, 'certs/localhost.pem')),
+    //   key: path.resolve(__dirname, './certs/localhost-key.pem'),
+    //   cert: path.resolve(__dirname, './certs/localhost.pem'),
     // },
-    proxy: {
-      "/api": {
-        target: "https://srodriguez.intelcondev.org",
-        changeOrigin: true,
-        secure: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-    },
+    // Sin proxy - se usa directamente el backend
   },
   plugins: [
     react(),

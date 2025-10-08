@@ -8,6 +8,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import Requisitos from "./pages/Requisitos";
 import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/modules" element={<ModuleSelection />} />
           <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />

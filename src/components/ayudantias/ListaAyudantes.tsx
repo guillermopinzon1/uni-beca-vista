@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Eye, Check, X, Clock, Calendar, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchUsers } from "@/lib/api";
+import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface UsuarioAyudante {
@@ -51,54 +51,86 @@ interface ReporteHoras {
   notas?: string;
 }
 
-const ayudantesDummy: never[] = [];
-
 const ListaAyudantes = () => {
   const { toast } = useToast();
   const { tokens } = useAuth();
-  const [usuarios, setUsuarios] = useState<UsuarioAyudante[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedAyudante, setSelectedAyudante] = useState<Ayudante | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notas, setNotas] = useState("");
 
-  const loadUsuarios = async () => {
+  // Disponibilidades (admin/supervisor)
+  interface DisponibilidadItem {
+    id?: string;
+    usuarioId?: string;
+    disponibilidad?: {
+      lunes?: string[];
+      martes?: string[];
+      miercoles?: string[];
+      jueves?: string[];
+      viernes?: string[];
+      sabado?: string[];
+      domingo?: string[];
+    };
+    usuario?: {
+      id?: string;
+      nombre?: string;
+      apellido?: string;
+      role?: string;
+      cedula?: string;
+      carrera?: string;
+      semestre?: number;
+      promedio?: number;
+      email?: string;
+      telefono?: string;
+      cvUrl?: string;
+    };
+  }
+
+  const [disponibilidades, setDisponibilidades] = useState<DisponibilidadItem[]>([]);
+  const [loadingDispon, setLoadingDispon] = useState<boolean>(false);
+  const [limit, setLimit] = useState<number>(20);
+  const [offset, setOffset] = useState<number>(0);
+  const [selectedDisponibilidad, setSelectedDisponibilidad] = useState<DisponibilidadItem | null>(null);
+  const [supervisorAyudantes, setSupervisorAyudantes] = useState<Array<{ id: string; nombre: string; apellido?: string; email?: string; carrera?: string; semestre?: number }>>([]);
+
+  // Nota: Se eliminó la carga de usuarios (endpoint /users) en esta vista
+
+  const loadDisponibilidades = async (customOffset?: number) => {
     const stored = (() => {
       try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; }
     })();
     const accessToken = tokens?.accessToken || stored?.accessToken;
     if (!accessToken) {
-      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar usuarios', variant: 'destructive' });
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar disponibilidades', variant: 'destructive' });
       return;
     }
-    setLoading(true);
-    setError(null);
+    setLoadingDispon(true);
     try {
-      const res = await fetchUsers(accessToken);
-      const mapped = res.data.usuarios
-        .filter(u => !u.role || u.role === 'ayudante')
-        .map(u => ({
-          id: u.id,
-          email: u.email,
-          nombre: u.nombre,
-          apellido: u.apellido,
-          cedula: u.cedula,
-          telefono: u.telefono,
-          carrera: u.carrera,
-          semestre: u.semestre,
-        }));
-      setUsuarios(mapped);
+      const resp = await fetch(`${API_BASE}/v1/disponibilidad?limit=${limit}&offset=${customOffset ?? offset}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => null);
+        throw new Error(err?.message || `Error ${resp.status}`);
+      }
+      const data = await resp.json();
+      const items: DisponibilidadItem[] = data?.data?.disponibilidades || data?.data || [];
+      setDisponibilidades(items);
+      if (typeof (data?.data?.limit) === 'number') setLimit(data.data.limit);
+      if (typeof (data?.data?.offset) === 'number') setOffset(data.data.offset);
     } catch (e: any) {
-      setError(e?.message || 'No se pudieron cargar los usuarios');
-      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los usuarios', variant: 'destructive' });
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar las disponibilidades', variant: 'destructive' });
     } finally {
-      setLoading(false);
+      setLoadingDispon(false);
     }
   };
 
   useEffect(() => {
-    loadUsuarios();
+    loadDisponibilidades(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokens?.accessToken]);
 
   const buildAyudanteFromUsuario = (u: UsuarioAyudante): Ayudante => {
@@ -156,81 +188,96 @@ const ListaAyudantes = () => {
     }
   };
 
+  const loadSupervisorAyudantes = async () => {
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar ayudantes', variant: 'destructive' });
+      return;
+    }
+    try {
+      const resp = await fetch(`${API_BASE}/v1/supervisores/ayudantes`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => null);
+        throw new Error(err?.message || `Error ${resp.status}`);
+      }
+      const data = await resp.json();
+      const list = data?.data?.ayudantes || data?.data || [];
+      const mapped = list.map((u: any) => ({
+        id: u.id,
+        nombre: u.nombre,
+        apellido: u.apellido,
+        email: u.email,
+        carrera: u.carrera,
+        semestre: u.semestre,
+      }));
+      setSupervisorAyudantes(mapped);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los ayudantes', variant: 'destructive' });
+    }
+  };
+
+  useEffect(() => {
+    loadSupervisorAyudantes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokens?.accessToken]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-primary">Lista de Ayudantes</h2>
-          <p className="text-muted-foreground">Gestiona los estudiantes ayudantes y sus horas registradas</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-orange">
-            {usuarios.length} ayudantes activos
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadUsuarios}
-            disabled={loading}
-            className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Recargar
-          </Button>
-        </div>
-      </div>
+      {/* Encabezado de lista de ayudantes removido según solicitud */}
 
+      
+
+      {/* Tabla de ayudantes asignados al supervisor (GET /supervisores/ayudantes) */}
       <Card className="border border-orange/20">
         <CardHeader className="bg-orange/5">
-          <CardTitle className="text-primary">Estudiantes Ayudantes</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-primary">Ayudantes asignados</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadSupervisorAyudantes()}
+              className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Recargar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted/50 border-b border-orange/20">
                 <tr>
-                  <th className="text-left p-4 font-semibold text-primary">Email</th>
                   <th className="text-left p-4 font-semibold text-primary">Nombre</th>
-                  <th className="text-left p-4 font-semibold text-primary">Apellido</th>
-                  <th className="text-left p-4 font-semibold text-primary">Cédula</th>
-                  <th className="text-left p-4 font-semibold text-primary">Teléfono</th>
+                  <th className="text-left p-4 font-semibold text-primary">Email</th>
                   <th className="text-left p-4 font-semibold text-primary">Carrera</th>
-                  <th className="text-center p-4 font-semibold text-primary">Semestre</th>
+                  <th className="text-left p-4 font-semibold text-primary">Semestre</th>
                   <th className="text-center p-4 font-semibold text-primary">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((u, index) => (
-                  <tr 
-                    key={u.id} 
-                    className={`border-b border-orange/10 hover:bg-orange/5 transition-colors ${
-                      index % 2 === 0 ? 'bg-background' : 'bg-muted/20'
-                    }`}
-                  >
-                    <td className="p-4 text-primary font-medium">{u.email}</td>
-                    <td className="p-4 text-primary font-medium">{u.nombre}</td>
-                    <td className="p-4 text-primary font-medium">{u.apellido}</td>
-                    <td className="p-4 text-muted-foreground">{u.cedula || '-'}</td>
-                    <td className="p-4 text-muted-foreground">{u.telefono || '-'}</td>
-                    <td className="p-4 text-muted-foreground">{u.carrera || '-'}</td>
+                {supervisorAyudantes.map((a, index) => (
+                  <tr key={a.id || index} className={`border-b border-orange/10 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
+                    <td className="p-4 text-primary font-medium">{a.nombre} {a.apellido || ''}</td>
+                    <td className="p-4 text-muted-foreground">{a.email || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{a.carrera || '-'}</td>
+                    <td className="p-4 text-muted-foreground">{typeof a.semestre === 'number' ? a.semestre : '-'}</td>
                     <td className="p-4 text-center">
-                      <Badge variant="outline" className="border-primary/20 text-primary">
-                        {u.semestre ?? '-'}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleVerHoras(u)}
-                        className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Horas
-                      </Button>
+                      <Button variant="outline" size="sm" className="border-orange/40 hover:bg-orange/10 hover:border-orange/60" onClick={() => setSelectedAyudante({ id: a.id, nombre: a.nombre, apellido: a.apellido || '', cedula: '-', trimestre: 0, horasRegistradas: 0, horasPendientes: 0, reportesHoras: [] })}>Ver</Button>
                     </td>
                   </tr>
                 ))}
+                {supervisorAyudantes.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-6 text-center text-muted-foreground">Sin ayudantes asignados</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -248,20 +295,28 @@ const ListaAyudantes = () => {
           
           {selectedAyudante && (
             <div className="space-y-6">
-              {/* Información del ayudante */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg">
-                <div>
-                  <p className="text-sm text-muted-foreground">Cédula</p>
-                  <p className="font-medium">{selectedAyudante.cedula}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Trimestre</p>
-                  <p className="font-medium">{selectedAyudante.trimestre}°</p>
-                </div>
-              </div>
+              {/* Información del ayudante removida (cédula, trimestre) */}
 
-              {/* Lista de reportes de horas */}
+              {/* Lista de reportes de horas / Disponibilidad */}
               <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-primary">Disponibilidad Seleccionada</h3>
+
+                {/* Mostrar disponibilidad si llegó desde la tarjeta de disponibilidades */}
+                {selectedDisponibilidad?.disponibilidad ? (
+                  <div className="border border-orange/20 rounded-lg p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      {Object.entries(selectedDisponibilidad.disponibilidad).map(([dia, horas]) => (
+                        <div key={dia}>
+                          <p className="text-muted-foreground capitalize">{dia}</p>
+                          <p className="font-medium">{(horas as string[]).length > 0 ? (horas as string[]).join(', ') : '-'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No hay disponibilidad asociada a este usuario en la selección actual.</div>
+                )}
+
                 <h3 className="text-lg font-semibold text-primary">Reportes de Horas</h3>
                 {selectedAyudante.reportesHoras.map((reporte) => (
                   <div key={reporte.id} className="border border-orange/20 rounded-lg p-4 space-y-4">

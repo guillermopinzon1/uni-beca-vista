@@ -7,16 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Shield } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
-import { loginUser } from "@/lib/api";
+import { loginUser, forgotPassword } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState as useStateReact } from "react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [isForgotPasswordLoading, setIsForgotPasswordLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { loginSuccess, logoutAndNavigateHome } = useAuth();
+  const { loginSuccess } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +36,10 @@ const Login = () => {
       const result = await loginUser({ email, password });
 
       // Guardar en contexto + localStorage
-      loginSuccess(result.data.user, result.data.tokens);
+      loginSuccess({
+        ...result.data.user,
+        apellido: result.data.user.apellido || ""
+      }, result.data.tokens);
 
       toast({
         title: "Inicio de sesión exitoso",
@@ -65,6 +73,33 @@ const Login = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsForgotPasswordLoading(true);
+
+    try {
+      if (!forgotEmail.endsWith("@unimet.edu.ve")) {
+        throw new Error("El correo debe ser del dominio @unimet.edu.ve");
+      }
+
+      await forgotPassword(forgotEmail);
+      toast({
+        title: "Solicitud enviada",
+        description: "Si el email existe, recibirás instrucciones para restablecer tu contraseña",
+      });
+      setIsForgotPasswordOpen(false);
+      setForgotEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo enviar la solicitud de recuperación",
+        variant: "destructive",
+      });
+    } finally {
+      setIsForgotPasswordLoading(false);
     }
   };
 
@@ -134,6 +169,52 @@ const Login = () => {
                 </Button>
               </form>
               
+              <div className="mt-4 text-center">
+                <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="link" className="text-sm text-muted-foreground hover:text-primary">
+                      ¿Olvidaste tu contraseña?
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Recuperar Contraseña</DialogTitle>
+                      <DialogDescription>
+                        Ingresa tu correo electrónico institucional y te enviaremos instrucciones para restablecer tu contraseña.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      <div>
+                        <Label htmlFor="forgot-email">Correo Electrónico</Label>
+                        <Input
+                          id="forgot-email"
+                          type="email"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          placeholder="tu.email@unimet.edu.ve"
+                          required
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsForgotPasswordOpen(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={isForgotPasswordLoading}
+                        >
+                          {isForgotPasswordLoading ? "Enviando..." : "Enviar"}
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+              
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   ¿No tienes una cuenta?{" "}
@@ -143,7 +224,7 @@ const Login = () => {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={logoutAndNavigateHome}
+                  onClick={() => navigate('/')}
                   className="mt-4"
                 >
                   Volver al Inicio

@@ -8,7 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE } from "@/lib/api";
 
 interface UnifiedApplicationFormProps {
   programTitle: string;
@@ -16,6 +19,84 @@ interface UnifiedApplicationFormProps {
 
 const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) => {
   const [birthDate, setBirthDate] = useState<Date>();
+  const { tokens } = useAuth();
+  const { toast } = useToast();
+  const [postulacionId, setPostulacionId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [documentos, setDocumentos] = useState<Array<{ id: string; tipoDocumento: string; nombreOriginal: string }>>([]);
+
+  // Crear postulación mínima si aún no existe (se puede mejorar ligándolo al envío del formulario)
+  const ensurePostulacion = async () => {
+    if (postulacionId) return postulacionId;
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: "Sin sesión", description: "Inicia sesión para postular", variant: "destructive" });
+      throw new Error("No token");
+    }
+    const body = {
+      programa: programTitle || "Ayudantía",
+      periodoAcademico: "2025-1",
+      datos: {}
+    };
+    const resp = await fetch(`${API_BASE}/v1/postulaciones`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => null);
+      throw new Error(err?.message || `Error creando postulación (${resp.status})`);
+    }
+    const data = await resp.json();
+    const id = data?.data?.id || data?.id;
+    if (!id) throw new Error("No se recibió id de postulación");
+    setPostulacionId(id);
+    return id;
+  };
+
+  const loadDocs = async (id: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) return;
+    try {
+      const r = await fetch(`${API_BASE}/v1/documents/postulacion/${id}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      const list = d?.data?.documentos || d?.data || [];
+      const mapped = list.map((doc: any) => ({ id: doc.id, tipoDocumento: doc.tipoDocumento, nombreOriginal: doc.nombreOriginal }));
+      setDocumentos(mapped);
+    } catch {}
+  };
+
+  const handleUpload = async (file: File, tipoDocumento: string) => {
+    try {
+      const id = await ensurePostulacion();
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) return;
+      setUploading(tipoDocumento);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tipoDocumento', tipoDocumento);
+      formData.append('postulacionId', id);
+      formData.append('observaciones', `Documento ${tipoDocumento}`);
+      const resp = await fetch(`${API_BASE}/v1/documents/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        body: formData
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => null);
+        throw new Error(err?.message || `Error al subir (${resp.status})`);
+      }
+      toast({ title: "Documento subido", description: file.name });
+      await loadDocs(id);
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "No se pudo subir el archivo", variant: "destructive" });
+    } finally {
+      setUploading(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -182,10 +263,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                   <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">Fotocopia de Cédula de Identidad</p>
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Subir Archivo
-                  </Button>
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'cedula')} disabled={!!uploading} />
                 </CardContent>
               </Card>
               
@@ -193,10 +271,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                   <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">Flujograma de carrera</p>
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Subir Archivo
-                  </Button>
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'flujograma_carrera')} disabled={!!uploading} />
                 </CardContent>
               </Card>
               
@@ -204,10 +279,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                   <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">Histórico de notas</p>
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Subir Archivo
-                  </Button>
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'historico_notas')} disabled={!!uploading} />
                 </CardContent>
               </Card>
               
@@ -215,10 +287,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                   <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">Plan de carrera avalado por el Director de Escuela</p>
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Subir Archivo
-                  </Button>
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'plan_carrera_avalado')} disabled={!!uploading} />
                 </CardContent>
               </Card>
               
@@ -226,13 +295,26 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
                 <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                   <Upload className="h-8 w-8 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">Currículum deportivo o dossier artístico</p>
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Subir Archivo
-                  </Button>
+                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'curriculum')} disabled={!!uploading} />
                 </CardContent>
               </Card>
             </div>
+            {postulacionId && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Documentos cargados</h4>
+                <div className="text-sm bg-muted/30 rounded p-3">
+                  {documentos.length === 0 ? (
+                    <div className="text-muted-foreground">Sin documentos aún</div>
+                  ) : (
+                    <ul className="list-disc pl-5 space-y-1">
+                      {documentos.map(doc => (
+                        <li key={doc.id}>{doc.tipoDocumento} — {doc.nombreOriginal}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Botones de Acción */}

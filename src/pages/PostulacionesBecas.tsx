@@ -20,10 +20,7 @@ const PostulacionesBecas = () => {
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
 
   const handleLogout = () => {
-    // Navegar al inicio con logout
-    // NOTA: esta ruta usa breadcrumb con onClick; moveremos a hook en botón principal
-    // Si se requiere, podemos importar useAuth y usar logoutAndNavigateHome
-    navigate('/');
+    navigate("/");
   };
 
   const handleProgramSelect = (programId: string) => {

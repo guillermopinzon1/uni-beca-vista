@@ -10,6 +10,9 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchUsers } from "@/lib/api";
+import { useEffect, useState as useStateReact } from "react";
 
 interface Supervisor {
   id: string;
@@ -37,12 +40,15 @@ interface EstudianteAsignado {
 const GestionSupervisores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { tokens } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartamento, setFilterDepartamento] = useState("todos");
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null);
+  const [supervisores, setSupervisores] = useState<Supervisor[]>([]);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     correo: "",
@@ -112,8 +118,42 @@ const GestionSupervisores = () => {
     setEditingSupervisor(null);
   };
 
-  // Mock data
-  const supervisores: Supervisor[] = [
+  const loadSupervisores = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar supervisores', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetchUsers(accessToken, { role: 'supervisor' });
+      const mapped = res.data.usuarios.map(u => ({
+        id: u.id,
+        nombre: u.nombre + (u.apellido ? ` ${u.apellido}` : ''),
+        cedula: u.cedula || 'N/A',
+        departamento: u.departamento || 'N/A',
+        cargo: u.cargo || 'N/A',
+        email: u.email,
+        telefono: u.telefono || 'N/A',
+        estudiantesAsignados: 0, // TODO: obtener del endpoint correspondiente
+        maxEstudiantes: 5, // TODO: obtener del endpoint correspondiente
+        estado: u.activo ? "Activo" : "Inactivo",
+        fechaIngreso: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : 'N/A'
+      }));
+      setSupervisores(mapped);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los supervisores', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSupervisores();
+  }, [tokens?.accessToken]);
+
+  // Mock data (temporal hasta que se implementen los endpoints faltantes)
+  const supervisoresMock: Supervisor[] = [
     {
       id: "1",
       nombre: "Dr. Carlos Mendoza",

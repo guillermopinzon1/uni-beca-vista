@@ -23,8 +23,26 @@ export interface UsersResponse {
   };
 }
 
-export async function fetchUsers(accessToken: string): Promise<UsersResponse> {
-  const response = await fetch(`${API_BASE}/v1/users`, {
+export interface FetchUsersParams {
+  role?: string;
+  activo?: boolean;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function fetchUsers(accessToken: string, params?: FetchUsersParams): Promise<UsersResponse> {
+  const searchParams = new URLSearchParams();
+  
+  if (params?.role) searchParams.append('role', params.role);
+  if (params?.activo !== undefined) searchParams.append('activo', params.activo.toString());
+  if (params?.search) searchParams.append('search', params.search);
+  if (params?.limit) searchParams.append('limit', params.limit.toString());
+  if (params?.offset) searchParams.append('offset', params.offset.toString());
+
+  const url = `${API_BASE}/v1/users${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Accept': 'application/json',

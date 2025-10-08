@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, Cog } from "lucide-react";
+import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, FileUp } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import EstudiantesBecarios from "@/components/admin/EstudiantesBecarios";
 import GestionSupervisores from "@/components/admin/GestionSupervisores";
 import GestionPostulaciones from "@/components/admin/GestionPostulaciones";
@@ -12,7 +11,6 @@ import ConfiguracionSistema from "@/components/admin/ConfiguracionSistema";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { logoutAndNavigateHome } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("estudiantes-becarios");
 
@@ -44,8 +42,8 @@ const AdminDashboard = () => {
     },
     {
       title: "Configuración del Sistema",
-      icon: Cog,
-      onClick: () => setActiveModule("sistema")
+      icon: FileUp,
+      onClick: () => setActiveModule("configuracion-sistema")
     }
   ];
 
@@ -58,7 +56,7 @@ const AdminDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={logoutAndNavigateHome}
+              onClick={() => navigate("/")}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -124,7 +122,7 @@ const AdminDashboard = () => {
               <GestionPlazas />
             ) : activeModule === "configuracion" ? (
               <ConfiguracionBecas />
-            ) : activeModule === "sistema" ? (
+            ) : activeModule === "configuracion-sistema" ? (
               <ConfiguracionSistema />
             ) : (
               <div className="text-center py-16">
