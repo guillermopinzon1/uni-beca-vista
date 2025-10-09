@@ -29,8 +29,8 @@ const Login = () => {
 
     try {
       // Validación de dominio de email
-      if (!email.endsWith("@unimet.edu.ve")) {
-        throw new Error("El correo debe ser del dominio @unimet.edu.ve");
+      if (!email.endsWith("@unimet.edu.ve") && !email.endsWith("@correo.unimet.edu.ve")) {
+        throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
       }
 
       const result = await loginUser({ email, password });
@@ -81,8 +81,8 @@ const Login = () => {
     setIsForgotPasswordLoading(true);
 
     try {
-      if (!forgotEmail.endsWith("@unimet.edu.ve")) {
-        throw new Error("El correo debe ser del dominio @unimet.edu.ve");
+      if (!forgotEmail.endsWith("@unimet.edu.ve") && !forgotEmail.endsWith("@correo.unimet.edu.ve")) {
+        throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
       }
 
       await forgotPassword(forgotEmail);
@@ -191,7 +191,7 @@ const Login = () => {
                           type="email"
                           value={forgotEmail}
                           onChange={(e) => setForgotEmail(e.target.value)}
-                          placeholder="tu.email@unimet.edu.ve"
+                          placeholder="tu.email@unimet.edu.ve o @correo.unimet.edu.ve"
                           required
                         />
                       </div>

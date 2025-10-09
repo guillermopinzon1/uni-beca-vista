@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchPlazas, createPlaza, fetchUsers } from "@/lib/api";
+import { fetchPlazas, createPlaza, updatePlaza, fetchUsers } from "@/lib/api";
 
 interface Plaza {
   id: string;
@@ -27,6 +27,26 @@ interface Plaza {
   descripcion: string;
   requisitos: string[];
   fechaCreacion: string;
+  // Propiedades del API para edición
+  materia?: string;
+  codigo?: string;
+  profesor?: string;
+  capacidad?: number;
+  ocupadas?: number;
+  horario?: Array<{
+    dia: string;
+    horaInicio: string;
+    horaFin: string;
+  }>;
+  tipoAyudantia?: string;
+  descripcionActividades?: string;
+  requisitosEspeciales?: string[];
+  horasSemana?: number;
+  periodoAcademico?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  supervisorResponsable?: string;
+  observaciones?: string;
 }
 
 interface AyudanteEnPlaza {
@@ -46,6 +66,8 @@ const GestionPlazas = () => {
   const [filterEstado, setFilterEstado] = useState("todos");
   const [selectedPlaza, setSelectedPlaza] = useState<Plaza | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingPlaza, setEditingPlaza] = useState<Plaza | null>(null);
   const [plazas, setPlazas] = useState<Plaza[]>([]);
   const [loading, setLoading] = useState(false);
   const [supervisores, setSupervisores] = useState<Array<{id: string, nombre: string, apellido?: string, email: string}>>([]);
@@ -102,7 +124,23 @@ const GestionPlazas = () => {
         estado: p.estado as "Activa" | "Inactiva" | "Completa",
         descripcion: p.descripcionActividades,
         requisitos: p.requisitosEspeciales,
-        fechaCreacion: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : 'N/A'
+        fechaCreacion: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : 'N/A',
+        // Propiedades del API para edición
+        materia: p.materia,
+        codigo: p.codigo,
+        profesor: p.profesor,
+        capacidad: p.capacidad,
+        ocupadas: p.ocupadas,
+        horario: p.horario,
+        tipoAyudantia: p.tipoAyudantia,
+        descripcionActividades: p.descripcionActividades,
+        requisitosEspeciales: p.requisitosEspeciales,
+        horasSemana: p.horasSemana,
+        periodoAcademico: p.periodoAcademico,
+        fechaInicio: p.fechaInicio,
+        fechaFin: p.fechaFin,
+        supervisorResponsable: p.supervisorResponsable,
+        observaciones: p.observaciones
       }));
       setPlazas(mapped);
     } catch (e: any) {
@@ -160,6 +198,124 @@ const GestionPlazas = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleEditPlaza = (plaza: Plaza) => {
+    console.log('Editando plaza:', plaza); // Debug log
+    setEditingPlaza(plaza);
+    
+    // Formatear fechas para el input date
+    const formatDate = (dateString: string | undefined) => {
+      if (!dateString) return "";
+      try {
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+      } catch {
+        return "";
+      }
+    };
+
+    // Asegurar que requisitosEspeciales sea un array
+    const requisitos = Array.isArray(plaza.requisitosEspeciales) 
+      ? plaza.requisitosEspeciales 
+      : [""];
+
+    // Asegurar que horario sea un array
+    const horario = Array.isArray(plaza.horario) && plaza.horario.length > 0
+      ? plaza.horario
+      : [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }];
+
+    setFormData({
+      materia: plaza.materia || "",
+      codigo: plaza.codigo || "",
+      departamento: plaza.departamento || "",
+      ubicacion: plaza.ubicacion || "",
+      profesor: plaza.profesor || "",
+      capacidad: plaza.capacidad || 1,
+      ocupadas: plaza.ocupadas || 0,
+      horario: horario,
+      estado: plaza.estado || "Activa",
+      tipoAyudantia: plaza.tipoAyudantia || "academica",
+      descripcionActividades: plaza.descripcionActividades || "",
+      requisitosEspeciales: requisitos,
+      horasSemana: plaza.horasSemana || 10,
+      periodoAcademico: plaza.periodoAcademico || "2025-1", // Valor por defecto para campo requerido
+      fechaInicio: formatDate(plaza.fechaInicio) || new Date().toISOString().split('T')[0],
+      fechaFin: formatDate(plaza.fechaFin) || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      supervisorResponsable: plaza.supervisorResponsable || "",
+      observaciones: plaza.observaciones || ""
+    });
+    setIsEditing(true);
+  };
+
+  const handleUpdatePlaza = async () => {
+    if (!editingPlaza) return;
+
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({
+        title: 'Sin sesión',
+        description: 'Inicia sesión para actualizar plazas',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      // Filtrar requisitos vacíos
+      const requisitos = formData.requisitosEspeciales.filter(req => req.trim() !== '');
+      
+      const plazaData = {
+        ...formData,
+        requisitosEspeciales: requisitos,
+        fechaInicio: formData.fechaInicio || new Date().toISOString().split('T')[0],
+        fechaFin: formData.fechaFin || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      };
+      
+      await updatePlaza(accessToken, editingPlaza.id, plazaData);
+      toast({
+        title: 'Plaza actualizada',
+        description: 'La plaza se ha actualizado exitosamente',
+      });
+      setIsEditing(false);
+      setEditingPlaza(null);
+      loadPlazas();
+    } catch (error: any) {
+      console.error('Error updating plaza:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo actualizar la plaza',
+        variant: 'destructive'
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingPlaza(null);
+    setFormData({
+      materia: "",
+      codigo: "",
+      departamento: "",
+      ubicacion: "",
+      profesor: "",
+      capacidad: 1,
+      ocupadas: 0,
+      horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
+      estado: "Activa",
+      tipoAyudantia: "academica",
+      descripcionActividades: "",
+      requisitosEspeciales: [""],
+      horasSemana: 10,
+      periodoAcademico: "2025-1",
+      fechaInicio: "",
+      fechaFin: "",
+      supervisorResponsable: "",
+      observaciones: ""
+    });
   };
 
   const loadSupervisores = async () => {
@@ -330,7 +486,15 @@ const GestionPlazas = () => {
           <h2 className="text-3xl font-bold text-primary">Gestión de Plazas</h2>
           <p className="text-muted-foreground">Administración de plazas de trabajo para ayudantías</p>
         </div>
-        <Dialog open={isCreating} onOpenChange={setIsCreating}>
+        <Dialog open={isCreating || isEditing} onOpenChange={(open) => {
+          if (!open) {
+            if (isEditing) {
+              handleCancelEdit();
+            } else {
+              setIsCreating(false);
+            }
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
@@ -339,7 +503,7 @@ const GestionPlazas = () => {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Crear Nueva Plaza</DialogTitle>
+              <DialogTitle>{isEditing ? 'Editar Plaza' : 'Crear Nueva Plaza'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -555,11 +719,21 @@ const GestionPlazas = () => {
               </div>
               
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreating(false)} disabled={creating}>
+                <Button 
+                  variant="outline" 
+                  onClick={isEditing ? handleCancelEdit : () => setIsCreating(false)} 
+                  disabled={creating}
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleCreatePlaza} disabled={creating}>
-                  {creating ? "Creando..." : "Crear Plaza"}
+                <Button 
+                  onClick={isEditing ? handleUpdatePlaza : handleCreatePlaza} 
+                  disabled={creating}
+                >
+                  {creating 
+                    ? (isEditing ? "Actualizando..." : "Creando...") 
+                    : (isEditing ? "Actualizar Plaza" : "Crear Plaza")
+                  }
                 </Button>
               </div>
             </div>
@@ -655,7 +829,7 @@ const GestionPlazas = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Plazas de Ayudantía ({filteredPlazas.length})</CardTitle>
+          <CardTitle>Plazas de Ayudantía ({filteredPlazas.length})</CardTitle>
             <Button 
               variant="outline" 
               size="sm" 
@@ -815,7 +989,11 @@ const GestionPlazas = () => {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditPlaza(plaza)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                     </div>

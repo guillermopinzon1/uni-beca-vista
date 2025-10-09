@@ -56,6 +56,7 @@ const BuscarAyudantes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDisp, setSelectedDisp] = useState<DisponibilidadItem | null>(null);
   const [mensajeCorreo, setMensajeCorreo] = useState("");
+  
   const handleVerCV = (estudiante: EstudianteSinPlaza) => {
     if (!estudiante.tieneCV) {
       alert("Este estudiante no ha subido su CV");
@@ -81,6 +82,8 @@ const BuscarAyudantes = () => {
     if (promedio >= 16) return "secondary";
     return "outline";
   };
+
+
 
   const loadDisponibilidades = async (customOffset?: number) => {
     const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
@@ -142,6 +145,7 @@ const BuscarAyudantes = () => {
         </div>
       </div>
 
+
       <Card className="border border-orange/20">
         <CardHeader className="bg-orange/5">
           <CardTitle className="text-primary flex items-center">
@@ -159,7 +163,7 @@ const BuscarAyudantes = () => {
                   <th className="text-left p-4 font-semibold text-primary">Apellido</th>
                   <th className="text-left p-4 font-semibold text-primary">Rol</th>
                   <th className="text-left p-4 font-semibold text-primary">Carrera</th>
-                  <th className="text-left p-4 font-semibold text-primary">Semestre</th>
+                  <th className="text-left p-4 font-semibold text-primary">Trimestre</th>
                   <th className="text-center p-4 font-semibold text-primary">Acciones</th>
                 </tr>
               </thead>
@@ -202,9 +206,6 @@ const BuscarAyudantes = () => {
         </CardContent>
       </Card>
 
-      <div className="text-center text-sm text-muted-foreground">
-        <p>Tip: Usa los filtros de disponibilidad (próximamente) para afinar la búsqueda.</p>
-      </div>
 
       {/* Modal Ver Horas / Disponibilidad */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

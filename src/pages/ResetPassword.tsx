@@ -64,9 +64,10 @@ const ResetPassword = () => {
         description: "Contraseña restablecida exitosamente",
       });
     } catch (error: any) {
+      console.error('Error resetting password:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo restablecer la contraseña",
+        description: error.message || "No se pudo restablecer la contraseña. Por favor, intenta nuevamente.",
         variant: "destructive",
       });
     } finally {

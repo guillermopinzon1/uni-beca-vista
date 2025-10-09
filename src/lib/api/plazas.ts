@@ -188,3 +188,82 @@ export async function createPlaza(accessToken: string, plazaData: CreatePlazaReq
 
   return payload as CreatePlazaResponse;
 }
+
+export interface UpdatePlazaRequest {
+  materia: string;
+  codigo: string;
+  departamento: string;
+  ubicacion: string;
+  profesor: string;
+  capacidad: number;
+  ocupadas: number;
+  horario: Array<{
+    dia: string;
+    horaInicio: string;
+    horaFin: string;
+  }>;
+  estado: string;
+  tipoAyudantia: string;
+  descripcionActividades: string;
+  requisitosEspeciales: string[];
+  horasSemana: number;
+  periodoAcademico: string;
+  fechaInicio: string;
+  fechaFin: string;
+  supervisorResponsable: string;
+  observaciones: string;
+}
+
+export interface UpdatePlazaResponse {
+  success: true;
+  message: string;
+  data: {
+    id: string;
+    materia: string;
+    codigo: string;
+    departamento: string;
+    ubicacion: string;
+    profesor: string;
+    capacidad: number;
+    ocupadas: number;
+    horario: Array<{
+      dia: string;
+      horaInicio: string;
+      horaFin: string;
+    }>;
+    estado: string;
+    tipoAyudantia: string;
+    descripcionActividades: string;
+    requisitosEspeciales: string[];
+    horasSemana: number;
+    periodoAcademico: string;
+    fechaInicio: string;
+    fechaFin: string;
+    supervisorResponsable: string;
+    observaciones: string;
+    updatedAt: string;
+  };
+}
+
+export async function updatePlaza(accessToken: string, plazaId: string, plazaData: UpdatePlazaRequest): Promise<UpdatePlazaResponse> {
+  const response = await fetch(`${API_BASE}/v1/plazas/${plazaId}`, {
+    method: 'PUT',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(plazaData),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error actualizando plaza (${response.status})`;
+    throw new Error(message);
+  }
+
+  return payload as UpdatePlazaResponse;
+}
