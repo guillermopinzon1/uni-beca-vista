@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, FileUp } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, FileUp, Activity } from "lucide-react";
 import { useState } from "react";
 import EstudiantesBecarios from "@/components/admin/EstudiantesBecarios";
 import GestionSupervisores from "@/components/admin/GestionSupervisores";
@@ -8,9 +9,11 @@ import GestionPostulaciones from "@/components/admin/GestionPostulaciones";
 import GestionPlazas from "@/components/admin/GestionPlazas";
 import ConfiguracionBecas from "@/components/admin/ConfiguracionBecas";
 import ConfiguracionSistema from "@/components/admin/ConfiguracionSistema";
+import GestionEstudiantesReportes from "@/components/admin/GestionEstudiantesReportes";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("estudiantes-becarios");
 
@@ -19,6 +22,11 @@ const AdminDashboard = () => {
       title: "Estudiantes y Reportes",
       icon: Users,
       onClick: () => setActiveModule("estudiantes-becarios")
+    },
+    {
+      title: "Gestión de Estudiantes y Reportes",
+      icon: Activity,
+      onClick: () => setActiveModule("gestion-estudiantes-reportes")
     },
     {
       title: "Supervisores",
@@ -56,7 +64,7 @@ const AdminDashboard = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={() => logout(() => navigate('/'))}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -114,6 +122,8 @@ const AdminDashboard = () => {
           <div className="max-w-7xl mx-auto">
             {activeModule === "estudiantes-becarios" ? (
               <EstudiantesBecarios />
+            ) : activeModule === "gestion-estudiantes-reportes" ? (
+              <GestionEstudiantesReportes />
             ) : activeModule === "supervisores" ? (
               <GestionSupervisores />
             ) : activeModule === "postulaciones" ? (

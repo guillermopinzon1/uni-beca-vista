@@ -2,12 +2,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen, CreditCard } from "lucide-react";
 import PasanteAyudantiasModules from "./PasanteAyudantiasModules";
 import AspiranteScholarshipPrograms from "./AspiranteScholarshipPrograms";
 
 const ScholarshipPrograms = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
@@ -24,8 +26,8 @@ const ScholarshipPrograms = () => {
     return <AspiranteScholarshipPrograms />;
   }
 
-  const handleLogout = () => {
-    navigate("/login");
+  const handleLogout = async () => {
+    await logout(() => navigate('/'));
   };
 
   const programs = [

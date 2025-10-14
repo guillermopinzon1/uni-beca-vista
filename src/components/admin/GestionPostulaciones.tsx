@@ -4,61 +4,306 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Eye, Check, X, Clock, User, Mail, Phone, Calendar, FileText, GraduationCap, Download } from "lucide-react";
-import { useState } from "react";
+import { Search, Filter, Eye, Check, X, Clock, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { API_BASE } from "@/lib/api";
 
 interface Postulacion {
   id: string;
   nombre: string;
   cedula: string;
+  email: string;
+  telefono: string;
+  fechaNacimiento: string;
+  estadoCivil: string;
+  tipoPostulante: string;
   carrera: string;
-  semestre: number;
-  promedio: number;
+  trimestre: number;
+  iaa?: number;
+  promedioBachillerato?: number;
+  asignaturasAprobadas?: number;
+  creditosInscritos?: number;
   tipoBeca: string;
   estado: "Pendiente" | "Aprobada" | "Rechazada" | "En Revisión";
   fechaPostulacion: string;
-  documentos: string[];
+  documentos: Array<{
+    tipo: string;
+    nombre: string;
+    url: string;
+    path: string;
+  }>;
   observaciones?: string;
-  // Datos adicionales para el modal
-  correoElectronico?: string;
-  telefono?: string;
-  fechaNacimiento?: string;
-  estadoCivil?: string;
-  tipoPostulante?: string;
-  iaa?: number;
-  asignaturasAprobadas?: number;
-  creditosInscritos?: number;
 }
 
 const GestionPostulaciones = () => {
+  const { tokens } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBeca, setFilterBeca] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [selectedPostulacion, setSelectedPostulacion] = useState<Postulacion | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
+
+  // Función para cargar postulaciones del API
+  const loadPostulaciones = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`${API_BASE}/v1/postulaciones`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error al cargar postulaciones (${response.status})`);
+      }
+
+      const data = await response.json();
+      const postulacionesRaw = data.data?.postulaciones || data.postulaciones || [];
+      
+      // Limpiar y convertir los datos para asegurar tipos correctos
+      const postulacionesLimpias = postulacionesRaw.map((post: any) => ({
+        ...post,
+        iaa: post.iaa ? parseFloat(post.iaa) : undefined,
+        promedioBachillerato: post.promedioBachillerato ? parseFloat(post.promedioBachillerato) : undefined,
+        creditosInscritos: post.creditosInscritos ? parseInt(post.creditosInscritos) : undefined,
+        asignaturasAprobadas: post.asignaturasAprobadas ? parseInt(post.asignaturasAprobadas) : undefined,
+        trimestre: post.trimestre ? parseInt(post.trimestre) || 0 : 0, // Convertir a número, 0 si no es válido
+      }));
+      
+      console.log('Postulaciones originales:', postulacionesRaw);
+      console.log('Postulaciones limpias:', postulacionesLimpias);
+      
+      setPostulaciones(postulacionesLimpias);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar las postulaciones");
+      toast({
+        title: "Error",
+        description: err.message || "No se pudieron cargar las postulaciones",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar postulaciones al montar el componente
+  useEffect(() => {
+    loadPostulaciones();
+  }, []);
 
   const handleVerDetalles = (postulacion: Postulacion) => {
-    // Agregar datos adicionales simulados para el modal
-    const postulacionCompleta = {
-      ...postulacion,
-      correoElectronico: "postulante@email.com",
-      telefono: "+57 300 123 4567",
-      fechaNacimiento: "1998-03-15",
-      estadoCivil: "Soltero(a)",
-      tipoPostulante: "Estudiante regular de pregrado",
-      iaa: postulacion.promedio,
-      asignaturasAprobadas: 35,
-      creditosInscritos: 18
-    };
-    setSelectedPostulacion(postulacionCompleta);
+    setSelectedPostulacion(postulacion);
+    setMotivoRechazo(""); // Limpiar motivo al abrir modal
     setIsModalOpen(true);
   };
 
-  // Mock data con datos más completos
-  const postulaciones: Postulacion[] = [
+  // Función para cancelar una postulación
+  const handleCancelarPostulacion = async (postulacionId: string) => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`${API_BASE}/v1/postulaciones/${postulacionId}/cancelar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('Error al cancelar postulación:', errorData);
+        throw new Error(errorData?.message || `Error al cancelar postulación (${response.status})`);
+      }
+
+      toast({
+        title: "Postulación cancelada",
+        description: "La postulación ha sido cancelada exitosamente"
+      });
+
+      // Recargar las postulaciones para reflejar el cambio
+      await loadPostulaciones();
+      
+      // Cerrar el modal si está abierto
+      setIsModalOpen(false);
+      setSelectedPostulacion(null);
+
+    } catch (err: any) {
+      console.error('Error completo al cancelar postulación:', err);
+      toast({
+        title: "Error del Servidor",
+        description: "Error interno del servidor. Por favor, intente nuevamente o contacte al administrador.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Función para aprobar una postulación
+  const handleAprobarPostulacion = async (postulacionId: string, observaciones: string = "Cumple todos los requisitos") => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      // Log de datos que se van a enviar
+      const requestBody = {
+        observaciones: observaciones
+      };
+      
+      console.log('=== LOG APROBAR POSTULACIÓN ===');
+      console.log('Postulación ID:', postulacionId);
+      console.log('Request Body:', requestBody);
+      console.log('URL:', `${API_BASE}/v1/postulaciones/${postulacionId}/aprobar`);
+      
+      // Log de la postulación seleccionada para ver sus datos
+      if (selectedPostulacion) {
+        console.log('Datos de la postulación seleccionada:', selectedPostulacion);
+        console.log('Datos académicos de la postulación:');
+        console.log('- IAA (iaa):', selectedPostulacion.iaa);
+        console.log('- Trimestre (string):', selectedPostulacion.trimestre);
+        console.log('- Créditos inscritos:', selectedPostulacion.creditosInscritos);
+        console.log('- Asignaturas aprobadas:', selectedPostulacion.asignaturasAprobadas);
+        console.log('- Promedio bachillerato:', selectedPostulacion.promedioBachillerato);
+        
+        // Verificar tipos de datos
+        console.log('Verificación de tipos:');
+        console.log('- iaa es number?', typeof selectedPostulacion.iaa === 'number');
+        console.log('- trimestre es string?', typeof selectedPostulacion.trimestre === 'string');
+        console.log('- creditosInscritos es number?', typeof selectedPostulacion.creditosInscritos === 'number');
+        console.log('- asignaturasAprobadas es number?', typeof selectedPostulacion.asignaturasAprobadas === 'number');
+        console.log('- promedioBachillerato es number?', typeof selectedPostulacion.promedioBachillerato === 'number');
+      }
+
+      const response = await fetch(`${API_BASE}/v1/postulaciones/${postulacionId}/aprobar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('=== ERROR AL APROBAR POSTULACIÓN ===');
+        console.error('Status:', response.status);
+        console.error('Error Data:', errorData);
+        console.error('Response Headers:', Object.fromEntries(response.headers.entries()));
+        throw new Error(errorData?.message || `Error al aprobar postulación (${response.status})`);
+      }
+
+      // Log de respuesta exitosa
+      const successData = await response.json().catch(() => null);
+      console.log('=== RESPUESTA EXITOSA ===');
+      console.log('Success Data:', successData);
+
+      toast({
+        title: "Postulación aprobada",
+        description: "La postulación ha sido aprobada exitosamente"
+      });
+
+      // Recargar las postulaciones para reflejar el cambio
+      await loadPostulaciones();
+      
+      // Cerrar el modal si está abierto
+      setIsModalOpen(false);
+      setSelectedPostulacion(null);
+
+    } catch (err: any) {
+      console.error('Error completo al aprobar postulación:', err);
+      toast({
+        title: "Error del Servidor",
+        description: "Error interno del servidor. Por favor, intente nuevamente o contacte al administrador.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Función para rechazar una postulación
+  const handleRechazarPostulacion = async (postulacionId: string) => {
+    if (!motivoRechazo.trim()) {
+      toast({
+        title: "Error",
+        description: "Debe ingresar un motivo para el rechazo",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`${API_BASE}/v1/postulaciones/${postulacionId}/rechazar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          motivoRechazo: motivoRechazo.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error al rechazar postulación (${response.status})`);
+      }
+
+      toast({
+        title: "Postulación rechazada",
+        description: "La postulación ha sido rechazada exitosamente"
+      });
+
+      // Recargar las postulaciones para reflejar el cambio
+      await loadPostulaciones();
+      
+      // Cerrar el modal si está abierto
+      setIsModalOpen(false);
+      setSelectedPostulacion(null);
+      setMotivoRechazo("");
+
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo rechazar la postulación",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Datos mock eliminados - ahora se cargan del API
+  const mockPostulaciones: Postulacion[] = [
     {
       id: "1",
       nombre: "Roberto Silva Martínez",
@@ -253,13 +498,27 @@ const GestionPostulaciones = () => {
           <CardTitle>Postulaciones ({filteredPostulaciones.length})</CardTitle>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Cargando postulaciones...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={loadPostulaciones} variant="outline">
+                Reintentar
+              </Button>
+            </div>
+          ) : (
+          <div className="max-h-96 overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Postulante</TableHead>
                 <TableHead>Carrera</TableHead>
-                <TableHead>Semestre</TableHead>
-                <TableHead>Promedio</TableHead>
+                <TableHead>Trimestre</TableHead>
+                <TableHead>IAA/Promedio</TableHead>
                 <TableHead>Tipo de Beca</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Fecha</TableHead>
@@ -276,9 +535,9 @@ const GestionPostulaciones = () => {
                     </div>
                   </TableCell>
                   <TableCell>{postulacion.carrera}</TableCell>
-                  <TableCell>{postulacion.semestre}°</TableCell>
+                  <TableCell>{postulacion.trimestre}</TableCell>
                   <TableCell>
-                    <span className="font-medium">{postulacion.promedio}</span>
+                    <span className="font-medium">{postulacion.iaa || postulacion.promedioBachillerato || 'N/A'}</span>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{postulacion.tipoBeca}</Badge>
@@ -297,16 +556,6 @@ const GestionPostulaciones = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {postulacion.estado === "Pendiente" && (
-                        <>
-                          <Button variant="ghost" size="sm" className="text-green-600" title="Aprobar">
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600" title="Rechazar">
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
                       {postulacion.estado === "En Revisión" && (
                         <Button variant="ghost" size="sm" className="text-blue-600" title="En proceso">
                           <Clock className="h-4 w-4" />
@@ -318,6 +567,8 @@ const GestionPostulaciones = () => {
               ))}
             </TableBody>
           </Table>
+          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -471,11 +722,18 @@ const GestionPostulaciones = () => {
                       <div key={index} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{documento}</span>
+                          <div>
+                            <span className="font-medium">{documento.nombre}</span>
+                            <p className="text-sm text-muted-foreground">{documento.tipo}</p>
+                          </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className="bg-green-100 text-green-800 border-green-200">Recibido</Badge>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(documento.url, '_blank')}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Ver
                           </Button>
@@ -504,13 +762,32 @@ const GestionPostulaciones = () => {
                   <CardHeader>
                     <h3 className="text-lg font-semibold text-primary">Acciones</h3>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="motivo-rechazo" className="text-sm font-medium text-muted-foreground">
+                        Motivo del rechazo (opcional)
+                      </Label>
+                      <textarea
+                        id="motivo-rechazo"
+                        value={motivoRechazo}
+                        onChange={(e) => setMotivoRechazo(e.target.value)}
+                        placeholder="Ingrese el motivo del rechazo si aplica..."
+                        className="w-full mt-1 p-2 border border-gray-300 rounded-md resize-none"
+                        rows={3}
+                      />
+                    </div>
                     <div className="flex gap-4">
-                      <Button className="bg-green-600 hover:bg-green-700 text-white">
+                      <Button 
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleAprobarPostulacion(selectedPostulacion.id)}
+                      >
                         <Check className="h-4 w-4 mr-2" />
                         Aprobar Postulación
                       </Button>
-                      <Button variant="destructive">
+                      <Button 
+                        variant="destructive"
+                        onClick={() => handleCancelarPostulacion(selectedPostulacion.id)}
+                      >
                         <X className="h-4 w-4 mr-2" />
                         Rechazar Postulación
                       </Button>

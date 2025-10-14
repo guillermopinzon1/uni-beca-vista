@@ -283,40 +283,6 @@ const ConfiguracionBecas = () => {
       )}
 
       {/* Estadísticas generales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">4</p>
-              <p className="text-sm text-muted-foreground">Tipos de Becas</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">205</p>
-              <p className="text-sm text-muted-foreground">Cupos Totales</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">1,550,000</p>
-              <p className="text-sm text-muted-foreground">Presupuesto Mensual (Bs.)</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">17.1</p>
-              <p className="text-sm text-muted-foreground">Promedio Mín. General</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Tabs para cada tipo de beca */}
       <Card>

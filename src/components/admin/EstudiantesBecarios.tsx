@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Download, Eye, Calendar, Clock, FileText, BarChart3, RefreshCw } from "lucide-react";
+import { Search, Filter, Download, Eye, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,20 +26,6 @@ interface EstudianteBecario {
   fechaFin?: string;
 }
 
-interface ReporteActividad {
-  id: string;
-  estudiante: string;
-  cedula: string;
-  supervisor: string;
-  plaza: string;
-  periodo: string;
-  horasRequeridas: number;
-  horasCompletadas: number;
-  actividades: string[];
-  estado: "Completo" | "En Progreso" | "Pendiente" | "Atrasado";
-  fechaUltimoReporte: string;
-  observaciones?: string;
-}
 
 const EstudiantesBecarios = () => {
   const navigate = useNavigate();
@@ -51,11 +37,56 @@ const EstudiantesBecarios = () => {
   const [activeTab, setActiveTab] = useState("estudiantes");
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<Array<{ id: string; nombre: string; apellido?: string; cedula?: string; carrera?: string; semestre?: number }>>([]);
+  const [becarios, setBecarios] = useState<any[]>([]);
+  const [becariosLoading, setBecariosLoading] = useState(true);
+  const [becariosError, setBecariosError] = useState<string | null>(null);
   
-  // Estados para reportes de actividades
-  const [searchTermReportes, setSearchTermReportes] = useState("");
-  const [filterEstadoReportes, setFilterEstadoReportes] = useState("todos");
-  const [filterPeriodo, setFilterPeriodo] = useState("2024-2");
+
+  // Función para cargar becarios del API
+  const loadBecarios = async () => {
+    try {
+      setBecariosLoading(true);
+      setBecariosError(null);
+      
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`https://srodriguez.intelcondev.org/api/v1/users?role=ayudante`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error al cargar becarios (${response.status})`);
+      }
+
+      const data = await response.json();
+      // Asegurar que becarios siempre sea un array
+      const becariosData = data.data?.usuarios || data.usuarios || data.data || data || [];
+      setBecarios(Array.isArray(becariosData) ? becariosData : []);
+    } catch (err: any) {
+      setBecariosError(err.message || "Error al cargar los becarios");
+      toast({
+        title: "Error",
+        description: err.message || "No se pudieron cargar los becarios",
+        variant: "destructive"
+      });
+    } finally {
+      setBecariosLoading(false);
+    }
+  };
+
+  // Cargar becarios al montar el componente
+  useEffect(() => {
+    loadBecarios();
+  }, []);
 
   const handleVerDetalles = (estudianteId: string) => {
     navigate(`/estudiante/${estudianteId}`);
@@ -92,51 +123,6 @@ const EstudiantesBecarios = () => {
     loadUsuarios();
   }, [tokens?.accessToken]);
 
-  // Mock data para reportes de actividades
-  const reportes: ReporteActividad[] = [
-    {
-      id: "1",
-      estudiante: "Luis Rodríguez Silva",
-      cedula: "V-87654321",
-      supervisor: "Prof. María Fernández",
-      plaza: "Laboratorio de Sistemas",
-      periodo: "2024-2",
-      horasRequeridas: 120,
-      horasCompletadas: 95,
-      actividades: ["Apoyo en clases prácticas", "Mantenimiento de equipos", "Tutoría a estudiantes"],
-      estado: "En Progreso",
-      fechaUltimoReporte: "2024-12-10",
-      observaciones: "Excelente desempeño en todas las actividades asignadas"
-    },
-    {
-      id: "2",
-      estudiante: "Carmen Pérez Torres",
-      cedula: "V-11223344",
-      supervisor: "Dr. Roberto Sánchez",
-      plaza: "Biblioteca Central",
-      periodo: "2024-2",
-      horasRequeridas: 100,
-      horasCompletadas: 100,
-      actividades: ["Organización de material", "Atención a usuarios", "Catalogación"],
-      estado: "Completo",
-      fechaUltimoReporte: "2024-12-15",
-      observaciones: "Completó todas las horas requeridas satisfactoriamente"
-    },
-    {
-      id: "3",
-      estudiante: "Diego Martínez Ruiz",
-      cedula: "V-55667788",
-      supervisor: "Ing. Laura Vásquez",
-      plaza: "Laboratorio de Química",
-      periodo: "2024-2",
-      horasRequeridas: 90,
-      horasCompletadas: 45,
-      actividades: ["Preparación de reactivos", "Limpieza de equipos"],
-      estado: "Atrasado",
-      fechaUltimoReporte: "2024-11-20",
-      observaciones: "Necesita mejorar la asistencia y cumplimiento de horarios"
-    }
-  ];
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -151,28 +137,6 @@ const EstudiantesBecarios = () => {
     }
   };
 
-  const getEstadoReporteBadge = (estado: string) => {
-    switch (estado) {
-      case "Completo":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Completo</Badge>;
-      case "En Progreso":
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">En Progreso</Badge>;
-      case "Pendiente":
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendiente</Badge>;
-      case "Atrasado":
-        return <Badge variant="destructive">Atrasado</Badge>;
-      default:
-        return <Badge variant="outline">{estado}</Badge>;
-    }
-  };
-
-  const getProgresoColor = (completadas: number, requeridas: number) => {
-    const porcentaje = (completadas / requeridas) * 100;
-    if (porcentaje >= 90) return "bg-green-500";
-    if (porcentaje >= 70) return "bg-blue-500";
-    if (porcentaje >= 50) return "bg-yellow-500";
-    return "bg-red-500";
-  };
 
   const estudiantesFromApi: EstudianteBecario[] = useMemo(() => {
     return usuarios.map(u => ({
@@ -201,26 +165,7 @@ const EstudiantesBecarios = () => {
     return matchesSearch && matchesBeca && matchesEstado;
   });
 
-  const filteredReportes = reportes.filter(reporte => {
-    const matchesSearch = 
-      reporte.estudiante.toLowerCase().includes(searchTermReportes.toLowerCase()) ||
-      reporte.cedula.toLowerCase().includes(searchTermReportes.toLowerCase()) ||
-      reporte.supervisor.toLowerCase().includes(searchTermReportes.toLowerCase());
-    
-    const matchesEstado = filterEstadoReportes === "todos" || reporte.estado === filterEstadoReportes;
-    const matchesPeriodo = reporte.periodo === filterPeriodo;
-    
-    return matchesSearch && matchesEstado && matchesPeriodo;
-  });
 
-  // Estadísticas para reportes
-  const estadisticasReportes = {
-    total: reportes.length,
-    completos: reportes.filter(r => r.estado === "Completo").length,
-    enProgreso: reportes.filter(r => r.estado === "En Progreso").length,
-    atrasados: reportes.filter(r => r.estado === "Atrasado").length,
-    horasTotales: reportes.reduce((acc, r) => acc + r.horasCompletadas, 0)
-  };
 
   return (
     <div className="space-y-6">
@@ -232,14 +177,10 @@ const EstudiantesBecarios = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="estudiantes" className="flex items-center space-x-2">
             <Eye className="h-4 w-4" />
             <span>Estudiantes Becarios</span>
-          </TabsTrigger>
-          <TabsTrigger value="reportes" className="flex items-center space-x-2">
-            <BarChart3 className="h-4 w-4" />
-            <span>Reporte de Actividades</span>
           </TabsTrigger>
         </TabsList>
 
@@ -287,11 +228,19 @@ const EstudiantesBecarios = () => {
           </Card>
 
           {/* Estadísticas de Estudiantes */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">156</p>
+                  {becariosLoading ? (
+                    <div className="flex items-center justify-center">
+                      <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : becariosError ? (
+                    <p className="text-red-500 text-sm">Error al cargar</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{Array.isArray(becarios) ? becarios.length : 0}</p>
+                  )}
                   <p className="text-sm text-muted-foreground">Total Becarios</p>
                 </div>
               </CardContent>
@@ -299,16 +248,18 @@ const EstudiantesBecarios = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">142</p>
+                  {becariosLoading ? (
+                    <div className="flex items-center justify-center">
+                      <RefreshCw className="h-6 w-6 animate-spin text-green-600" />
+                    </div>
+                  ) : becariosError ? (
+                    <p className="text-red-500 text-sm">Error al cargar</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-green-600">
+                      {Array.isArray(becarios) ? becarios.filter(becario => becario.activo === true).length : 0}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground">Activos</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-600">8</p>
-                  <p className="text-sm text-muted-foreground">Suspendidos</p>
                 </div>
               </CardContent>
             </Card>
@@ -335,175 +286,58 @@ const EstudiantesBecarios = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Estudiante</TableHead>
-                    <TableHead>Carrera</TableHead>
-                    <TableHead>Trimestre</TableHead>
-                    <TableHead>Promedio</TableHead>
-                    <TableHead>Tipo de Beca</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Supervisor</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEstudiantes.map((estudiante) => (
-                    <TableRow key={estudiante.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{estudiante.nombre}</p>
-                          <p className="text-sm text-muted-foreground">{estudiante.cedula}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{estudiante.carrera}</TableCell>
-                      <TableCell>{estudiante.semestre}°</TableCell>
-                      <TableCell>
-                        <span className="font-medium">{estudiante.promedio}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{estudiante.tipoBeca}</Badge>
-                      </TableCell>
-                      <TableCell>{getEstadoBadge(estudiante.estado)}</TableCell>
-                      <TableCell className="text-sm">{estudiante.supervisor}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleVerDetalles(estudiante.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              <div className="max-h-96 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Estudiante</TableHead>
+                      <TableHead>Carrera</TableHead>
+                      <TableHead>Trimestre</TableHead>
+                      <TableHead>Promedio</TableHead>
+                      <TableHead>Tipo de Beca</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Supervisor</TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-        </TabsContent>
-
-        {/* Pestaña Reporte de Actividades */}
-        <TabsContent value="reportes" className="space-y-6">
-          
-          {/* Filtros para Reportes */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por estudiante, cédula o supervisor..."
-                    value={searchTermReportes}
-                    onChange={(e) => setSearchTermReportes(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={filterPeriodo} onValueChange={setFilterPeriodo}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2024-2">2024-2</SelectItem>
-                    <SelectItem value="2024-1">2024-1</SelectItem>
-                    <SelectItem value="2023-3">2023-3</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={filterEstadoReportes} onValueChange={setFilterEstadoReportes}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos los Estados</SelectItem>
-                    <SelectItem value="Completo">Completo</SelectItem>
-                    <SelectItem value="En Progreso">En Progreso</SelectItem>
-                    <SelectItem value="Pendiente">Pendiente</SelectItem>
-                    <SelectItem value="Atrasado">Atrasado</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button className="bg-primary hover:bg-primary/90">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tabla de reportes de actividades */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Reportes de Actividades ({filteredReportes.length})</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Período: {filterPeriodo}</span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Estudiante</TableHead>
-                    <TableHead>Supervisor</TableHead>
-                    <TableHead>Plaza</TableHead>
-                    <TableHead>Progreso</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Último Reporte</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReportes.map((reporte) => (
-                    <TableRow key={reporte.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{reporte.estudiante}</p>
-                          <p className="text-sm text-muted-foreground">{reporte.cedula}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{reporte.supervisor}</TableCell>
-                      <TableCell className="text-sm">{reporte.plaza}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${getProgresoColor(reporte.horasCompletadas, reporte.horasRequeridas)}`}
-                              style={{ width: `${Math.min((reporte.horasCompletadas / reporte.horasRequeridas) * 100, 100)}%` }}
-                            ></div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEstudiantes.map((estudiante) => (
+                      <TableRow key={estudiante.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{estudiante.nombre}</p>
+                            <p className="text-sm text-muted-foreground">{estudiante.cedula}</p>
                           </div>
-                          <span className="text-sm font-medium">
-                            {reporte.horasCompletadas}/{reporte.horasRequeridas}h
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getEstadoReporteBadge(reporte.estado)}</TableCell>
-                      <TableCell className="text-sm">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span>{new Date(reporte.fechaUltimoReporte).toLocaleDateString('es-ES')}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm" title="Ver detalles">
-                            <FileText className="h-4 w-4" />
+                        </TableCell>
+                        <TableCell>{estudiante.carrera}</TableCell>
+                        <TableCell>{estudiante.semestre}°</TableCell>
+                        <TableCell>
+                          <span className="font-medium">{estudiante.promedio}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{estudiante.tipoBeca}</Badge>
+                        </TableCell>
+                        <TableCell>{getEstadoBadge(estudiante.estado)}</TableCell>
+                        <TableCell className="text-sm">{estudiante.supervisor}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleVerDetalles(estudiante.id)}
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" title="Descargar reporte">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
         </TabsContent>
+
 
       </Tabs>
     </div>

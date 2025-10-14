@@ -4,14 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Eye, Edit, Users } from "lucide-react";
+import { Search, Plus, Eye, Edit, Users, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchUsers } from "@/lib/api";
+import { fetchUsers, API_BASE } from "@/lib/api";
 import { useEffect, useState as useStateReact } from "react";
 
 interface Supervisor {
@@ -26,6 +26,25 @@ interface Supervisor {
   maxEstudiantes: number;
   estado: "Activo" | "Inactivo";
   fechaIngreso: string;
+  // Datos adicionales del nuevo endpoint
+  estudiantesSupervisionados?: Array<{
+    id: string;
+    tipoBeca: string;
+    estado: string;
+    horasCompletadas: number;
+    horasRequeridas: number;
+    usuario: {
+      nombre: string;
+      apellido: string;
+      cedula: string;
+      email: string;
+    };
+    plaza: {
+      materia: string;
+      codigo: string;
+      departamento: string;
+    };
+  }>;
 }
 
 interface EstudianteAsignado {
@@ -51,6 +70,7 @@ const GestionSupervisores = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
+    apellido: "",
     correo: "",
     cedula: "",
     departamento: "",
@@ -58,99 +78,650 @@ const GestionSupervisores = () => {
     estudiantes: [] as string[]
   });
 
-  const handleEditSupervisor = (supervisor: Supervisor) => {
+  // Estado separado para el tipo y número de cédula
+  const [cedulaData, setCedulaData] = useState({
+    tipo: "V",
+    numero: ""
+  });
+
+  // Estados para estadísticas de supervisores
+  const [supervisoresAPI, setSupervisoresAPI] = useState<any[]>([]);
+  const [supervisoresLoading, setSupervisoresLoading] = useState(true);
+  const [supervisoresError, setSupervisoresError] = useState<string | null>(null);
+  const [estadisticas, setEstadisticas] = useState({
+    totalSupervisores: 0,
+    totalAyudantes: 0,
+    promedioAyudantesPorSupervisor: 0
+  });
+  
+  // Estados para cambio de supervisor
+  const [isChangeSupervisorModalOpen, setIsChangeSupervisorModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [availableSupervisors, setAvailableSupervisors] = useState<any[]>([]);
+  const [newSupervisorId, setNewSupervisorId] = useState("");
+  const [changingSupervisor, setChangingSupervisor] = useState(false);
+
+  // Función para cargar supervisores del API
+  const loadSupervisores = async () => {
+    try {
+      setSupervisoresLoading(true);
+      setSupervisoresError(null);
+      
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`https://srodriguez.intelcondev.org/api/v1/supervisores/ayudantes/all?limit=50&offset=0`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error al cargar supervisores (${response.status})`);
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data); // Debug log
+      
+      // Asegurar que supervisores siempre sea un array
+      const supervisoresData = data.data?.supervisores || data.supervisores || [];
+      setSupervisoresAPI(Array.isArray(supervisoresData) ? supervisoresData : []);
+      
+      // Guardar estadísticas del API
+      if (data.data?.estadisticas) {
+        setEstadisticas({
+          totalSupervisores: data.data.estadisticas.totalSupervisores || 0,
+          totalAyudantes: data.data.estadisticas.totalAyudantes || 0,
+          promedioAyudantesPorSupervisor: parseFloat(data.data.estadisticas.promedioAyudantesPorSupervisor) || 0
+        });
+      }
+    } catch (err: any) {
+      console.error('Error loading supervisores:', err); // Debug log
+      setSupervisoresError(err.message || "Error al cargar los supervisores");
+      toast({
+        title: "Error",
+        description: err.message || "No se pudieron cargar los supervisores",
+        variant: "destructive"
+      });
+    } finally {
+      setSupervisoresLoading(false);
+    }
+  };
+
+  // Cargar supervisores al montar el componente
+  useEffect(() => {
+    loadSupervisores();
+  }, []);
+
+  const handleEditSupervisor = async (supervisor: Supervisor) => {
     setEditingSupervisor(supervisor);
-    setFormData({
-      nombre: supervisor.nombre,
-      correo: supervisor.email,
-      cedula: supervisor.cedula,
-      departamento: supervisor.departamento,
-      cargo: supervisor.cargo,
-      estudiantes: ["1", "2"] // Simulando estudiantes asignados
-    });
     setIsEditModalOpen(true);
+    
+    // Cargar datos reales del supervisor y sus ayudantes
+    await loadSupervisorData(supervisor);
+  };
+
+  // Función para cargar datos del supervisor y sus ayudantes
+  const loadSupervisorData = async (supervisor: Supervisor) => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      console.log('=== CARGANDO DATOS DEL SUPERVISOR ===');
+      console.log('Supervisor ID:', supervisor.id);
+
+      // Cargar ayudantes del supervisor
+      const ayudantesResponse = await fetch(`${API_BASE}/v1/supervisores/${supervisor.id}/ayudantes`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (ayudantesResponse.ok) {
+        const ayudantesData = await ayudantesResponse.json();
+        console.log('Ayudantes del supervisor:', ayudantesData);
+        
+        // Mapear ayudantes a IDs para el formulario
+        const ayudantesIds = ayudantesData.data?.ayudantes?.map((ayudante: any) => ayudante.id) || [];
+        
+        // Separar nombre completo en nombre y apellido
+        const nombreCompleto = supervisor.nombre || "";
+        const partesNombre = nombreCompleto.split(' ');
+        const nombre = partesNombre[0] || "";
+        const apellido = partesNombre.slice(1).join(' ') || "";
+        
+        // Parsear cédula existente
+        const cedulaExistente = supervisor.cedula || "";
+        const cedulaMatch = cedulaExistente.match(/^([VE])-(.+)$/);
+        const cedulaTipo = cedulaMatch ? cedulaMatch[1] : "V";
+        const cedulaNumero = cedulaMatch ? cedulaMatch[2] : "";
+        
+        setCedulaData({
+          tipo: cedulaTipo,
+          numero: cedulaNumero
+        });
+        
+    setFormData({
+          nombre: nombre,
+          apellido: apellido,
+          correo: supervisor.email || "",
+          cedula: cedulaExistente,
+          departamento: supervisor.departamento || "",
+          cargo: supervisor.cargo || "",
+          estudiantes: ayudantesIds
+        });
+      } else {
+        console.warn('No se pudieron cargar los ayudantes del supervisor');
+        // Separar nombre completo en nombre y apellido
+        const nombreCompleto = supervisor.nombre || "";
+        const partesNombre = nombreCompleto.split(' ');
+        const nombre = partesNombre[0] || "";
+        const apellido = partesNombre.slice(1).join(' ') || "";
+        
+        // Parsear cédula existente
+        const cedulaExistente = supervisor.cedula || "";
+        const cedulaMatch = cedulaExistente.match(/^([VE])-(.+)$/);
+        const cedulaTipo = cedulaMatch ? cedulaMatch[1] : "V";
+        const cedulaNumero = cedulaMatch ? cedulaMatch[2] : "";
+        
+        setCedulaData({
+          tipo: cedulaTipo,
+          numero: cedulaNumero
+        });
+        
+        setFormData({
+          nombre: nombre,
+          apellido: apellido,
+          correo: supervisor.email || "",
+          cedula: cedulaExistente,
+          departamento: supervisor.departamento || "",
+          cargo: supervisor.cargo || "",
+          estudiantes: []
+        });
+      }
+
+      // Cargar estudiantes disponibles para asignar
+      await loadEstudiantesDisponibles();
+    } catch (err: any) {
+      console.error('Error cargando datos del supervisor:', err);
+      // Usar datos básicos del supervisor si falla la carga
+      const nombreCompleto = supervisor.nombre || "";
+      const partesNombre = nombreCompleto.split(' ');
+      const nombre = partesNombre[0] || "";
+      const apellido = partesNombre.slice(1).join(' ') || "";
+      
+      // Parsear cédula existente
+      const cedulaExistente = supervisor.cedula || "";
+      const cedulaMatch = cedulaExistente.match(/^([VE])-(.+)$/);
+      const cedulaTipo = cedulaMatch ? cedulaMatch[1] : "V";
+      const cedulaNumero = cedulaMatch ? cedulaMatch[2] : "";
+      
+      setCedulaData({
+        tipo: cedulaTipo,
+        numero: cedulaNumero
+      });
+      
+      setFormData({
+        nombre: nombre,
+        apellido: apellido,
+        correo: supervisor.email || "",
+        cedula: cedulaExistente,
+        departamento: supervisor.departamento || "",
+        cargo: supervisor.cargo || "",
+        estudiantes: []
+      });
+    }
+  };
+
+  // Función para cargar estudiantes disponibles (sin supervisor asignado)
+  const loadEstudiantesDisponibles = async () => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      console.log('=== CARGANDO ESTUDIANTES DISPONIBLES (SIN SUPERVISOR) ===');
+
+      // Cargar becarios sin supervisor asignado
+      const response = await fetch(`${API_BASE}/v1/becarios?sinSupervisor=true&estado=Activa&limit=100`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Respuesta del endpoint becarios:', data);
+        
+        const becarios = data.data?.becarios || data.becarios || [];
+        
+        // Mapear a formato esperado
+        const estudiantesMapeados = becarios.map((becario: any) => ({
+          id: becario.id,
+          nombre: `${becario.usuario?.nombre || ''} ${becario.usuario?.apellido || ''}`.trim(),
+          cedula: becario.usuario?.cedula || 'N/A',
+          email: becario.usuario?.email || 'N/A',
+          tipoBeca: becario.tipoBeca || 'N/A',
+          plaza: becario.plaza?.materia || 'Sin plaza asignada'
+        }));
+        
+        setEstudiantesDisponibles(estudiantesMapeados);
+        console.log('✅ Estudiantes disponibles (sin supervisor) cargados:', estudiantesMapeados);
+        console.log(`📊 Total de estudiantes disponibles: ${estudiantesMapeados.length}`);
+      } else {
+        const errorData = await response.json().catch(() => null);
+        console.warn('No se pudieron cargar los estudiantes disponibles:', errorData);
+        // Usar datos mock como fallback
+        setEstudiantesDisponibles([
+          { id: "1", nombre: "María González Rodríguez", cedula: "V-27543123" },
+          { id: "2", nombre: "Carlos López Martínez", cedula: "V-28456789" }
+        ]);
+      }
+    } catch (err: any) {
+      console.error('Error cargando estudiantes disponibles:', err);
+      // Usar datos mock como fallback
+      setEstudiantesDisponibles([
+        { id: "1", nombre: "María González Rodríguez", cedula: "V-27543123" },
+        { id: "2", nombre: "Carlos López Martínez", cedula: "V-28456789" }
+      ]);
+    }
   };
 
   const handleEstudianteClick = (estudianteId: string) => {
     navigate(`/estudiante/${estudianteId}`);
   };
 
-  // Lista de estudiantes disponibles para asignar
-  const estudiantesDisponibles = [
-    { id: "1", nombre: "María González Rodríguez", cedula: "V-27543123" },
-    { id: "2", nombre: "Carlos López Martínez", cedula: "V-28456789" },
-    { id: "3", nombre: "Ana Sofía Ramírez", cedula: "V-29567890" },
-    { id: "4", nombre: "Luis Fernando Torres", cedula: "V-30678901" },
-    { id: "5", nombre: "Daniela Vásquez Castro", cedula: "V-31789012" },
-    { id: "6", nombre: "Pedro Miguel Santos", cedula: "V-32890123" },
-    { id: "7", nombre: "Isabella Morales Cruz", cedula: "V-33901234" },
-    { id: "8", nombre: "Diego Alejandro Ruiz", cedula: "V-34012345" }
-  ];
+  // Función para abrir modal de cambio de supervisor
+  const handleChangeSupervisor = (estudiante: any) => {
+    setSelectedStudent(estudiante);
+    setNewSupervisorId("");
+    setIsChangeSupervisorModalOpen(true);
+    // Cargar supervisores disponibles
+    loadAvailableSupervisors();
+  };
+
+  // Función para cargar supervisores disponibles
+  const loadAvailableSupervisors = async () => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`https://srodriguez.intelcondev.org/api/v1/supervisores/ayudantes/all?limit=50&offset=0`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al cargar supervisores (${response.status})`);
+      }
+
+      const data = await response.json();
+      const supervisoresData = data.data?.supervisores || data.supervisores || [];
+      setAvailableSupervisors(Array.isArray(supervisoresData) ? supervisoresData : []);
+    } catch (err: any) {
+      console.error('Error loading available supervisors:', err);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los supervisores disponibles",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Función para cambiar supervisor de un estudiante
+  const handleChangeSupervisorSubmit = async () => {
+    if (!selectedStudent || !newSupervisorId) {
+      toast({
+        title: "Error",
+        description: "Seleccione un supervisor",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setChangingSupervisor(true);
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      const response = await fetch(`https://srodriguez.intelcondev.org/api/v1/supervisores/ayudantes/${selectedStudent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          supervisorId: newSupervisorId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error al cambiar supervisor (${response.status})`);
+      }
+
+      const data = await response.json();
+      console.log('Supervisor changed successfully:', data);
+      
+      toast({
+        title: "Éxito",
+        description: data.message || "Supervisor cambiado exitosamente",
+      });
+
+      // Cerrar modal y recargar datos
+      setIsChangeSupervisorModalOpen(false);
+      setSelectedStudent(null);
+      setNewSupervisorId("");
+      loadSupervisores(); // Recargar la lista de supervisores
+    } catch (err: any) {
+      console.error('Error changing supervisor:', err);
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo cambiar el supervisor",
+        variant: "destructive"
+      });
+    } finally {
+      setChangingSupervisor(false);
+    }
+  };
+
+  // Estado para estudiantes disponibles (sin supervisor asignado)
+  const [estudiantesDisponibles, setEstudiantesDisponibles] = useState([
+    { id: "1", nombre: "María González Rodríguez", cedula: "V-27543123", email: "maria.gonzalez@unimet.edu.ve", tipoBeca: "Ayudantía", plaza: "Programación I" },
+    { id: "2", nombre: "Carlos López Martínez", cedula: "V-28456789", email: "carlos.lopez@unimet.edu.ve", tipoBeca: "Ayudantía", plaza: "Cálculo I" }
+  ]);
 
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCedulaChange = (tipo: string, numero: string) => {
+    setCedulaData({ tipo, numero });
+    // Concatenar tipo y número para formData.cedula
+    const cedulaCompleta = numero ? `${tipo}-${numero}` : "";
+    setFormData(prev => ({ ...prev, cedula: cedulaCompleta }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      console.log('=== CREAR SUPERVISOR ===');
+      console.log('Datos del formulario:', formData);
+
+      // Paso 1: Crear usuario con POST /api/v1/auth/register
+      const userData = {
+        email: formData.correo,
+        password: "Supervisor123!", // Contraseña temporal
+        nombre: formData.nombre.trim(),
+        apellido: formData.apellido.trim(),
+        cedula: formData.cedula,
+        telefono: "+58 212 1234567", // Teléfono temporal
+        role: "supervisor",
+        departamento: formData.departamento,
+        cargo: formData.cargo
+      };
+
+      console.log('Paso 1 - Creando usuario:', userData);
+
+      const userResponse = await fetch(`${API_BASE}/v1/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+
+      if (!userResponse.ok) {
+        const errorData = await userResponse.json().catch(() => null);
+        console.error('Error creando usuario:', errorData);
+        throw new Error(errorData?.message || `Error al crear usuario (${userResponse.status})`);
+      }
+
+      const userResult = await userResponse.json();
+      console.log('Usuario creado exitosamente:', userResult);
+      
+      const supervisorId = userResult.data?.user?.id;
+      if (!supervisorId) {
+        throw new Error("No se pudo obtener el ID del supervisor creado");
+      }
+
+      // Paso 2: Asignar ayudantes si hay estudiantes seleccionados
+      if (formData.estudiantes.length > 0) {
+        console.log('Paso 2 - Asignando ayudantes:', formData.estudiantes);
+        
+        const assignData = {
+          estudiantesBecarios: formData.estudiantes,
+          permitirReasignacion: true
+        };
+
+        console.log('Datos de asignación:', assignData);
+
+        const assignResponse = await fetch(`${API_BASE}/v1/supervisores/${supervisorId}/ayudantes/asignar`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(assignData)
+        });
+
+        if (!assignResponse.ok) {
+          const errorData = await assignResponse.json().catch(() => null);
+          console.error('Error asignando ayudantes:', errorData);
+          
+          // Mostrar información específica del error
+          if (errorData?.data?.errores) {
+            console.warn('Errores de asignación:', errorData.data.errores);
+            toast({
+              title: "Advertencia",
+              description: `El supervisor se creó pero ${errorData.data.totalErrores} ayudante(s) no se pudieron asignar. Revisa la consola para más detalles.`,
+              variant: "destructive"
+            });
+          } else {
+            console.warn('El supervisor se creó pero no se pudieron asignar los ayudantes');
+            toast({
+              title: "Advertencia", 
+              description: "El supervisor se creó pero no se pudieron asignar los ayudantes",
+              variant: "destructive"
+            });
+          }
+        } else {
+          const successData = await assignResponse.json().catch(() => null);
+          console.log('Ayudantes asignados exitosamente:', successData);
+          
+          if (successData?.data?.totalAsignados > 0) {
+            toast({
+              title: "Éxito",
+              description: `${successData.data.totalAsignados} ayudante(s) asignado(s) exitosamente`
+            });
+          }
+        }
+      }
+
     toast({
       title: "Supervisor creado",
       description: "El supervisor ha sido creado exitosamente.",
     });
+
     setIsModalOpen(false);
     setFormData({
       nombre: "",
+        apellido: "",
       correo: "",
       cedula: "",
       departamento: "",
       cargo: "",
       estudiantes: []
     });
-  };
-
-  const handleEditSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Supervisor actualizado",
-      description: "Los datos del supervisor han sido actualizados exitosamente.",
+    setCedulaData({
+      tipo: "V",
+      numero: ""
     });
-    setIsEditModalOpen(false);
-    setEditingSupervisor(null);
+      await loadSupervisores();
+    } catch (err: any) {
+      console.error('Error creating supervisor:', err);
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo crear el supervisor",
+        variant: "destructive"
+      });
+    }
   };
 
-  const loadSupervisores = async () => {
-    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
-    if (!accessToken) {
-      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar supervisores', variant: 'destructive' });
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingSupervisor) {
+    toast({
+        title: "Error",
+        description: "No hay supervisor seleccionado para editar",
+        variant: "destructive"
+    });
       return;
     }
-    setLoading(true);
+
     try {
-      const res = await fetchUsers(accessToken, { role: 'supervisor' });
-      const mapped = res.data.usuarios.map(u => ({
-        id: u.id,
-        nombre: u.nombre + (u.apellido ? ` ${u.apellido}` : ''),
-        cedula: u.cedula || 'N/A',
-        departamento: u.departamento || 'N/A',
-        cargo: u.cargo || 'N/A',
-        email: u.email,
-        telefono: u.telefono || 'N/A',
-        estudiantesAsignados: 0, // TODO: obtener del endpoint correspondiente
-        maxEstudiantes: 5, // TODO: obtener del endpoint correspondiente
-        estado: u.activo ? "Activo" : "Inactivo",
-        fechaIngreso: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : 'N/A'
-      }));
-      setSupervisores(mapped);
-    } catch (e: any) {
-      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los supervisores', variant: 'destructive' });
-    } finally {
-      setLoading(false);
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      console.log('=== EDITAR SUPERVISOR ===');
+      console.log('Supervisor ID:', editingSupervisor.id);
+      console.log('Datos del formulario:', formData);
+
+      // Paso 1: Actualizar datos básicos del supervisor
+      const userData = {
+        nombre: formData.nombre.trim(),
+        apellido: formData.apellido.trim(),
+        departamento: formData.departamento,
+        cargo: formData.cargo
+      };
+
+      console.log('Paso 1 - Actualizando datos básicos:', userData);
+
+      const userResponse = await fetch(`${API_BASE}/v1/users/${editingSupervisor.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+
+      if (!userResponse.ok) {
+        const errorData = await userResponse.json().catch(() => null);
+        console.error('Error actualizando usuario:', errorData);
+        throw new Error(errorData?.message || `Error al actualizar usuario (${userResponse.status})`);
+      }
+
+      console.log('Datos básicos actualizados exitosamente');
+
+      // Paso 2: Actualizar ayudantes asignados si hay cambios
+      if (formData.estudiantes.length > 0) {
+        console.log('Paso 2 - Asignando ayudantes:', formData.estudiantes);
+        
+        const assignData = {
+          estudiantesBecarios: formData.estudiantes,
+          permitirReasignacion: true
+        };
+
+        console.log('Datos de asignación (editar):', assignData);
+
+        const assignResponse = await fetch(`${API_BASE}/v1/supervisores/${editingSupervisor.id}/ayudantes/asignar`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(assignData)
+        });
+
+        if (!assignResponse.ok) {
+          const errorData = await assignResponse.json().catch(() => null);
+          console.error('Error asignando ayudantes:', errorData);
+          
+          // Mostrar información específica del error
+          if (errorData?.data?.errores) {
+            console.warn('Errores de asignación:', errorData.data.errores);
+            toast({
+              title: "Advertencia",
+              description: `Los datos se actualizaron pero ${errorData.data.totalErrores} ayudante(s) no se pudieron asignar. Revisa la consola para más detalles.`,
+              variant: "destructive"
+            });
+          } else {
+            console.warn('Los datos básicos se actualizaron pero no se pudieron asignar los ayudantes');
+            toast({
+              title: "Advertencia",
+              description: "Los datos se actualizaron pero no se pudieron asignar los ayudantes",
+              variant: "destructive"
+            });
+          }
+        } else {
+          const successData = await assignResponse.json().catch(() => null);
+          console.log('Ayudantes asignados exitosamente:', successData);
+          
+          if (successData?.data?.totalAsignados > 0) {
+            toast({
+              title: "Éxito",
+              description: `${successData.data.totalAsignados} ayudante(s) asignado(s) exitosamente`
+            });
+          }
+        }
+      }
+
+      toast({
+        title: "Supervisor actualizado",
+        description: "Los datos del supervisor han sido actualizados exitosamente.",
+      });
+
+      setIsEditModalOpen(false);
+      setEditingSupervisor(null);
+      await loadSupervisores();
+    } catch (err: any) {
+      console.error('Error updating supervisor:', err);
+      toast({
+        title: "Error",
+        description: err.message || "No se pudo actualizar el supervisor",
+        variant: "destructive"
+      });
     }
   };
 
-  useEffect(() => {
-    loadSupervisores();
-  }, [tokens?.accessToken]);
 
   // Mock data (temporal hasta que se implementen los endpoints faltantes)
   const supervisoresMock: Supervisor[] = [
@@ -236,7 +807,24 @@ const GestionSupervisores = () => {
     }
   };
 
-  const filteredSupervisores = supervisores.filter(supervisor => {
+  // Mapear datos del API al formato esperado por la tabla
+  const supervisoresMapeados = supervisoresAPI.map(supervisor => ({
+    id: supervisor.id,
+    nombre: supervisor.nombre + (supervisor.apellido ? ` ${supervisor.apellido}` : ''),
+    cedula: 'N/A', // No viene en el nuevo endpoint
+    departamento: supervisor.departamento || 'N/A',
+    cargo: 'Supervisor', // Valor por defecto
+    email: supervisor.email,
+    telefono: 'N/A', // No viene en el nuevo endpoint
+    estudiantesAsignados: supervisor.cantidadAyudantes || 0,
+    maxEstudiantes: 10, // Valor por defecto
+    estado: "Activo", // Asumimos activo por defecto
+    fechaIngreso: 'N/A', // No viene en el nuevo endpoint
+    // Datos adicionales del nuevo endpoint
+    estudiantesSupervisionados: supervisor.estudiantesSupervisionados || []
+  }));
+
+  const filteredSupervisores = supervisoresMapeados.filter(supervisor => {
     const matchesSearch = supervisor.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          supervisor.cedula.includes(searchTerm) ||
                          supervisor.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -253,7 +841,25 @@ const GestionSupervisores = () => {
           <h2 className="text-3xl font-bold text-primary">Gestión de Supervisores</h2>
           <p className="text-muted-foreground">Administración de supervisores y estudiantes asignados</p>
         </div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <Dialog open={isModalOpen} onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (open) {
+            // Limpiar el formulario cuando se abre el modal de crear
+            setFormData({
+              nombre: "",
+              apellido: "",
+              correo: "",
+              cedula: "",
+              departamento: "",
+              cargo: "",
+              estudiantes: []
+            });
+            setCedulaData({
+              tipo: "V",
+              numero: ""
+            });
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90">
               <Plus className="h-4 w-4 mr-2" />
@@ -268,12 +874,22 @@ const GestionSupervisores = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre Completo</Label>
+                    <Label htmlFor="nombre">Nombre</Label>
                   <Input
                     id="nombre"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange("nombre", e.target.value)}
-                    placeholder="Ingrese el nombre completo"
+                      placeholder="Ingrese el nombre"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apellido">Apellido</Label>
+                    <Input
+                      id="apellido"
+                      value={formData.apellido}
+                      onChange={(e) => handleInputChange("apellido", e.target.value)}
+                      placeholder="Ingrese el apellido"
                     required
                   />
                 </div>
@@ -290,13 +906,28 @@ const GestionSupervisores = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cedula">Cédula</Label>
-                  <Input
-                    id="cedula"
-                    value={formData.cedula}
-                    onChange={(e) => handleInputChange("cedula", e.target.value)}
-                    placeholder="V-12345678"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Select 
+                      value={cedulaData.tipo} 
+                      onValueChange={(value) => handleCedulaChange(value, cedulaData.numero)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="V">V</SelectItem>
+                        <SelectItem value="E">E</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="cedula"
+                      value={cedulaData.numero}
+                      onChange={(e) => handleCedulaChange(cedulaData.tipo, e.target.value)}
+                      placeholder="12345678"
+                      required
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="departamento">Departamento</Label>
@@ -362,8 +993,13 @@ const GestionSupervisores = () => {
                     {formData.estudiantes.map((estudianteId) => {
                       const estudiante = estudiantesDisponibles.find(e => e.id === estudianteId);
                       return (
-                        <div key={estudianteId} className="flex items-center justify-between bg-background p-2 rounded border">
-                          <span className="text-sm">{estudiante?.nombre} - {estudiante?.cedula}</span>
+                        <div key={estudianteId} className="flex items-center justify-between bg-background p-3 rounded border">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{estudiante?.nombre}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {estudiante?.cedula} • {estudiante?.tipoBeca} • {estudiante?.plaza}
+                            </p>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
@@ -371,6 +1007,7 @@ const GestionSupervisores = () => {
                             onClick={() => {
                               handleInputChange("estudiantes", formData.estudiantes.filter(id => id !== estudianteId));
                             }}
+                            className="text-red-500 hover:text-red-700"
                           >
                             ×
                           </Button>
@@ -423,40 +1060,37 @@ const GestionSupervisores = () => {
         </CardContent>
       </Card>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">24</p>
-              <p className="text-sm text-muted-foreground">Total Supervisores</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">22</p>
-              <p className="text-sm text-muted-foreground">Activos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">142</p>
-              <p className="text-sm text-muted-foreground">Estudiantes Supervisados</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Tabla de supervisores */}
       <Card>
         <CardHeader>
+          <div className="flex justify-between items-center">
           <CardTitle>Lista de Supervisores ({filteredSupervisores.length})</CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadSupervisores}
+              disabled={supervisoresLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${supervisoresLoading ? 'animate-spin' : ''}`} />
+              Recargar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          {supervisoresLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Cargando supervisores...</span>
+            </div>
+          ) : supervisoresError ? (
+            <div className="text-center py-8">
+              <p className="text-red-500 mb-4">{supervisoresError}</p>
+              <Button onClick={loadSupervisores} variant="outline">
+                Reintentar
+              </Button>
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -522,32 +1156,75 @@ const GestionSupervisores = () => {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Estudiante</TableHead>
-                                  <TableHead>Carrera</TableHead>
+                                  <TableHead>Plaza</TableHead>
                                   <TableHead>Tipo de Beca</TableHead>
-                                  <TableHead>Promedio</TableHead>
+                                  <TableHead>Horas</TableHead>
                                   <TableHead>Estado</TableHead>
+                                  <TableHead>Acciones</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {estudiantesAsignados.map((estudiante) => (
+                                {supervisor.estudiantesSupervisionados && supervisor.estudiantesSupervisionados.length > 0 ? (
+                                  supervisor.estudiantesSupervisionados.map((estudiante) => (
                                   <TableRow 
                                     key={estudiante.id}
                                     className="cursor-pointer hover:bg-muted/50"
                                     onClick={() => handleEstudianteClick(estudiante.id)}
                                   >
-                                    <TableCell className="font-medium">{estudiante.nombre}</TableCell>
-                                    <TableCell>{estudiante.carrera}</TableCell>
+                                      <TableCell className="font-medium">
+                                        <div>
+                                          <p>{estudiante.usuario.nombre} {estudiante.usuario.apellido}</p>
+                                          <p className="text-sm text-muted-foreground">{estudiante.usuario.email}</p>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div>
+                                          <p className="font-medium">{estudiante.plaza.materia}</p>
+                                          <p className="text-sm text-muted-foreground">{estudiante.plaza.codigo}</p>
+                                        </div>
+                                      </TableCell>
                                     <TableCell>
                                       <Badge variant="outline">{estudiante.tipoBeca}</Badge>
                                     </TableCell>
-                                    <TableCell>{estudiante.promedio}</TableCell>
+                                      <TableCell>
+                                        <div className="text-sm">
+                                          <p>{estudiante.horasCompletadas}/{estudiante.horasRequeridas} hrs</p>
+                                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                            <div 
+                                              className="bg-blue-600 h-2 rounded-full" 
+                                              style={{ 
+                                                width: `${estudiante.horasRequeridas > 0 ? (estudiante.horasCompletadas / estudiante.horasRequeridas) * 100 : 0}%` 
+                                              }}
+                                            ></div>
+                                          </div>
+                                        </div>
+                                      </TableCell>
                                     <TableCell>
                                       <Badge className="bg-green-100 text-green-800 border-green-200">
                                         {estudiante.estado}
                                       </Badge>
                                     </TableCell>
+                                      <TableCell>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleChangeSupervisor(estudiante);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
                                   </TableRow>
-                                ))}
+                                  ))
+                                ) : (
+                                  <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                                      No hay estudiantes asignados a este supervisor
+                                    </TableCell>
+                                  </TableRow>
+                                )}
                               </TableBody>
                             </Table>
                           </div>
@@ -566,25 +1243,56 @@ const GestionSupervisores = () => {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
         </Card>
 
-        {/* Modal de Edición */}
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        {/* Modal de Edición - Editar Datos del Supervisor */}
+        <Dialog open={isEditModalOpen} onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) {
+            // Limpiar el formulario cuando se cierra el modal de edición
+            setFormData({
+              nombre: "",
+              apellido: "",
+              correo: "",
+              cedula: "",
+              departamento: "",
+              cargo: "",
+              estudiantes: []
+            });
+            setCedulaData({
+              tipo: "V",
+              numero: ""
+            });
+            setEditingSupervisor(null);
+          }
+        }}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Editar Supervisor</DialogTitle>
             </DialogHeader>
             
+            {editingSupervisor && (
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-nombre">Nombre Completo</Label>
+                    <Label htmlFor="edit-nombre">Nombre</Label>
                   <Input
                     id="edit-nombre"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange("nombre", e.target.value)}
-                    placeholder="Ingrese el nombre completo"
+                      placeholder="Ingrese el nombre"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-apellido">Apellido</Label>
+                    <Input
+                      id="edit-apellido"
+                      value={formData.apellido}
+                      onChange={(e) => handleInputChange("apellido", e.target.value)}
+                      placeholder="Ingrese el apellido"
                     required
                   />
                 </div>
@@ -601,13 +1309,28 @@ const GestionSupervisores = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-cedula">Cédula</Label>
-                  <Input
-                    id="edit-cedula"
-                    value={formData.cedula}
-                    onChange={(e) => handleInputChange("cedula", e.target.value)}
-                    placeholder="V-12345678"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Select 
+                      value={cedulaData.tipo} 
+                      onValueChange={(value) => handleCedulaChange(value, cedulaData.numero)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="V">V</SelectItem>
+                        <SelectItem value="E">E</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="edit-cedula"
+                      value={cedulaData.numero}
+                      onChange={(e) => handleCedulaChange(cedulaData.tipo, e.target.value)}
+                      placeholder="12345678"
+                      required
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-departamento">Departamento</Label>
@@ -657,7 +1380,12 @@ const GestionSupervisores = () => {
                           value={estudiante.id}
                           disabled={formData.estudiantes.includes(estudiante.id)}
                         >
-                          {estudiante.nombre} - {estudiante.cedula}
+                            <div className="flex flex-col">
+                              <span className="font-medium">{estudiante.nombre}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {estudiante.cedula} • {estudiante.tipoBeca} • {estudiante.plaza}
+                              </span>
+                            </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -673,8 +1401,13 @@ const GestionSupervisores = () => {
                     {formData.estudiantes.map((estudianteId) => {
                       const estudiante = estudiantesDisponibles.find(e => e.id === estudianteId);
                       return (
-                        <div key={estudianteId} className="flex items-center justify-between bg-background p-2 rounded border">
-                          <span className="text-sm">{estudiante?.nombre} - {estudiante?.cedula}</span>
+                        <div key={estudianteId} className="flex items-center justify-between bg-background p-3 rounded border">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{estudiante?.nombre}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {estudiante?.cedula} • {estudiante?.tipoBeca} • {estudiante?.plaza}
+                            </p>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
@@ -682,6 +1415,7 @@ const GestionSupervisores = () => {
                             onClick={() => {
                               handleInputChange("estudiantes", formData.estudiantes.filter(id => id !== estudianteId));
                             }}
+                            className="text-red-500 hover:text-red-700"
                           >
                             ×
                           </Button>
@@ -701,6 +1435,70 @@ const GestionSupervisores = () => {
                 </Button>
               </div>
             </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para cambiar supervisor */}
+        <Dialog open={isChangeSupervisorModalOpen} onOpenChange={setIsChangeSupervisorModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Cambiar Supervisor</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedStudent && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Estudiante:</h4>
+                  <p className="text-sm">
+                    {selectedStudent.usuario?.nombre} {selectedStudent.usuario?.apellido}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedStudent.usuario?.email}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Plaza: {selectedStudent.plaza?.materia} ({selectedStudent.plaza?.codigo})
+                  </p>
+                </div>
+              )}
+              
+              <div>
+                <Label htmlFor="newSupervisor">Nuevo Supervisor *</Label>
+                <Select 
+                  value={newSupervisorId} 
+                  onValueChange={setNewSupervisorId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar supervisor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSupervisors.map((supervisor) => (
+                      <SelectItem key={supervisor.id} value={supervisor.id}>
+                        {supervisor.nombre} {supervisor.apellido || ''} ({supervisor.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsChangeSupervisorModalOpen(false)} 
+                  className="flex-1"
+                  disabled={changingSupervisor}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleChangeSupervisorSubmit} 
+                  className="flex-1 bg-primary hover:bg-primary/90"
+                  disabled={changingSupervisor || !newSupervisorId}
+                >
+                  {changingSupervisor ? "Cambiando..." : "Cambiar Supervisor"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

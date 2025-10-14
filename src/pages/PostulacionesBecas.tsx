@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -17,10 +18,11 @@ import ProgramaExcelenciaTabs from "@/components/excelencia/ProgramaExcelenciaTa
 
 const PostulacionesBecas = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
 
-  const handleLogout = () => {
-    navigate("/");
+  const handleLogout = async () => {
+    await logout(() => navigate('/'));
   };
 
   const handleProgramSelect = (programId: string) => {
@@ -106,15 +108,6 @@ const PostulacionesBecas = () => {
             </BreadcrumbList>
           </Breadcrumb>
 
-          {/* Back Button */}
-          <Button 
-            variant="outline" 
-            onClick={handleBackToPrograms}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver a Programas
-          </Button>
 
           {/* Application Form */}
           {selectedProgram === "excelencia" ? (

@@ -47,16 +47,25 @@ interface Plaza {
   fechaFin?: string;
   supervisorResponsable?: string;
   observaciones?: string;
+  // Datos de estudiantes asignados
+  estudiantesAsignados?: Array<{
+    id: string;
+    usuarioId: string;
+    estado: string;
+    horasRequeridas: number;
+    horasCompletadas: number;
+    periodoInicio: string;
+    fechaAsignacion: string;
+    usuario: {
+      nombre: string;
+      apellido: string;
+      email: string;
+      carrera: string;
+      trimestre: number;
+    };
+  }>;
 }
 
-interface AyudanteEnPlaza {
-  id: string;
-  nombre: string;
-  cedula: string;
-  carrera: string;
-  horario: string;
-  estado: string;
-}
 
 const GestionPlazas = () => {
   const { toast } = useToast();
@@ -74,6 +83,33 @@ const GestionPlazas = () => {
   const [loadingSupervisores, setLoadingSupervisores] = useState(false);
 
   console.log('GestionPlazas component rendering');
+  
+  // Limpiar formulario cuando se abre el modal de creación
+  useEffect(() => {
+    if (isCreating && !isEditing) {
+      setFormData({
+        materia: "",
+        codigo: "",
+        departamento: "",
+        ubicacion: "",
+        profesor: "",
+        capacidad: 1,
+        ocupadas: 0,
+        horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
+        estado: "Activa",
+        tipoAyudantia: "academica",
+        descripcionActividades: "",
+        requisitosEspeciales: [""],
+        horasSemana: 0,
+        periodoAcademico: "2025-1",
+        fechaInicio: "",
+        fechaFin: "",
+        supervisorResponsable: "",
+        observaciones: ""
+      });
+    }
+  }, [isCreating, isEditing]);
+
   const [formData, setFormData] = useState({
     materia: "",
     codigo: "",
@@ -140,7 +176,9 @@ const GestionPlazas = () => {
         fechaInicio: p.fechaInicio,
         fechaFin: p.fechaFin,
         supervisorResponsable: p.supervisorResponsable,
-        observaciones: p.observaciones
+        observaciones: p.observaciones,
+        // Datos de estudiantes asignados
+        estudiantesAsignados: p.estudiantesAsignados || []
       }));
       setPlazas(mapped);
     } catch (e: any) {
@@ -162,9 +200,23 @@ const GestionPlazas = () => {
       // Filtrar requisitos vacíos
       const requisitos = formData.requisitosEspeciales.filter(req => req.trim() !== '');
       
+      // Filtrar horarios vacíos y asegurar que todos los campos estén llenos
+      const horarios = formData.horario.filter(h => 
+        h.dia && h.horaInicio && h.horaFin && 
+        h.dia.trim() !== '' && h.horaInicio.trim() !== '' && h.horaFin.trim() !== ''
+      );
+      
+      // Validar que haya al menos un horario
+      if (horarios.length === 0) {
+        toast({ title: 'Error', description: 'Debe agregar al menos un horario de trabajo', variant: 'destructive' });
+        setCreating(false);
+        return;
+      }
+      
       const plazaData = {
         ...formData,
         requisitosEspeciales: requisitos,
+        horario: horarios,
         fechaInicio: formData.fechaInicio || new Date().toISOString().split('T')[0],
         fechaFin: formData.fechaFin || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       };
@@ -266,9 +318,23 @@ const GestionPlazas = () => {
       // Filtrar requisitos vacíos
       const requisitos = formData.requisitosEspeciales.filter(req => req.trim() !== '');
       
+      // Filtrar horarios vacíos y asegurar que todos los campos estén llenos
+      const horarios = formData.horario.filter(h => 
+        h.dia && h.horaInicio && h.horaFin && 
+        h.dia.trim() !== '' && h.horaInicio.trim() !== '' && h.horaFin.trim() !== ''
+      );
+      
+      // Validar que haya al menos un horario
+      if (horarios.length === 0) {
+        toast({ title: 'Error', description: 'Debe agregar al menos un horario de trabajo', variant: 'destructive' });
+        setCreating(false);
+        return;
+      }
+      
       const plazaData = {
         ...formData,
         requisitosEspeciales: requisitos,
+        horario: horarios,
         fechaInicio: formData.fechaInicio || new Date().toISOString().split('T')[0],
         fechaFin: formData.fechaFin || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       };
@@ -417,24 +483,6 @@ const GestionPlazas = () => {
     }
   ];
 
-  const ayudantesEnPlaza: AyudanteEnPlaza[] = [
-    {
-      id: "1",
-      nombre: "Luis Rodríguez Silva",
-      cedula: "V-87654321",
-      carrera: "Ingeniería de Sistemas",
-      horario: "Lunes 8:00-12:00",
-      estado: "Activo"
-    },
-    {
-      id: "2",
-      nombre: "Ana García López",
-      cedula: "V-12345678",
-      carrera: "Ingeniería Civil",
-      horario: "Miércoles 14:00-18:00",
-      estado: "Activo"
-    }
-  ];
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -493,10 +541,14 @@ const GestionPlazas = () => {
             } else {
               setIsCreating(false);
             }
+          } else if (!isEditing) {
+            setIsCreating(true);
           }
         }}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nueva Plaza
             </Button>
@@ -705,6 +757,72 @@ const GestionPlazas = () => {
                   onClick={() => setFormData({...formData, requisitosEspeciales: [...formData.requisitosEspeciales, ""]})}
                 >
                   + Agregar Requisito
+                </Button>
+              </div>
+              
+              <div>
+                <Label>Horarios de Trabajo</Label>
+                {formData.horario.map((horario, index) => (
+                  <div key={index} className="grid grid-cols-4 gap-2 mb-2">
+                    <Select 
+                      value={horario.dia} 
+                      onValueChange={(value) => {
+                        const newHorarios = [...formData.horario];
+                        newHorarios[index] = { ...newHorarios[index], dia: value };
+                        setFormData({...formData, horario: newHorarios});
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Día" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Lunes">Lunes</SelectItem>
+                        <SelectItem value="Martes">Martes</SelectItem>
+                        <SelectItem value="Miércoles">Miércoles</SelectItem>
+                        <SelectItem value="Jueves">Jueves</SelectItem>
+                        <SelectItem value="Viernes">Viernes</SelectItem>
+                        <SelectItem value="Sábado">Sábado</SelectItem>
+                        <SelectItem value="Domingo">Domingo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input 
+                      type="time"
+                      value={horario.horaInicio}
+                      onChange={(e) => {
+                        const newHorarios = [...formData.horario];
+                        newHorarios[index] = { ...newHorarios[index], horaInicio: e.target.value };
+                        setFormData({...formData, horario: newHorarios});
+                      }}
+                    />
+                    <Input 
+                      type="time"
+                      value={horario.horaFin}
+                      onChange={(e) => {
+                        const newHorarios = [...formData.horario];
+                        newHorarios[index] = { ...newHorarios[index], horaFin: e.target.value };
+                        setFormData({...formData, horario: newHorarios});
+                      }}
+                    />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => {
+                        const newHorarios = formData.horario.filter((_, i) => i !== index);
+                        setFormData({...formData, horario: newHorarios});
+                      }}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                ))}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setFormData({...formData, horario: [...formData.horario, { dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }]})}
+                >
+                  + Agregar Horario
                 </Button>
               </div>
               
@@ -955,34 +1073,56 @@ const GestionPlazas = () => {
                             </div>
                             
                             <div>
-                              <h4 className="font-medium mb-3">Ayudantes Asignados</h4>
+                              <h4 className="font-medium mb-3">Ayudantes Asignados ({plaza.estudiantesAsignados?.length || 0})</h4>
                               <Table>
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>Nombre</TableHead>
                                     <TableHead>Carrera</TableHead>
-                                    <TableHead>Horario</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Horas</TableHead>
                                     <TableHead>Estado</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {ayudantesEnPlaza.map((ayudante) => (
-                                    <TableRow key={ayudante.id}>
-                                      <TableCell>
-                                        <div>
-                                          <p className="font-medium">{ayudante.nombre}</p>
-                                          <p className="text-sm text-muted-foreground">{ayudante.cedula}</p>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>{ayudante.carrera}</TableCell>
-                                      <TableCell>{ayudante.horario}</TableCell>
-                                      <TableCell>
-                                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                                          {ayudante.estado}
-                                        </Badge>
+                                  {plaza.estudiantesAsignados && plaza.estudiantesAsignados.length > 0 ? (
+                                    plaza.estudiantesAsignados.map((estudiante) => (
+                                      <TableRow key={estudiante.id}>
+                                        <TableCell>
+                                          <div>
+                                            <p className="font-medium">{estudiante.usuario.nombre} {estudiante.usuario.apellido}</p>
+                                            <p className="text-sm text-muted-foreground">Trimestre {estudiante.usuario.trimestre}</p>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>{estudiante.usuario.carrera}</TableCell>
+                                        <TableCell>{estudiante.usuario.email}</TableCell>
+                                        <TableCell>
+                                          <div className="text-sm">
+                                            <p>{estudiante.horasCompletadas}/{estudiante.horasRequeridas} hrs</p>
+                                            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                              <div 
+                                                className="bg-blue-600 h-2 rounded-full" 
+                                                style={{ 
+                                                  width: `${estudiante.horasRequeridas > 0 ? (estudiante.horasCompletadas / estudiante.horasRequeridas) * 100 : 0}%` 
+                                                }}
+                                              ></div>
+                                            </div>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                                            {estudiante.estado}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  ) : (
+                                    <TableRow>
+                                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                                        No hay ayudantes asignados a esta plaza
                                       </TableCell>
                                     </TableRow>
-                                  ))}
+                                  )}
                                 </TableBody>
                               </Table>
                             </div>
