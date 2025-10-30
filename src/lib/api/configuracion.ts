@@ -74,8 +74,8 @@ export interface ConfiguracionBeca {
   id: string;
   tipoBeca: TipoBeca;
   subtipoExcelencia?: SubtipoExcelencia;
-  cuposDisponibles: number;
-  duracionMeses: number;
+  cuposDisponibles: number | null;
+  duracionMeses: number | null;
   promedioMinimo: number;
   semestreMinimo: number;
   semestreMaximo: number;
@@ -89,8 +89,8 @@ export interface ConfiguracionBeca {
 export interface CreateOrUpdateConfiguracionBecaRequest {
   tipoBeca: TipoBeca;
   subtipoExcelencia?: SubtipoExcelencia;
-  cuposDisponibles: number;
-  duracionMeses: number;
+  cuposDisponibles: number | null;
+  duracionMeses: number | null;
   promedioMinimo: number;
   semestreMinimo: number;
   semestreMaximo: number;

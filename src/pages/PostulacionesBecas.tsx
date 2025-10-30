@@ -157,18 +157,10 @@ const PostulacionesBecas = () => {
               <CardContent className="p-6">
                 {selectedConfigs.map((config: any, idx: number) => (
                   <div key={config.id || idx} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Cupos Disponibles</p>
-                        <p className="text-2xl font-bold text-primary">{config.cuposDisponibles ?? '-'}</p>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="text-center p-4 bg-gray-50 rounded-lg">
                         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Promedio Mínimo</p>
                         <p className="text-2xl font-bold text-primary">{config.promedioMinimo ?? '-'}</p>
-                      </div>
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Duración</p>
-                        <p className="text-2xl font-bold text-primary">{config.duracionMeses ?? '-'} meses</p>
                       </div>
                     </div>
                     
@@ -220,7 +212,10 @@ const PostulacionesBecas = () => {
           {selectedProgram === "excelencia" ? (
             <ProgramaExcelenciaTabs configuraciones={configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia')} />
           ) : (
-            <UnifiedApplicationForm programTitle={program?.title || ""} />
+            <UnifiedApplicationForm 
+              programTitle={program?.title || ""}
+              requiredDocuments={Array.from(new Set((selectedConfigs || []).flatMap((c: any) => Array.isArray(c.documentosRequeridos) ? c.documentosRequeridos : [])))}
+            />
           )}
         </main>
       </div>

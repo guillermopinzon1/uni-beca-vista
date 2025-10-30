@@ -36,8 +36,8 @@ const ConfiguracionBecas = () => {
   const [formData, setFormData] = useState<CreateOrUpdateConfiguracionBecaRequest>({
     tipoBeca: TipoBeca.EXCELENCIA,
     subtipoExcelencia: SubtipoExcelencia.ACADEMICA,
-    cuposDisponibles: 0,
-    duracionMeses: 12,
+    cuposDisponibles: null,
+    duracionMeses: null,
     promedioMinimo: 15.0,
     semestreMinimo: 1,
     semestreMaximo: 12,
@@ -74,8 +74,8 @@ const ConfiguracionBecas = () => {
       setFormData({
         tipoBeca: selectedTab,
         subtipoExcelencia: selectedTab === TipoBeca.EXCELENCIA ? selectedSubtipoExcelencia : undefined,
-        cuposDisponibles: 0,
-        duracionMeses: 12,
+        cuposDisponibles: null,
+        duracionMeses: null,
         promedioMinimo: 15.0,
         semestreMinimo: 1,
         semestreMaximo: 12,
@@ -152,11 +152,7 @@ const ConfiguracionBecas = () => {
       return;
     }
 
-    // Validaciones
-    if (formData.cuposDisponibles <= 0) {
-      toast({ title: 'Error', description: 'Los cupos disponibles deben ser mayores a 0', variant: 'destructive' });
-      return;
-    }
+    // Validaciones (cupos/duración pueden ser null por requerimiento)
 
     setSaving(true);
     try {
@@ -309,51 +305,7 @@ const ConfiguracionBecas = () => {
           </CardHeader>
         </Card>
 
-        {/* Información básica mejorada */}
-        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <Settings className="h-5 w-5 text-blue-600" />
-              Información Básica
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              Configura los parámetros fundamentales de la beca
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cupos" className="text-sm font-medium text-gray-700">
-                  Cupos Disponibles
-                </Label>
-                <Input
-                  id="cupos"
-                  type="number"
-                  value={formData.cuposDisponibles}
-                  onChange={(e) => handleFormChange('cuposDisponibles', parseInt(e.target.value) || 0)}
-                  min="1"
-                  className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Ej: 25"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="duracion" className="text-sm font-medium text-gray-700">
-                  Duración (meses)
-                </Label>
-                <Input
-                  id="duracion"
-                  type="number"
-                  value={formData.duracionMeses}
-                  onChange={(e) => handleFormChange('duracionMeses', parseInt(e.target.value) || 1)}
-                  min="1"
-                  max="48"
-                  className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Ej: 12"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Información básica: removida por requerimiento (cupos/duración ahora null) */}
 
         {/* Requisitos académicos mejorados */}
         <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">

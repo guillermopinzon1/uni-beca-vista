@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-import { Search, Users, RefreshCw, ChevronDown, ChevronUp, UserCheck, Clock, Plus, Edit, UserX, UserPlus } from "lucide-react";
+import { Search, Users, RefreshCw, ChevronDown, ChevronUp, UserCheck, Clock, Plus, Edit, UserX, UserPlus, Building } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -685,147 +685,163 @@ const GestionSupervisores = () => {
 
                   {/* Expanded Content - Plazas asignadas y estudiantes */}
                   {expandedSupervisor === supervisor.id && (
-                    <div className="border-t border-orange/20 bg-orange/5 p-4">
-                      {/* Plazas asignadas */}
-                      {Array.isArray(supervisor.plazasAsignadas) && supervisor.plazasAsignadas.length > 0 && (
-                        <div className="space-y-3 mb-6">
-                          <h4 className="font-semibold text-sm text-primary">Plaza{supervisor.plazasAsignadas.length > 1 ? 's' : ''} asignada{supervisor.plazasAsignadas.length > 1 ? 's' : ''} ({supervisor.plazasAsignadas.length})</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {supervisor.plazasAsignadas.map((plaza) => (
-                              <Card key={plaza.id} className="border-primary/20">
-                                <CardContent className="p-4 space-y-3">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div>
-                                      <div className="text-sm font-semibold text-foreground">{plaza.materia}</div>
-                                      <div className="text-xs text-muted-foreground">{plaza.codigo} · {plaza.departamento}</div>
-                                    </div>
-                                    <div>
-                                      <Badge variant="outline" className="text-xs">{plaza.estado}</Badge>
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-3 text-xs">
-                                    <div className="space-y-1">
-                                      <div className="text-muted-foreground">Ubicación</div>
-                                      <div className="font-medium">{plaza.ubicacion}</div>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="text-muted-foreground">Horas/Semana</div>
-                                      <div className="font-medium">{plaza.horasSemana}</div>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="text-muted-foreground">Período</div>
-                                      <div className="font-medium">{plaza.periodoAcademico}</div>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="text-muted-foreground">Cupos</div>
-                                      <div className="font-medium">{plaza.ocupadas}/{plaza.capacidad}</div>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-muted-foreground mb-1">Horario</div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {plaza.horario.map((h, idx) => (
-                                        <Badge key={idx} variant="secondary" className="text-[10px]">
-                                          {h.dia}: {h.horaInicio}-{h.horaFin}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
+                    <div className="border-t border-orange/20 bg-orange/5 p-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Plazas Asignadas Column */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-base text-primary flex items-center gap-2">
+                              <Building className="h-4 w-4" />
+                              Plaza{Array.isArray(supervisor.plazasAsignadas) && supervisor.plazasAsignadas.length !== 1 ? 's' : ''} Asignada{Array.isArray(supervisor.plazasAsignadas) && supervisor.plazasAsignadas.length !== 1 ? 's' : ''}
+                            </h4>
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
+                              {Array.isArray(supervisor.plazasAsignadas) ? supervisor.plazasAsignadas.length : 0}
+                            </Badge>
                           </div>
-                        </div>
-                      )}
 
-                      {supervisor.estudiantesSupervisionados.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-4">
-                          No hay ayudantes asignados a este supervisor
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-sm text-primary mb-3">
-                            Ayudantes Asignados ({supervisor.cantidadAyudantes})
-                          </h4>
-                          {supervisor.estudiantesSupervisionados.map((estudiante) => (
-                            <Card key={estudiante.id} className="border-orange/20 bg-white">
-                              <CardContent className="p-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {/* Student Info */}
-                                  <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                          {Array.isArray(supervisor.plazasAsignadas) && supervisor.plazasAsignadas.length > 0 ? (
+                            <div className="space-y-3">
+                              {supervisor.plazasAsignadas.map((plaza) => (
+                                <Card key={plaza.id} className="border-purple-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                                  <CardContent className="p-4 space-y-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1">
+                                        <div className="text-sm font-semibold text-foreground line-clamp-1">{plaza.materia}</div>
+                                        <div className="text-xs text-muted-foreground">{plaza.codigo} · {plaza.departamento}</div>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs shrink-0">{plaza.estado}</Badge>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 text-xs">
+                                      <div className="space-y-1">
+                                        <div className="text-muted-foreground">Ubicación</div>
+                                        <div className="font-medium truncate">{plaza.ubicacion}</div>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <div className="text-muted-foreground">Horas/Semana</div>
+                                        <div className="font-medium">{plaza.horasSemana}h</div>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <div className="text-muted-foreground">Período</div>
+                                        <div className="font-medium">{plaza.periodoAcademico}</div>
+                                      </div>
+                                      <div className="space-y-1">
+                                        <div className="text-muted-foreground">Cupos</div>
+                                        <div className="font-medium">
+                                          <span className={plaza.ocupadas >= plaza.capacidad ? 'text-red-600' : 'text-green-600'}>
+                                            {plaza.ocupadas}
+                                          </span>
+                                          /{plaza.capacidad}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {plaza.horario && plaza.horario.length > 0 && (
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1.5">Horario</div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {plaza.horario.map((h, idx) => (
+                                            <Badge key={idx} variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                                              {h.dia}: {h.horaInicio}-{h.horaFin}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          ) : (
+                            <Card className="border-dashed border-2 border-gray-200">
+                              <CardContent className="p-6 text-center">
+                                <Building className="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                                <p className="text-sm text-muted-foreground">Sin plazas asignadas</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+
+                        {/* Ayudantes Asignados Column */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-base text-primary flex items-center gap-2">
+                              <UserCheck className="h-4 w-4" />
+                              Ayudantes Asignados
+                            </h4>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
+                              {supervisor.cantidadAyudantes}
+                            </Badge>
+                          </div>
+
+                          {supervisor.estudiantesSupervisionados.length > 0 ? (
+                            <div className="space-y-3">
+                              {supervisor.estudiantesSupervisionados.map((estudiante) => (
+                                <Card key={estudiante.id} className="border-blue-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                                  <CardContent className="p-4 space-y-3">
+                                    {/* Student Header */}
+                                    <div className="flex items-start gap-3">
+                                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
                                         {estudiante.usuario.nombre.charAt(0)}{estudiante.usuario.apellido.charAt(0)}
                                       </div>
-                                      <div>
-                                        <p className="font-semibold text-sm">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-sm truncate">
                                           {estudiante.usuario.nombre} {estudiante.usuario.apellido}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">{estudiante.usuario.email}</p>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-1 text-sm">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Cédula:</span>
-                                        <span className="font-medium">{estudiante.usuario.cedula}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Carrera:</span>
-                                        <span className="font-medium">{estudiante.usuario.carrera || 'N/A'}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Estado:</span>
-                                        {getEstadoBadge(estudiante.estado)}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Plaza & Progress */}
-                                  <div>
-                                    {estudiante.plaza ? (
-                                      <div className="space-y-2">
-                                        <div className="p-2 bg-green-50 border border-green-200 rounded-md">
-                                          <p className="font-semibold text-sm text-green-800">{estudiante.plaza.materia}</p>
-                                          <p className="text-xs text-green-600">Código: {estudiante.plaza.codigo}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{estudiante.usuario.email}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs text-muted-foreground">{estudiante.usuario.cedula}</span>
+                                          {getEstadoBadge(estudiante.estado)}
                                         </div>
-                                        <div className="space-y-1 text-sm">
-                                          <div className="flex items-center justify-between">
+                                      </div>
+                                    </div>
+
+                                    {/* Plaza Info */}
+                                    {estudiante.plaza ? (
+                                      <div className="space-y-2 pt-2 border-t border-gray-100">
+                                        <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+                                          <p className="font-semibold text-xs text-green-800 truncate">{estudiante.plaza.materia}</p>
+                                          <p className="text-[10px] text-green-600">Código: {estudiante.plaza.codigo}</p>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <div className="flex items-center justify-between text-xs">
                                             <span className="text-muted-foreground flex items-center gap-1">
                                               <Clock className="h-3 w-3" />
-                                              Horas completadas:
+                                              Horas:
                                             </span>
                                             <span className="font-bold text-primary">
-                                              {parseFloat(estudiante.horasCompletadas).toFixed(0)}/{estudiante.horasRequeridas}
+                                              {parseFloat(estudiante.horasCompletadas).toFixed(0)}/{estudiante.horasRequeridas || 0}
                                             </span>
                                           </div>
                                           <div className="w-full bg-gray-200 rounded-full h-2">
                                             <div
-                                              className="bg-primary rounded-full h-2 transition-all duration-300"
+                                              className="bg-gradient-to-r from-primary to-orange-accent rounded-full h-2 transition-all duration-300"
                                               style={{
-                                                width: `${Math.min((parseFloat(estudiante.horasCompletadas) / estudiante.horasRequeridas) * 100, 100)}%`
+                                                width: `${Math.min((parseFloat(estudiante.horasCompletadas || 0) / (estudiante.horasRequeridas || 1)) * 100, 100)}%`
                                               }}
                                             />
                                           </div>
-                                          <div className="flex items-center justify-between text-xs">
+                                          <div className="flex items-center justify-between text-[10px]">
                                             <span className="text-muted-foreground">Progreso</span>
-                                            <span className="font-medium">
-                                              {((parseFloat(estudiante.horasCompletadas) / estudiante.horasRequeridas) * 100).toFixed(1)}%
+                                            <span className="font-medium text-primary">
+                                              {((parseFloat(estudiante.horasCompletadas || 0) / (estudiante.horasRequeridas || 1)) * 100).toFixed(1)}%
                                             </span>
                                           </div>
                                         </div>
                                       </div>
-                                    ) : (
-                                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-center">
-                                        <p className="text-sm text-yellow-800 font-medium">Sin plaza asignada</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                                     ) : null}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          ) : (
+                            <Card className="border-dashed border-2 border-gray-200">
+                              <CardContent className="p-6 text-center">
+                                <UserCheck className="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                                <p className="text-sm text-muted-foreground">Sin ayudantes asignados</p>
                               </CardContent>
                             </Card>
-                          ))}
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </Card>

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Search, RefreshCw, Eye, Edit2, Save, X, Trash2, Power, User, Mail, Phone, Shield, Building, Briefcase, BookOpen, GraduationCap, Plus } from "lucide-react";
+import { Search, RefreshCw, Eye, Edit2, Save, X, Trash2, Power, User, Mail, Phone, Shield, Building, Briefcase, BookOpen, GraduationCap, Plus, FileText } from "lucide-react";
 
 type RoleFilter = "all" | "estudiante" | "supervisor" | "admin";
 
@@ -38,6 +38,8 @@ const GestionUsuarios = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
+  const [postStatus, setPostStatus] = useState<string>("");
+  const [loadingPostStatus, setLoadingPostStatus] = useState(false);
 
   // Create user modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -103,10 +105,98 @@ const GestionUsuarios = () => {
       setEditForm(response.data);
       setIsDetailModalOpen(true);
       setIsEditing(false);
+      // Estado de postulación
+      await fetchPostulacionStatus(response.data.id);
     } catch (error: any) {
       toast({ title: "Error", description: error?.message || "No se pudieron cargar los detalles", variant: "destructive" });
     }
   };
+
+  const fetchPostulacionStatus = async (userId: string) => {
+    if (!accessToken || !userId) return;
+    setLoadingPostStatus(true);
+    setPostStatus("");
+    try {
+      // Si el usuario seleccionado es el usuario autenticado, usar los endpoints indicados
+      const authUser = JSON.parse(localStorage.getItem('auth_user') || 'null');
+      if (authUser?.id && authUser.id === userId) {
+        // 1) Intentar obtener beca propia
+        const resMe = await fetch(`${API_BASE}/v1/becarios/me`, {
+          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (resMe.ok) {
+          setPostStatus('Tienes beca aprobada');
+          return;
+        }
+
+        if (resMe.status !== 404) {
+          // Si hay otro error distinto a 404, marcar desconocido pero continuar al paso 2 como fallback
+        }
+
+        // 2) Buscar postulaciones propias
+        const resPost = await fetch(`${API_BASE}/v1/postulaciones`, {
+          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (resPost.ok) {
+          const payload = await resPost.json();
+          const lista = payload?.data?.postulaciones || payload?.data || [];
+          if (!Array.isArray(lista) || lista.length === 0) {
+            setPostStatus('No te has postulado');
+            return;
+          }
+          const algunaAprobada = lista.some((p: any) => (p.estado || '').toLowerCase() === 'aprobada');
+          setPostStatus(algunaAprobada ? 'Tienes beca aprobada' : 'Postulado sin aprobar');
+          return;
+        }
+        // Si falla, continuar a fallback administrativo
+      }
+
+      // Fallback administrativo: consultar por usuarioId cuando no es el propio usuario
+      let tieneBeca = false;
+      try {
+        const resB = await fetch(`${API_BASE}/v1/becarios?usuarioId=${userId}&limit=1`, {
+          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (resB.ok) {
+          const payload = await resB.json();
+          const becarios = payload?.data?.becarios || payload?.data || [];
+          tieneBeca = Array.isArray(becarios) && becarios.some((b: any) => (b.estado || '').toLowerCase().includes('activa') || (b.estado || '').toLowerCase().includes('aprob'));
+        }
+      } catch {}
+
+      if (tieneBeca) {
+        setPostStatus('Tienes beca aprobada');
+        return;
+      }
+
+      let postulaciones: any[] = [];
+      try {
+        const resP = await fetch(`${API_BASE}/v1/postulaciones?usuarioId=${userId}&limit=5`, {
+          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (resP.ok) {
+          const payload = await resP.json();
+          postulaciones = payload?.data?.postulaciones || payload?.data || [];
+        }
+      } catch {}
+
+      if (!postulaciones || postulaciones.length === 0) {
+        setPostStatus('No se ha postulado');
+        return;
+      }
+
+      const algunaAprobada = postulaciones.some((p: any) => (p.estado || '').toLowerCase() === 'aprobada');
+      setPostStatus(algunaAprobada ? 'Tienes beca aprobada' : 'Postulado sin aprobar');
+    } catch {
+      setPostStatus('Estado desconocido');
+    } finally {
+      setLoadingPostStatus(false);
+    }
+  };
+
+  const setPostulacionLabel = (label: string) => setPostStatus(label);
 
   const handleSaveEdit = async () => {
     if (!accessToken || !selectedUser) return;
@@ -562,6 +652,30 @@ const GestionUsuarios = () => {
                         <p className="mt-1 text-sm font-medium">{selectedUser.telefono || '-'}</p>
                       )}
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Estado de Postulación */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Estado de Postulación
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Resultado basado en becarios y postulaciones del usuario</p>
+                  <div className="mt-2">
+                    {loadingPostStatus ? (
+                      <Badge className="bg-gray-300">Cargando...</Badge>
+                    ) : (
+                      <Badge className={
+                        postStatus.includes('aprob') ? 'bg-green-500' : postStatus.includes('Postulado') ? 'bg-yellow-500' : 'bg-gray-400'
+                      }>
+                        {postStatus || 'Estado desconocido'}
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>

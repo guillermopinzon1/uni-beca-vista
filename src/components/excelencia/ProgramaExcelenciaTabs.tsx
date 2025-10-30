@@ -106,18 +106,10 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
           <Card className="mb-6 border-0 shadow-lg w-full">
             <CardContent className="p-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Cupos Disponibles</p>
-                    <p className="text-2xl font-bold text-primary">{config.cuposDisponibles ?? '-'}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Promedio Mínimo</p>
                     <p className="text-2xl font-bold text-primary">{config.promedioMinimo ?? '-'}</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Duración</p>
-                    <p className="text-2xl font-bold text-primary">{config.duracionMeses ?? '-'} meses</p>
                   </div>
                 </div>
                 
@@ -177,7 +169,8 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
         )}
         
         <UnifiedApplicationForm 
-          programTitle={`Programa de Excelencia - ${program?.title}`} 
+          programTitle={`Programa de Excelencia - ${program?.title}`}
+          requiredDocuments={(config?.documentosRequeridos as string[]) || []}
         />
       </div>
     );
@@ -262,10 +255,6 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
                         <span>Edad máxima: {program.config.edadMaxima} años</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                        <span>Duración: {program.config.duracionMeses} meses</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>

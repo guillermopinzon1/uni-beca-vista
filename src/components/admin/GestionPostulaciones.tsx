@@ -57,6 +57,11 @@ const GestionPostulaciones = () => {
   const [error, setError] = useState<string | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [checklist, setChecklist] = useState<{[key: string]: boolean}>({});
+  const [configs, setConfigs] = useState<any[]>([]);
+  const [iaaThreshold, setIaaThreshold] = useState<number | null>(null);
+  const [requiredDocNames, setRequiredDocNames] = useState<string[]>([]);
+
+  const normalize = (s: string) => (s || "").toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
   // Función para descargar un documento con autenticación
   const handleDescargarDocumento = async (documentoUrl: string, nombreDocumento: string) => {
@@ -247,6 +252,17 @@ const GestionPostulaciones = () => {
   // Cargar postulaciones al montar el componente
   useEffect(() => {
     loadPostulaciones();
+    // Cargar configuraciones de becas para checklist dinámico
+    (async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/v1/configuracion/becas`, { headers: { 'Accept': 'application/json' } });
+        const payload = await resp.json();
+        if (resp.ok) {
+          const list = Array.isArray(payload?.data?.configuraciones) ? payload.data.configuraciones : [];
+          setConfigs(list);
+        }
+      } catch {}
+    })();
   }, []);
 
   // Función para obtener checklist según tipo de beca
@@ -301,6 +317,75 @@ const GestionPostulaciones = () => {
     return labels[key] || key;
   };
 
+  const getConfigsForTipo = (tipo: string) => {
+    const t = normalize(tipo);
+    if (t.includes('excelencia')) {
+      return configs.filter((c: any) => normalize(c.tipoBeca) === 'excelencia');
+    }
+    if (t.includes('impacto')) {
+      return configs.filter((c: any) => normalize(c.tipoBeca) === 'impacto');
+    }
+    if (t.includes('ayud')) {
+      return configs.filter((c: any) => normalize(c.tipoBeca).includes('ayud'));
+    }
+    if (t.includes('formacion') || t.includes('formación') || t.includes('docente')) {
+      return configs.filter((c: any) => normalize(c.tipoBeca).includes('formacion') || normalize(c.tipoBeca).includes('formación') || normalize(c.tipoBeca).includes('docente'));
+    }
+    if (t.includes('exoner')) {
+      return configs.filter((c: any) => normalize(c.tipoBeca).includes('exoner'));
+    }
+    return [] as any[];
+  };
+
+  const computeChecklistFromData = (post: Postulacion) => {
+    const related = getConfigsForTipo(post.tipoBeca);
+    // Umbral IAA: usar el mínimo entre configuraciones relacionadas; fallback 14.0
+    const thresholds = related
+      .map((c: any) => parseFloat(c.promedioMinimo))
+      .filter((n: any) => !isNaN(n));
+    const threshold = thresholds.length > 0 ? Math.min(...thresholds) : 14.0;
+    setIaaThreshold(threshold);
+
+    // Documentos requeridos: para Excelencia englobar subtipos → unión
+    const reqDocsUnion: string[] = Array.from(new Set(
+      related.flatMap((c: any) => Array.isArray(c.documentosRequeridos) ? c.documentosRequeridos : [])
+    ));
+    setRequiredDocNames(reqDocsUnion);
+
+    const docNamesSet = new Set((post.documentos || []).map(d => normalize(d.nombre)));
+    const docTypesSet = new Set((post.documentos || []).map(d => normalize(d.tipo)));
+    const hasDocNameOrType = (needle: string) => docNamesSet.has(normalize(needle)) || docTypesSet.has(normalize(needle));
+
+    const allRequiredPresent = reqDocsUnion.every(req => {
+      const r = normalize(req);
+      // buscar por inclusión amplia en nombre/tipo
+      return Array.from(docNamesSet).some(n => n.includes(r)) || Array.from(docTypesSet).some(n => n.includes(r));
+    });
+
+    const iaaValue = typeof post.iaa === 'number' ? post.iaa : (typeof post.promedioBachillerato === 'number' ? post.promedioBachillerato! : NaN);
+    const cumpleIaa = !isNaN(iaaValue) && iaaValue >= threshold;
+
+    // Heurísticas para otros ítems
+    const hasCV = Array.from(docNamesSet).some(n => n.includes('cv') || n.includes('curriculum') || n.includes('curriculum') || n.includes('currículum'))
+      || Array.from(docTypesSet).some(n => n.includes('cv') || n.includes('curriculum'));
+    const hasCarta = Array.from(docNamesSet).some(n => n.includes('carta') && n.includes('motiv'))
+      || Array.from(docTypesSet).some(n => n.includes('carta') && n.includes('motiv'));
+    const hasLogros = Array.from(docNamesSet).some(n => n.includes('logro') || n.includes('titulo') || n.includes('título') || n.includes('certificado'))
+      || Array.from(docTypesSet).some(n => n.includes('logro') || n.includes('titulo') || n.includes('título') || n.includes('certificado'));
+
+    const keys = getChecklistForBeca(post.tipoBeca);
+    const computed: {[key: string]: boolean} = {};
+    keys.forEach(k => {
+      if (k === 'cumple_iaa_minimo') computed[k] = cumpleIaa;
+      else if (k === 'documentos_completos') computed[k] = reqDocsUnion.length === 0 ? true : allRequiredPresent;
+      else if (k === 'curriculum_actualizado') computed[k] = hasCV;
+      else if (k === 'carta_motivacion_clara') computed[k] = hasCarta;
+      else if (k === 'evidencia_logros') computed[k] = hasLogros;
+      else computed[k] = false;
+    });
+    setChecklist(computed);
+  };
+
   const handleVerDetalles = (postulacion: Postulacion) => {
     setSelectedPostulacion(postulacion);
     setMotivoRechazo(""); // Limpiar motivo al abrir modal
@@ -312,6 +397,9 @@ const GestionPostulaciones = () => {
       initialChecklist[item] = false;
     });
     setChecklist(initialChecklist);
+
+    // Computar checklist dinámico según configuraciones
+    computeChecklistFromData(postulacion);
 
     setIsModalOpen(true);
   };
@@ -1076,7 +1164,7 @@ const GestionPostulaciones = () => {
                           )}
                         </div>
                         <label className="flex-1 text-sm font-medium cursor-pointer">
-                          {getChecklistLabel(item)}
+                          {item === 'cumple_iaa_minimo' && iaaThreshold ? `Cumple con el IAA mínimo requerido (≥ ${Number(iaaThreshold).toFixed(2)})` : getChecklistLabel(item)}
                         </label>
                       </div>
                     ))}

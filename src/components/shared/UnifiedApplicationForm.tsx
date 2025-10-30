@@ -14,6 +14,7 @@ import { API_BASE } from "@/lib/api";
 
 interface UnifiedApplicationFormProps {
   programTitle: string;
+  requiredDocuments?: string[];
 }
 
 interface FormData {
@@ -33,7 +34,7 @@ interface FormData {
   tipoBeca: string;
 }
 
-const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) => {
+const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: UnifiedApplicationFormProps) => {
   const [birthDate, setBirthDate] = useState<Date>();
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
@@ -60,6 +61,20 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const normalize = (text: string) =>
+    (text || "")
+      .toString()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
+  const uploadCardsMeta: Array<{ key: string; label: string }> = [
+    { key: 'cedula', label: 'Cédula de Identidad' },
+    { key: 'historico_notas', label: 'Histórico de Notas' },
+    { key: 'flujograma_carrera', label: 'Flujograma de Carrera' },
+    { key: 'plan_carrera_avalado', label: 'Plan de Carrera Avalado' },
+    { key: 'curriculum', label: 'Currículum/Dossier' }
+  ];
 
   // Función para manejar cambios en el formulario
   const handleInputChange = (field: keyof FormData, value: string | number | null) => {
@@ -94,20 +109,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
     }
   };
 
-  // Función para mapear carrera del select al nombre completo
-  const getCarreraName = (carreraKey: string): string => {
-    const carreras: { [key: string]: string } = {
-      "ingenieria-sistemas": "Ingeniería de Sistemas",
-      "ingenieria-industrial": "Ingeniería Industrial", 
-      "ingenieria-civil": "Ingeniería Civil",
-      "administracion": "Administración de Empresas",
-      "comunicacion": "Comunicación Social",
-      "psicologia": "Psicología",
-      "derecho": "Derecho",
-      "contaduria": "Contaduría Pública"
-    };
-    return carreras[carreraKey] || carreraKey;
-  };
+  // Eliminado mapeo: la carrera ahora es texto libre ingresado por el usuario
 
   // Función para mapear el título del programa al tipo de beca válido
   // Valores permitidos por el backend: 'Ayudantía', 'Impacto', 'Excelencia', 'Exoneración de Pago', 'Formación Docente'
@@ -207,6 +209,25 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
         return;
       }
 
+      // Validar documentos requeridos (por nombre)
+      const requiredSet = new Set((requiredDocuments || []).map(normalize));
+      const uploadedTypes = new Set(documentos.map(d => d.tipo));
+      const missingRequired: string[] = [];
+      for (const meta of uploadCardsMeta) {
+        if (requiredSet.has(normalize(meta.label)) && !uploadedTypes.has(meta.key)) {
+          missingRequired.push(meta.label);
+        }
+      }
+
+      if (missingRequired.length > 0) {
+        toast({
+          title: "Faltan documentos obligatorios",
+          description: `Debe adjuntar: ${missingRequired.join(', ')}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
       // PASO 1: Crear postulación SIN documentos
       toast({
         title: "Creando postulación...",
@@ -221,7 +242,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
         fechaNacimiento: formData.fechaNacimiento,
         estadoCivil: formData.estadoCivil,
         tipoPostulante: formData.tipoPostulante,
-        carrera: getCarreraName(formData.carrera),
+        carrera: String(formData.carrera || '').trim(),
         trimestre: formData.trimestre,
         iaa: formData.iaa,
         promedioBachillerato: formData.promedioBachillerato,
@@ -732,21 +753,12 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="carrera">Carrera/Programa de estudios *</Label>
-                <Select value={formData.carrera} onValueChange={(value) => handleInputChange("carrera", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione su carrera" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ingenieria-sistemas">Ingeniería de Sistemas</SelectItem>
-                    <SelectItem value="ingenieria-industrial">Ingeniería Industrial</SelectItem>
-                    <SelectItem value="ingenieria-civil">Ingeniería Civil</SelectItem>
-                    <SelectItem value="administracion">Administración de Empresas</SelectItem>
-                    <SelectItem value="comunicacion">Comunicación Social</SelectItem>
-                    <SelectItem value="psicologia">Psicología</SelectItem>
-                    <SelectItem value="derecho">Derecho</SelectItem>
-                    <SelectItem value="contaduria">Contaduría Pública</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="carrera"
+                  placeholder="Escriba su carrera o programa"
+                  value={formData.carrera}
+                  onChange={(e) => handleInputChange("carrera", e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="promedioBachillerato">Promedio de notas de bachillerato *</Label>
@@ -843,132 +855,40 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Cédula */}
-              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2 font-medium">Cédula de Identidad</p>
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'cedula')}
-                    disabled={!!uploading}
-                    className="text-xs cursor-pointer"
-                  />
-                  {documentos.find(d => d.tipo === 'cedula') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 text-xs text-red-600 hover:text-red-700"
-                      onClick={() => handleRemoveDocument('cedula')}
-                    >
-                      Remover
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Histórico de notas */}
-              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2 font-medium">Histórico de Notas</p>
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'historico_notas')}
-                    disabled={!!uploading}
-                    className="text-xs cursor-pointer"
-                  />
-                  {documentos.find(d => d.tipo === 'historico_notas') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 text-xs text-red-600 hover:text-red-700"
-                      onClick={() => handleRemoveDocument('historico_notas')}
-                    >
-                      Remover
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Flujograma */}
-              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2 font-medium">Flujograma de Carrera</p>
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'flujograma_carrera')}
-                    disabled={!!uploading}
-                    className="text-xs cursor-pointer"
-                  />
-                  {documentos.find(d => d.tipo === 'flujograma_carrera') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 text-xs text-red-600 hover:text-red-700"
-                      onClick={() => handleRemoveDocument('flujograma_carrera')}
-                    >
-                      Remover
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Plan de carrera */}
-              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2 font-medium">Plan de Carrera Avalado</p>
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'plan_carrera_avalado')}
-                    disabled={!!uploading}
-                    className="text-xs cursor-pointer"
-                  />
-                  {documentos.find(d => d.tipo === 'plan_carrera_avalado') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 text-xs text-red-600 hover:text-red-700"
-                      onClick={() => handleRemoveDocument('plan_carrera_avalado')}
-                    >
-                      Remover
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Currículum - Solo Excelencia y Ayudantía */}
-              {(programTitle.includes("Excelencia") || programTitle.includes("Ayudantía")) && (
-                <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
-                  <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground mb-2 font-medium">Currículum/Dossier</p>
-                    <Input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'curriculum')}
-                      disabled={!!uploading}
-                      className="text-xs cursor-pointer"
-                    />
-                    {documentos.find(d => d.tipo === 'curriculum') && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 text-xs text-red-600 hover:text-red-700"
-                        onClick={() => handleRemoveDocument('curriculum')}
-                      >
-                        Remover
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+              {uploadCardsMeta
+                .filter(meta => meta.key !== 'curriculum' || programTitle.includes('Excelencia') || programTitle.includes('Ayudantía'))
+                .map((meta) => {
+                  const isRequired = (requiredDocuments || []).some((name) => normalize(name) === normalize(meta.label));
+                  const hasFile = !!documentos.find(d => d.tipo === meta.key);
+                  return (
+                    <Card key={meta.key} className={`border-dashed border-2 transition-colors ${isRequired ? 'border-red-300 hover:border-red-500' : 'border-muted-foreground/25 hover:border-primary/50'}`}>
+                      <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                        <Upload className={`h-8 w-8 mb-2 ${isRequired ? 'text-red-500' : 'text-muted-foreground'}`} />
+                        <p className="text-sm mb-2 font-medium flex items-center gap-2">
+                          <span className={isRequired ? 'text-red-700' : 'text-muted-foreground'}>{meta.label}</span>
+                          {isRequired && <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">Obligatorio</span>}
+                        </p>
+                        <Input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], meta.key)}
+                          disabled={!!uploading}
+                          className="text-xs cursor-pointer"
+                        />
+                        {hasFile && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 text-xs text-red-600 hover:text-red-700"
+                            onClick={() => handleRemoveDocument(meta.key)}
+                          >
+                            Remover
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
 
             {/* Lista de documentos seleccionados */}
