@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, Calendar, FileText, Activity, RefreshCw, CheckCircle, Users } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, FileText, Activity, RefreshCw, CheckCircle, Users, User, LogOut } from "lucide-react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useEffect, useState } from "react";
 import AvailabilitySchedule from "@/components/AvailabilitySchedule";
@@ -16,7 +16,7 @@ import { API_BASE } from "@/lib/api";
 const PasanteAyudantiasModules = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, tokens } = useAuth();
+  const { user, tokens, logout } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("actividades-recientes");
   const [activeWeek, setActiveWeek] = useState<string>("semana-1");
@@ -68,6 +68,76 @@ const PasanteAyudantiasModules = () => {
   const [semanaActual, setSemanaActual] = useState<number>(1);
   const [loadingSemanas, setLoadingSemanas] = useState(false);
 
+  // Reiniciar inputs al cambiar de semana en las pestañas
+  useEffect(() => {
+    setFormData({
+      fecha: "",
+      horas: "",
+      descripcion: "",
+      objetivos: "",
+      metas: "",
+      actividades: "",
+      reporteSemanal: "",
+      observaciones: ""
+    });
+  }, [activeWeek]);
+
+  // Estado para información académica del perfil
+  const [academicInfo, setAcademicInfo] = useState({
+    iaa: '',
+    asignaturasAprobadas: '',
+    creditosInscritos: ''
+  });
+
+  // Estado para información del becario desde /becarios/me
+  const [becarioStatus, setBecarioStatus] = useState<any>(null);
+  const [loadingBecarioStatus, setLoadingBecarioStatus] = useState(true);
+
+  // Función para verificar el estado de la beca del usuario
+  const loadBecarioStatus = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken || !user?.id) {
+      setLoadingBecarioStatus(false);
+      return;
+    }
+
+    setLoadingBecarioStatus(true);
+    try {
+      console.log('🎓 [BECARIO] Verificando estado de beca del usuario');
+
+      const response = await fetch(`${API_BASE}/v1/becarios/me`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log('🎓 [BECARIO] Respuesta:', response.status, response.statusText);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🎓 [BECARIO] Datos recibidos:', data);
+
+        if (data.data && data.data.estado === 'Activa') {
+          setBecarioStatus(data.data);
+          console.log('✅ [BECARIO] Estado de beca: Activa');
+        } else {
+          setBecarioStatus(null);
+          console.log('⚠️ [BECARIO] Estado de beca no activa:', data.data?.estado);
+        }
+      } else {
+        // Si hay error 404 o cualquier otro, significa que no hay beca activa
+        console.log('❌ [BECARIO] No se encontró beca activa');
+        setBecarioStatus(null);
+      }
+    } catch (error) {
+      console.error('❌ [BECARIO] Error al verificar estado de beca:', error);
+      setBecarioStatus(null);
+    } finally {
+      setLoadingBecarioStatus(false);
+    }
+  };
+
   // Función para cargar semanas habilitadas del período activo
   const loadSemanasHabilitadas = async () => {
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
@@ -76,7 +146,7 @@ const PasanteAyudantiasModules = () => {
     setLoadingSemanas(true);
     try {
       console.log('📅 [SEMANAS] Cargando semanas habilitadas del período activo');
-      
+
       const response = await fetch(`${API_BASE}/v1/configuracion/periodo-actual`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -87,7 +157,7 @@ const PasanteAyudantiasModules = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('📅 [SEMANAS] Respuesta del período activo:', data);
-        
+
         if (data.data) {
           setSemanasHabilitadas(data.data.semanasHabilitadas || []);
           setSemanaActual(data.data.semanaActual || 1);
@@ -239,10 +309,10 @@ const PasanteAyudantiasModules = () => {
   const loadReportes = async () => {
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
     if (!accessToken || !user?.id) return;
-    
-    // Verificar que el usuario tenga rol de ayudante
-    if (user.role !== 'ayudante') {
-      console.log('📝 [REPORTE] Usuario no es ayudante, no se cargan reportes');
+
+    // Verificar que el usuario tenga rol de estudiante
+    if (user.role !== 'estudiante') {
+      console.log('📝 [REPORTE] Usuario no es estudiante, no se cargan reportes');
       return;
     }
 
@@ -355,10 +425,12 @@ const PasanteAyudantiasModules = () => {
     finally { setLoadingReportes(false); }
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     // Cargar ID de ayudantía, reportes y plazas al entrar
     const initializeData = async () => {
-      if (user?.role === 'ayudante') {
+      if (user?.role === 'estudiante') {
+        // Primero verificar el estado de la beca
+        await loadBecarioStatus();
         await loadSemanasHabilitadas();
         await loadAyudantiaId();
         await loadReportes();
@@ -412,12 +484,12 @@ const PasanteAyudantiasModules = () => {
         return;
       }
 
-      // Verificar que el usuario tenga rol de ayudante
-      if (user.role !== 'ayudante') {
-        toast({ 
-          title: 'Acceso denegado', 
-          description: 'Solo los estudiantes ayudantes pueden enviar reportes de actividades', 
-          variant: 'destructive' 
+      // Verificar que el usuario tenga rol de estudiante
+      if (user.role !== 'estudiante') {
+        toast({
+          title: 'Acceso denegado',
+          description: 'Solo los estudiantes pueden enviar reportes de actividades',
+          variant: 'destructive'
         });
         return;
       }
@@ -900,18 +972,10 @@ const PasanteAyudantiasModules = () => {
                   )}
                   {!loadingReportes && reportes.length === 0 && (
                     <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground mb-4">Sin actividades registradas</p>
-                      <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded border">
-                        <p><strong>Debug Info:</strong></p>
-                        <p>ID de ayudantía: {ayudantiaId || user?.id}</p>
-                        <p>Rol del usuario: {user?.role}</p>
-                        <p>Estado de carga: {loadingReportes ? 'Cargando...' : 'Completado'}</p>
-                        <p>Período académico: 2025-1</p>
-                        <p>Endpoint: /api/v1/ayudantias/{ayudantiaId || user?.id}/reportes</p>
-                        <p className="text-orange-600 mt-2">
-                          💡 Revisa la consola del navegador para ver los logs detallados
-                        </p>
-                      </div>
+                      <p className="text-sm text-muted-foreground">Sin actividades registradas</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Comienza enviando tu primer reporte semanal
+                      </p>
                     </div>
                   )}
                   {!loadingReportes && reportes.map((r) => (
@@ -1066,6 +1130,201 @@ const PasanteAyudantiasModules = () => {
           </div>
         );
 
+      case "perfil":
+        return (
+          <div className="space-y-6">
+            {/* Información Personal */}
+            <Card className="border-orange/20">
+              <CardHeader>
+                <CardTitle className="text-xl text-primary flex items-center">
+                  <User className="h-5 w-5 mr-2" />
+                  Información Personal
+                </CardTitle>
+                <CardDescription>
+                  Datos de tu perfil como ayudante
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Nombre Completo</Label>
+                    <p className="text-base font-medium text-primary">
+                      {user?.nombre && user?.apellido
+                        ? `${user.nombre} ${user.apellido}`
+                        : 'No disponible'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Correo Electrónico</Label>
+                    <p className="text-base font-medium text-primary">
+                      {user?.email || 'No disponible'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Carnet/ID</Label>
+                    <p className="text-base font-medium text-primary">
+                      {user?.carnet || user?.id || 'No disponible'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Rol</Label>
+                    <p className="text-base font-medium text-primary capitalize">
+                      {user?.role === 'estudiante' ? 'Estudiante' : user?.role || 'No definido'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Información de Ayudantía */}
+            <Card className="border-orange/20">
+              <CardHeader>
+                <CardTitle className="text-xl text-primary flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  Información de Ayudantía
+                </CardTitle>
+                <CardDescription>
+                  Detalles de tu asignación y supervisor
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {plazaActual ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Plaza Asignada</Label>
+                        <p className="text-base font-medium text-primary">
+                          {plazaActual.materia || plazaActual.nombre || 'No asignada'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Supervisor</Label>
+                        <p className="text-base font-medium text-primary">
+                          {plazaActual.supervisor?.nombre && plazaActual.supervisor?.apellido
+                            ? `${plazaActual.supervisor.nombre} ${plazaActual.supervisor.apellido}`
+                            : plazaActual.supervisorResponsable || 'No asignado'}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Período Académico</Label>
+                        <p className="text-base font-medium text-primary">2025-1</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Estado</Label>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          plazaActual.estado === 'Activa'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {plazaActual.estado || 'Sin estado'}
+                        </span>
+                      </div>
+                    </div>
+                    {plazaActual.descripcionActividades && (
+                      <div className="pt-4 border-t border-orange/20">
+                        <Label className="text-sm font-medium text-muted-foreground">Descripción de Actividades</Label>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {plazaActual.descripcionActividades}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-muted-foreground">No tienes una plaza asignada actualmente</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Información Académica */}
+            <Card className="border-orange/20">
+              <CardHeader>
+                <CardTitle className="text-xl text-primary flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Información Académica
+                </CardTitle>
+                <CardDescription>
+                  Completa tu información académica
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    toast({
+                      title: 'Información guardada',
+                      description: 'Los datos académicos se han guardado localmente. La sincronización con el servidor estará disponible próximamente.',
+                    });
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="iaa">Índice Académico Acumulado (IAA)</Label>
+                      <Input
+                        id="iaa"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="20"
+                        placeholder="18.2"
+                        value={academicInfo.iaa}
+                        onChange={(e) =>
+                          setAcademicInfo({ ...academicInfo, iaa: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="asignaturasAprobadas">Asignaturas Aprobadas</Label>
+                      <Input
+                        id="asignaturasAprobadas"
+                        type="number"
+                        min="0"
+                        placeholder="42"
+                        value={academicInfo.asignaturasAprobadas}
+                        onChange={(e) =>
+                          setAcademicInfo({
+                            ...academicInfo,
+                            asignaturasAprobadas: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="creditosInscritos">Créditos Inscritos este Trimestre</Label>
+                      <Input
+                        id="creditosInscritos"
+                        type="number"
+                        min="0"
+                        placeholder="18"
+                        value={academicInfo.creditosInscritos}
+                        onChange={(e) =>
+                          setAcademicInfo({
+                            ...academicInfo,
+                            creditosInscritos: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      <strong>Nota:</strong> Los datos académicos se guardan localmente. La
+                      funcionalidad de sincronización con el servidor estará disponible próximamente.
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90">
+                    Guardar Información Académica
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
       case "reglamento":
         return (
           <div className="flex justify-center">
@@ -1087,22 +1346,22 @@ const PasanteAyudantiasModules = () => {
     }
   };
 
-  // Verificar que el usuario tenga rol de ayudante
-  if (user?.role !== 'ayudante') {
+  // Verificar que el usuario tenga rol de estudiante
+  if (user?.role !== 'estudiante') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-xl text-destructive">Acceso Denegado</CardTitle>
             <CardDescription>
-              Solo los estudiantes ayudantes pueden acceder a esta sección
+              Solo los estudiantes pueden acceder a esta sección
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
               Tu rol actual es: <span className="font-semibold">{user?.role || 'No definido'}</span>
             </p>
-            <Button 
+            <Button
               onClick={() => navigate("/scholarship-programs")}
               className="w-full"
             >
@@ -1115,8 +1374,107 @@ const PasanteAyudantiasModules = () => {
     );
   }
 
+  // Mostrar spinner mientras se carga la verificación inicial
+  if (user?.role === 'estudiante' && (loadingBecarioStatus || loadingReportes)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <RefreshCw className="h-12 w-12 animate-spin text-primary" />
+              <div className="text-center space-y-2">
+                <p className="text-lg font-medium text-primary">Verificando acceso...</p>
+                <p className="text-sm text-muted-foreground">
+                  Por favor espera mientras verificamos tu estado de ayudantía
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Verificar si la postulación del estudiante ha sido aprobada
+  if (user?.role === 'estudiante' && !loadingBecarioStatus && (!becarioStatus || becarioStatus?.estado !== 'Activa')) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 rounded-full bg-yellow-100 flex items-center justify-center">
+                <Clock className="h-8 w-8 text-yellow-600" />
+              </div>
+            </div>
+            <CardTitle className="text-xl text-yellow-600">Postulación Pendiente de Aprobación</CardTitle>
+            <CardDescription>
+              Tu postulación está siendo revisada
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <p className="text-sm text-yellow-800 text-center">
+                <strong>Estado:</strong> Tu registro ha sido creado exitosamente, pero tu postulación aún no ha sido aprobada por el gestor del programa.
+              </p>
+            </div>
+
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p className="text-center">
+                Una vez que tu postulación sea aprobada, podrás acceder a todas las funcionalidades de tu beca, incluyendo:
+              </p>
+              <ul className="space-y-2 ml-6 list-disc">
+                <li>Registro de horas trabajadas</li>
+                <li>Sistema de reportes semanales</li>
+                <li>Gestión de horarios de disponibilidad</li>
+                <li>Acceso a plazas disponibles</li>
+                <li>Visualización de tu perfil completo</li>
+              </ul>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800 text-center">
+                💡 <strong>Consejo:</strong> Mientras esperas, puedes contactar al gestor del programa para consultar el estado de tu postulación.
+              </p>
+            </div>
+
+            <div className="pt-4 space-y-2">
+              <Button
+                onClick={() => navigate("/scholarship-programs")}
+                className="w-full"
+                variant="outline"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver a Programas de Becas
+              </Button>
+              <Button
+                onClick={async () => {
+                  await loadBecarioStatus();
+                  toast({
+                    title: becarioStatus?.estado === 'Activa' ? 'Estado verificado' : 'Aún pendiente',
+                    description: becarioStatus?.estado === 'Activa'
+                      ? 'Tu postulación ha sido aprobada. La página se recargará automáticamente.'
+                      : 'Tu postulación aún está pendiente de aprobación.',
+                    variant: becarioStatus?.estado === 'Activa' ? 'default' : 'destructive',
+                  });
+                  if (becarioStatus?.estado === 'Activa') {
+                    setTimeout(() => window.location.reload(), 1500);
+                  }
+                }}
+                className="w-full bg-gradient-primary hover:opacity-90"
+                disabled={loadingBecarioStatus}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loadingBecarioStatus ? 'animate-spin' : ''}`} />
+                {loadingBecarioStatus ? 'Verificando...' : 'Verificar Estado de Aprobación'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Verificar si el usuario tiene ayudantía asignada
-  if (user?.role === 'ayudante' && ayudantiaId === null && !loadingReportes) {
+  if (user?.role === 'estudiante' && ayudantiaId === null && !loadingReportes) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -1154,19 +1512,50 @@ const PasanteAyudantiasModules = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Diseño de fondo con líneas modernas */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style={{ stopColor: '#FF6B35', stopOpacity: 0 }} />
+              <stop offset="50%" style={{ stopColor: '#FF6B35', stopOpacity: 0.2 }} />
+              <stop offset="100%" style={{ stopColor: '#FF6B35', stopOpacity: 0 }} />
+            </linearGradient>
+          </defs>
+
+          {/* Líneas diagonales principales (izquierda a derecha, descendente) */}
+          <line x1="0" y1="10%" x2="100%" y2="25%" stroke="url(#lineGradient)" strokeWidth="1.5" opacity="0.4"/>
+          <line x1="0" y1="30%" x2="100%" y2="45%" stroke="url(#lineGradient)" strokeWidth="2" opacity="0.5"/>
+          <line x1="0" y1="55%" x2="100%" y2="70%" stroke="url(#lineGradient)" strokeWidth="1.5" opacity="0.35"/>
+          <line x1="0" y1="75%" x2="100%" y2="90%" stroke="url(#lineGradient)" strokeWidth="1.5" opacity="0.3"/>
+
+          {/* Líneas diagonales secundarias (izquierda a derecha, ascendente) */}
+          <line x1="0" y1="85%" x2="100%" y2="70%" stroke="url(#lineGradient)" strokeWidth="1" opacity="0.25"/>
+          <line x1="0" y1="50%" x2="100%" y2="35%" stroke="url(#lineGradient)" strokeWidth="1" opacity="0.2"/>
+
+          {/* Líneas diagonales adicionales con diferentes ángulos */}
+          <line x1="0" y1="0" x2="40%" y2="100%" stroke="#FF6B35" strokeWidth="1" opacity="0.08"/>
+          <line x1="25%" y1="0" x2="65%" y2="100%" stroke="#FF6B35" strokeWidth="1.5" opacity="0.1"/>
+          <line x1="50%" y1="0" x2="90%" y2="100%" stroke="#FF6B35" strokeWidth="1" opacity="0.08"/>
+          <line x1="75%" y1="0" x2="100%" y2="50%" stroke="#FF6B35" strokeWidth="1" opacity="0.07"/>
+
+          {/* Líneas diagonales inversas (derecha a izquierda) */}
+          <line x1="100%" y1="15%" x2="60%" y2="100%" stroke="#FF6B35" strokeWidth="1" opacity="0.06"/>
+          <line x1="100%" y1="45%" x2="80%" y2="100%" stroke="#FF6B35" strokeWidth="1" opacity="0.05"/>
+        </svg>
+      </div>
       {/* Header */}
-      <header className="bg-card border-b border-orange/20 px-6 py-4">
+      <header className="bg-card border-b border-orange/20 px-6 py-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/scholarship-programs")}
+              onClick={() => logout(() => navigate("/"))}
               className="text-primary hover:text-primary/90"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver a Becas
+              <LogOut className="h-4 w-4" />
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Gestión de Ayudantía</h1>
@@ -1175,19 +1564,37 @@ const PasanteAyudantiasModules = () => {
               </p>
             </div>
           </div>
-          
+
+          {/* Logo en el centro */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <img
+              src="/450.jpg"
+              alt="UNIMET Logo"
+              className="h-12 object-contain"
+            />
+          </div>
+
           <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-primary">Ana María Rodríguez</p>
-              <p className="text-xs text-muted-foreground">Ayudante</p>
-            </div>
+            <button
+              onClick={() => setActiveModule("perfil")}
+              className="text-right cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              <p className="text-sm font-medium text-primary">
+                {user?.nombre && user?.apellido
+                  ? `${user.nombre} ${user.apellido}`
+                  : user?.email || 'Usuario'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {user?.role === 'estudiante' ? 'Estudiante' : user?.role || 'Usuario'}
+              </p>
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex relative z-10">
         {/* Integrated Sidebar */}
-        <div className="w-16 bg-card border-r border-orange/20 min-h-[calc(100vh-theme(spacing.20))]">
+        <div className="w-16 bg-card border-r border-orange/20 min-h-[calc(100vh-theme(spacing.20))] relative z-10">
           <div className="p-2 space-y-2">
             {sidebarItems.map((item, index) => (
               <div

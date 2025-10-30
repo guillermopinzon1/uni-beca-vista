@@ -1,25 +1,28 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import UnifiedApplicationForm from "@/components/shared/UnifiedApplicationForm";
-import { 
-  Trophy, 
-  Users, 
-  BookOpen, 
+import {
+  Trophy,
+  Users,
+  BookOpen,
   Home,
   LogOut,
-  CreditCard,
   ArrowLeft
 } from "lucide-react";
 import ProgramaExcelenciaTabs from "@/components/excelencia/ProgramaExcelenciaTabs";
+import { API_BASE } from "@/lib/api";
 
 const PostulacionesBecas = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [configs, setConfigs] = useState<Array<any>>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await logout(() => navigate('/'));
@@ -53,6 +56,45 @@ const PostulacionesBecas = () => {
       icon: Users
     }
   ];
+
+  // Cargar configuraciones de becas
+  useEffect(() => {
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await fetch(`${API_BASE}/v1/configuracion/becas`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        const payload = await resp.json();
+        if (!resp.ok) throw new Error(payload?.message || 'No se pudieron cargar las configuraciones');
+        setConfigs(Array.isArray(payload?.data?.configuraciones) ? payload.data.configuraciones : []);
+      } catch (e: any) {
+        setError(e?.message || 'No se pudieron cargar las configuraciones');
+        setConfigs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, []);
+
+  const getConfigsByProgram = (programId: string | null) => {
+    if (!programId) return [] as any[];
+    if (programId === 'excelencia') {
+      return configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia');
+    }
+    if (programId === 'ayudantia') {
+      return configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'ayudantía' || (c.tipoBeca || '').toLowerCase() === 'ayudantia');
+    }
+    if (programId === 'formacion') {
+      return configs.filter(c => (c.tipoBeca || '').toLowerCase().includes('formación') || (c.tipoBeca || '').toLowerCase().includes('formacion'));
+    }
+    return [] as any[];
+  };
+
+  const selectedConfigs = useMemo(() => getConfigsByProgram(selectedProgram), [configs, selectedProgram]);
 
   if (selectedProgram) {
     const program = programs.find(p => p.id === selectedProgram);
@@ -109,9 +151,74 @@ const PostulacionesBecas = () => {
           </Breadcrumb>
 
 
+          {/* Mostrar requisitos arriba del formulario para Ayudantía y Formación */}
+          {selectedProgram !== "excelencia" && selectedConfigs.length > 0 && (
+            <Card className="mb-6 border-0 shadow-lg w-full">
+              <CardContent className="p-6">
+                {selectedConfigs.map((config: any, idx: number) => (
+                  <div key={config.id || idx} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Cupos Disponibles</p>
+                        <p className="text-2xl font-bold text-primary">{config.cuposDisponibles ?? '-'}</p>
+                      </div>
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Promedio Mínimo</p>
+                        <p className="text-2xl font-bold text-primary">{config.promedioMinimo ?? '-'}</p>
+                      </div>
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Duración</p>
+                        <p className="text-2xl font-bold text-primary">{config.duracionMeses ?? '-'} meses</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">Requisitos Especiales</h3>
+                      <p className="text-sm text-muted-foreground">{config.requisitosEspeciales || 'No tiene ningún requisito'}</p>
+                    </div>
+                    
+                    <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-3">Documentos Requeridos</h3>
+                      {Array.isArray(config.documentosRequeridos) && config.documentosRequeridos.length > 0 ? (
+                        <ul className="space-y-2">
+                          {config.documentosRequeridos.map((doc: string, i: number) => (
+                            <li key={i} className="flex items-center text-sm">
+                              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                              {doc}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No tiene ningún requisito</p>
+                      )}
+                    </div>
+                    
+                    {config.semestreMinimo && config.semestreMaximo && (
+                      <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">Requisitos Académicos</h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                            <span>Semestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
+                          </div>
+                          {config.edadMaxima && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span>Edad máxima: {config.edadMaxima} años</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Application Form */}
           {selectedProgram === "excelencia" ? (
-            <ProgramaExcelenciaTabs />
+            <ProgramaExcelenciaTabs configuraciones={configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia')} />
           ) : (
             <UnifiedApplicationForm programTitle={program?.title || ""} />
           )}
@@ -177,11 +284,11 @@ const PostulacionesBecas = () => {
         </div>
 
         {/* Programs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto">
           {programs.map((program) => (
-            <Card 
+            <Card
               key={program.id}
-              className="border-orange/20 bg-gradient-card hover:shadow-lg transition-all duration-300 cursor-pointer group"
+              className="border-orange/20 bg-gradient-card hover:shadow-lg transition-all duration-300 cursor-pointer group flex flex-col"
             >
               <CardHeader className="text-center">
                 <div className="mx-auto p-3 rounded-full bg-primary/10 w-fit mb-4 group-hover:bg-primary/20 transition-colors">
@@ -189,14 +296,14 @@ const PostulacionesBecas = () => {
                 </div>
                 <CardTitle className="text-primary">{program.title}</CardTitle>
               </CardHeader>
-              <CardContent className="text-center">
-                <CardDescription className="mb-6 min-h-[3rem] flex items-center justify-center">
+              <CardContent className="text-center flex flex-col flex-1">
+                <CardDescription className="mb-6 min-h-[6rem] flex items-center justify-center">
                   {program.description}
                 </CardDescription>
-                
-                <Button 
+
+                <Button
                   onClick={() => handleProgramSelect(program.id)}
-                  className="w-full"
+                  className="w-full mt-auto"
                 >
                   Postular Ahora
                 </Button>

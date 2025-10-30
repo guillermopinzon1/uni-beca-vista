@@ -4,24 +4,24 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Download, Eye, RefreshCw } from "lucide-react";
+import { Search, Filter, Eye, RefreshCw, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchUsers } from "@/lib/api";
+import { fetchUsers, API_BASE } from "@/lib/api";
 
 interface EstudianteBecario {
   id: string;
   nombre: string;
   cedula: string;
-  carrera: string;
-  semestre: number;
-  promedio: number;
   tipoBeca: string;
-  estado: "Activo" | "Suspendido" | "Finalizado";
-  supervisor: string;
+  estado: "Activo" | "Desactivado" | "Suspendido" | "Finalizado";
+  emailVerified?: boolean;
+  plaza: string;
+  horasRequeridas: number;
+  horasCompletadas: number;
   fechaInicio: string;
   fechaFin?: string;
 }
@@ -34,13 +34,15 @@ const EstudiantesBecarios = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBeca, setFilterBeca] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterSupervisor, setFilterSupervisor] = useState("todos");
   const [activeTab, setActiveTab] = useState("estudiantes");
   const [loading, setLoading] = useState(false);
-  const [usuarios, setUsuarios] = useState<Array<{ id: string; nombre: string; apellido?: string; cedula?: string; carrera?: string; semestre?: number }>>([]);
+  const [usuarios, setUsuarios] = useState<Array<{ id: string; nombre: string; apellido?: string; cedula?: string; carrera?: string; semestre?: number; iaa?: number; activo?: boolean; emailVerified?: boolean }>>([]);
   const [becarios, setBecarios] = useState<any[]>([]);
   const [becariosLoading, setBecariosLoading] = useState(true);
   const [becariosError, setBecariosError] = useState<string | null>(null);
-  
+
+
 
   // Función para cargar becarios del API
   const loadBecarios = async () => {
@@ -53,7 +55,7 @@ const EstudiantesBecarios = () => {
         throw new Error("No hay token de acceso");
       }
 
-      const response = await fetch(`https://srodriguez.intelcondev.org/api/v1/users?role=ayudante`, {
+      const response = await fetch(`${API_BASE}/v1/becarios`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -68,8 +70,8 @@ const EstudiantesBecarios = () => {
       }
 
       const data = await response.json();
-      // Asegurar que becarios siempre sea un array
-      const becariosData = data.data?.usuarios || data.usuarios || data.data || data || [];
+      // Estructura esperada: data.data.becarios
+      const becariosData = data?.data?.becarios || [];
       setBecarios(Array.isArray(becariosData) ? becariosData : []);
     } catch (err: any) {
       setBecariosError(err.message || "Error al cargar los becarios");
@@ -97,23 +99,51 @@ const EstudiantesBecarios = () => {
     const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
     const accessToken = tokens?.accessToken || stored?.accessToken;
     if (!accessToken) {
-      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar usuarios', variant: 'destructive' });
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar becarios', variant: 'destructive' });
       return;
     }
     setLoading(true);
     try {
-      const res = await fetchUsers(accessToken, { role: 'ayudante' });
-      const mapped = res.data.usuarios.map(u => ({
-        id: u.id,
-        nombre: u.nombre,
-        apellido: (u as any).apellido,
-        cedula: u.cedula,
-        carrera: u.carrera,
-        semestre: u.semestre,
-      }));
+      const response = await fetch(`${API_BASE}/v1/becarios`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.message || `Error obteniendo becarios (${response.status})`);
+      }
+
+      const becariosApi = Array.isArray(payload?.data?.becarios) ? payload.data.becarios : [];
+
+      // Mapear a estructura intermedia que luego usamos para la tabla
+      const mapped = becariosApi.map((b: any) => {
+        const usuario = b.usuario || {};
+        const estadoBeca = (b.estado || '').toLowerCase();
+        const estadoTabla = estadoBeca === 'activa' ? 'Activo'
+          : estadoBeca === 'suspendida' ? 'Suspendido'
+          : estadoBeca === 'finalizada' ? 'Finalizado'
+          : 'Activo';
+        return {
+          id: usuario.id || b.usuarioId || b.id,
+          nombre: usuario.apellido ? `${usuario.nombre} ${usuario.apellido}` : (usuario.nombre || '-'),
+          cedula: usuario.cedula || '-',
+          tipoBeca: b.tipoBeca || '-',
+          estado: estadoTabla,
+          emailVerified: usuario.emailVerified,
+          plaza: b.plaza?.materia || '-',
+          horasRequeridas: typeof b.horasRequeridas === 'number' ? b.horasRequeridas : 0,
+          horasCompletadas: typeof b.horasCompletadas === 'string' ? parseFloat(b.horasCompletadas) : (b.horasCompletadas || 0),
+          fechaInicio: b.periodoInicio || ''
+        };
+      });
+
       setUsuarios(mapped);
     } catch (e: any) {
-      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los usuarios', variant: 'destructive' });
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los becarios', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -124,12 +154,20 @@ const EstudiantesBecarios = () => {
   }, [tokens?.accessToken]);
 
 
-  const getEstadoBadge = (estado: string) => {
+  const getEstadoBadge = (estado: string, emailVerified?: boolean) => {
+    // Si no está aprobado, siempre mostrar "Pendiente de Aprobación"
+    if (emailVerified === false) {
+      return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">⏳ Pendiente de Aprobación</Badge>;
+    }
+
+    // Si está aprobado, mostrar estado normal
     switch (estado) {
       case "Activo":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Activo</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200">✅ Aprobado</Badge>;
+      case "Desactivado":
+        return <Badge variant="destructive">🚫 Inactivo</Badge>;
       case "Suspendido":
-        return <Badge variant="destructive">Suspendido</Badge>;
+        return <Badge variant="destructive">⚠️ Suspendido</Badge>;
       case "Finalizado":
         return <Badge variant="secondary">Finalizado</Badge>;
       default:
@@ -139,31 +177,37 @@ const EstudiantesBecarios = () => {
 
 
   const estudiantesFromApi: EstudianteBecario[] = useMemo(() => {
-    return usuarios.map(u => ({
+    // Mapea desde payload de /v1/becarios (cargado en loadUsuarios)
+    return usuarios.map((u: any) => ({
       id: u.id,
-      nombre: u.apellido ? `${u.nombre} ${u.apellido}` : u.nombre,
+      nombre: u.nombre,
       cedula: u.cedula || '-',
-      carrera: u.carrera || '-',
-      semestre: typeof u.semestre === 'number' ? u.semestre : 0,
-      promedio: 0,
-      tipoBeca: '-',
-      estado: 'Activo',
-      supervisor: '-',
-      fechaInicio: ''
+      tipoBeca: u.tipoBeca || '-',
+      estado: u.estado as EstudianteBecario['estado'],
+      emailVerified: u.emailVerified,
+      plaza: u.plaza || '-',
+      horasRequeridas: typeof u.horasRequeridas === 'number' ? u.horasRequeridas : 0,
+      horasCompletadas: typeof u.horasCompletadas === 'number' ? u.horasCompletadas : 0,
+      fechaInicio: u.fechaInicio || ''
     }));
   }, [usuarios]);
 
+  // Supervisor filter no longer applicable; keep empty list
+  const supervisoresDisponibles: string[] = [];
+
   const filteredEstudiantes = estudiantesFromApi.filter(estudiante => {
-    const matchesSearch = 
+    const matchesSearch =
       estudiante.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       estudiante.cedula.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      estudiante.carrera.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      estudiante.plaza.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesBeca = filterBeca === "todos" || estudiante.tipoBeca === filterBeca;
     const matchesEstado = filterEstado === "todos" || estudiante.estado === filterEstado;
-    
-    return matchesSearch && matchesBeca && matchesEstado;
+    const matchesSupervisor = true;
+
+    return matchesSearch && matchesBeca && matchesEstado && matchesSupervisor;
   });
+
 
 
 
@@ -171,8 +215,8 @@ const EstudiantesBecarios = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-primary">Gestión de Estudiantes y Reportes</h2>
-          <p className="text-muted-foreground">Administración de estudiantes becarios y seguimiento de actividades</p>
+          <h2 className="text-3xl font-bold text-primary">Becarios</h2>
+          <p className="text-muted-foreground mt-1">Administración de estudiantes becarios y seguimiento de actividades</p>
         </div>
       </div>
 
@@ -188,148 +232,176 @@ const EstudiantesBecarios = () => {
         <TabsContent value="estudiantes" className="space-y-6">
           
           {/* Filtros para Estudiantes */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nombre, cédula o carrera..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={filterBeca} onValueChange={setFilterBeca}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Tipo de Beca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas las Becas</SelectItem>
-                    <SelectItem value="Excelencia Académica">Excelencia Académica</SelectItem>
-                    <SelectItem value="Ayudantía">Ayudantía</SelectItem>
-                    <SelectItem value="Impacto Social">Impacto Social</SelectItem>
-                    <SelectItem value="Formación Docente">Formación Docente</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={filterEstado} onValueChange={setFilterEstado}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos los Estados</SelectItem>
-                    <SelectItem value="Activo">Activo</SelectItem>
-                    <SelectItem value="Suspendido">Suspendido</SelectItem>
-                    <SelectItem value="Finalizado">Finalizado</SelectItem>
-                  </SelectContent>
-                </Select>
+          <Card className="border-orange/20 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros de Búsqueda
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre, cédula..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
               </div>
+              <Select value={filterBeca} onValueChange={setFilterBeca}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de Beca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas las Becas</SelectItem>
+                  <SelectItem value="Excelencia">Excelencia</SelectItem>
+                  <SelectItem value="Ayudantía">Ayudantía</SelectItem>
+                  <SelectItem value="Impacto">Impacto</SelectItem>
+                  <SelectItem value="Formación Docente">Formación Docente</SelectItem>
+                  <SelectItem value="Exoneración">Exoneración</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterEstado} onValueChange={setFilterEstado}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los Estados</SelectItem>
+                  <SelectItem value="Activo">Activo</SelectItem>
+                  <SelectItem value="Suspendido">Suspendido</SelectItem>
+                  <SelectItem value="Finalizado">Finalizado</SelectItem>
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
           {/* Estadísticas de Estudiantes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  {becariosLoading ? (
-                    <div className="flex items-center justify-center">
-                      <RefreshCw className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                  ) : becariosError ? (
-                    <p className="text-red-500 text-sm">Error al cargar</p>
-                  ) : (
-                    <p className="text-2xl font-bold text-primary">{Array.isArray(becarios) ? becarios.length : 0}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">Total Becarios</p>
-                </div>
+            <Card className="border-orange/20 bg-gradient-to-br from-orange-50 to-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                  Total Becarios
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {becariosLoading ? (
+                  <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                ) : becariosError ? (
+                  <p className="text-red-500 text-sm">Error al cargar</p>
+                ) : (
+                  <div className="text-3xl font-bold text-primary">{Array.isArray(becarios) ? becarios.length : 0}</div>
+                )}
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  {becariosLoading ? (
-                    <div className="flex items-center justify-center">
-                      <RefreshCw className="h-6 w-6 animate-spin text-green-600" />
-                    </div>
-                  ) : becariosError ? (
-                    <p className="text-red-500 text-sm">Error al cargar</p>
-                  ) : (
-                    <p className="text-2xl font-bold text-green-600">
-                      {Array.isArray(becarios) ? becarios.filter(becario => becario.activo === true).length : 0}
-                    </p>
-                  )}
-                  <p className="text-sm text-muted-foreground">Activos</p>
-                </div>
+            <Card className="border-orange/20 bg-gradient-to-br from-green-50 to-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-green-600" />
+                  Becarios Activos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {becariosLoading ? (
+                  <RefreshCw className="h-8 w-8 animate-spin text-green-600" />
+                ) : becariosError ? (
+                  <p className="text-red-500 text-sm">Error al cargar</p>
+                ) : (
+                  <div className="text-3xl font-bold text-green-600">
+                    {Array.isArray(becarios) ? becarios.filter(becario => becario.estado?.toLowerCase() === 'activa').length : 0}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Tabla de estudiantes */}
-          <Card>
+          <Card className="border-orange/20 shadow-lg">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Lista de Estudiantes Becarios ({filteredEstudiantes.length})</CardTitle>
-                <Badge variant="secondary" className="text-orange">
-                  {filteredEstudiantes.length} estudiantes encontrados
-                </Badge>
+                <div>
+                  <CardTitle className="text-xl">Lista de Estudiantes Becarios</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {filteredEstudiantes.length} becario{filteredEstudiantes.length !== 1 ? 's' : ''} encontrado{filteredEstudiantes.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadUsuarios}
                   disabled={loading}
-                  className="ml-2 border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+                  className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Recargar
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="max-h-96 overflow-y-auto">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Estudiante</TableHead>
-                      <TableHead>Carrera</TableHead>
-                      <TableHead>Trimestre</TableHead>
-                      <TableHead>Promedio</TableHead>
-                      <TableHead>Tipo de Beca</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Supervisor</TableHead>
-                      <TableHead>Acciones</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Estudiante</TableHead>
+                      <TableHead className="font-semibold">Tipo de Beca</TableHead>
+                      <TableHead className="font-semibold">Plaza</TableHead>
+                      <TableHead className="font-semibold">Horas</TableHead>
+                      <TableHead className="font-semibold">Estado</TableHead>
+                      <TableHead className="text-center font-semibold">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredEstudiantes.map((estudiante) => (
-                      <TableRow key={estudiante.id}>
+                      <TableRow key={estudiante.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
-                          <div>
-                            <p className="font-medium">{estudiante.nombre}</p>
-                            <p className="text-sm text-muted-foreground">{estudiante.cedula}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                              {estudiante.nombre?.charAt(0)?.toUpperCase() || 'E'}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">{estudiante.nombre}</p>
+                              <p className="text-sm text-muted-foreground">{estudiante.cedula}</p>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>{estudiante.carrera}</TableCell>
-                        <TableCell>{estudiante.semestre}°</TableCell>
                         <TableCell>
-                          <span className="font-medium">{estudiante.promedio}</span>
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {estudiante.tipoBeca}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {estudiante.plaza || '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{estudiante.tipoBeca}</Badge>
+                          <div className="text-sm">
+                            <span className="font-medium text-foreground">{estudiante.horasCompletadas}</span>
+                            <span className="text-muted-foreground"> / {estudiante.horasRequeridas || 0}</span>
+                          </div>
                         </TableCell>
-                        <TableCell>{getEstadoBadge(estudiante.estado)}</TableCell>
-                        <TableCell className="text-sm">{estudiante.supervisor}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
+                        <TableCell>{getEstadoBadge(estudiante.estado, estudiante.emailVerified)}</TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleVerDetalles(estudiante.id)}
+                            className="hover:bg-orange/10 hover:text-orange-600"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver Detalles
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
+                    {filteredEstudiantes.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-16">
+                          <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                          <p className="text-lg font-medium">No se encontraron becarios</p>
+                          <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>

@@ -6,15 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Edit, Save, X } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Edit, Save, X, Trash2, Info } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchUserById } from "@/lib/api";
+import { fetchUserById, API_BASE } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const EstudianteDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { tokens } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<null | {
@@ -33,6 +46,21 @@ const EstudianteDetail = () => {
     updatedAt: string;
   }>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [becario, setBecario] = useState<null | {
+    id: string;
+    tipoBeca: string;
+    estado: string;
+    periodoInicio?: string | null;
+    periodoFin?: string | null;
+    horasRequeridas?: number | null;
+    horasCompletadas?: number | string | null;
+    plaza?: { id: string; materia?: string; codigo?: string } | null;
+    observaciones?: string | null;
+  }>(null);
   const [editData, setEditData] = useState({
     nombreCompleto: "María González Rodríguez",
     cedula: "V-27543123",
@@ -49,6 +77,21 @@ const EstudianteDetail = () => {
   });
 
   const handleEditarEstudiante = () => {
+    // Cargar los datos actuales del estudiante en editData antes de editar
+    setEditData({
+      nombreCompleto: estudianteData.nombreCompleto,
+      cedula: estudianteData.cedula,
+      correoElectronico: estudianteData.correoElectronico,
+      telefono: estudianteData.telefono,
+      fechaNacimiento: estudianteData.fechaNacimiento,
+      estadoCivil: estudianteData.estadoCivil,
+      tipoPostulante: estudianteData.tipoPostulante,
+      carrera: estudianteData.carrera,
+      trimestreActual: String(estudianteData.trimestreActual),
+      iaa: String(estudianteData.iaa),
+      asignaturasAprobadas: String(estudianteData.asignaturasAprobadas),
+      creditosInscritos: String(estudianteData.creditosInscritos)
+    });
     setIsEditing(true);
   };
 
@@ -57,13 +100,221 @@ const EstudianteDetail = () => {
     // Resetear datos si fuera necesario
   };
 
-  const handleGuardarCambios = () => {
-    setIsEditing(false);
-    // Aquí se guardarían los cambios en una app real
+  const handleGuardarCambios = async () => {
+    console.log('🔧 [GUARDAR] Iniciando guardado de cambios...');
+
+    if (!id) {
+      console.error('🔧 [GUARDAR] No hay ID de usuario');
+      return;
+    }
+
+    const stored = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('auth_tokens') || 'null');
+      } catch {
+        return null;
+      }
+    })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+
+    if (!accessToken) {
+      console.error('🔧 [GUARDAR] No hay token de acceso');
+      toast({
+        title: 'Error de autenticación',
+        description: 'No se encontró token de acceso. Por favor, inicia sesión nuevamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Extraer nombre y apellido del nombreCompleto
+    const nombreParts = editData.nombreCompleto.trim().split(' ');
+    const nombre = nombreParts[0] || '';
+    const apellido = nombreParts.slice(1).join(' ') || '';
+
+    // Construir el body solo con campos que se pueden actualizar
+    const updateData: any = {};
+
+    if (nombre) updateData.nombre = nombre;
+    if (apellido) updateData.apellido = apellido;
+    if (editData.telefono) updateData.telefono = editData.telefono;
+    if (editData.carrera) updateData.carrera = editData.carrera;
+    if (editData.trimestreActual) updateData.trimestre = parseInt(editData.trimestreActual);
+
+    console.log('🔧 [GUARDAR] Datos a enviar:', updateData);
+    console.log('🔧 [GUARDAR] URL:', `${API_BASE}/v1/users/${id}`);
+
+    setIsSaving(true);
+    try {
+      console.log('🔧 [GUARDAR] Enviando request PUT...');
+
+      const response = await fetch(`${API_BASE}/v1/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      console.log('🔧 [GUARDAR] Respuesta recibida:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('🔧 [GUARDAR] Error del servidor:', errorData);
+        throw new Error(errorData?.message || `Error ${response.status}: No se pudo actualizar el usuario`);
+      }
+
+      const result = await response.json();
+      console.log('🔧 [GUARDAR] Datos actualizados:', result);
+
+      toast({
+        title: 'Cambios guardados',
+        description: 'La información del estudiante ha sido actualizada exitosamente.',
+      });
+
+      // Actualizar el estado del usuario con los nuevos datos
+      if (result.data) {
+        setUser(result.data);
+        console.log('🔧 [GUARDAR] Usuario actualizado en el estado');
+      }
+
+      setIsEditing(false);
+      console.log('🔧 [GUARDAR] Guardado completado exitosamente');
+    } catch (e: any) {
+      console.error('🔧 [GUARDAR] Error general:', e);
+      toast({
+        title: 'Error al guardar',
+        description: e?.message || 'No se pudieron guardar los cambios. Intenta nuevamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setEditData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleToggleStatus = async () => {
+    if (!id) return;
+
+    const stored = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('auth_tokens') || 'null');
+      } catch {
+        return null;
+      }
+    })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+
+    if (!accessToken) {
+      toast({
+        title: 'Error de autenticación',
+        description: 'No se encontró token de acceso. Por favor, inicia sesión nuevamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsTogglingStatus(true);
+    try {
+      const response = await fetch(`${API_BASE}/v1/users/${id}/toggle-status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error ${response.status}: No se pudo cambiar el estado del usuario`);
+      }
+
+      const result = await response.json();
+
+      // Actualizar el estado del usuario localmente
+      if (user) {
+        setUser({ ...user, activo: !user.activo });
+      }
+
+      toast({
+        title: user?.activo ? 'Usuario desactivado' : 'Usuario activado',
+        description: user?.activo
+          ? 'El usuario ha sido desactivado exitosamente.'
+          : 'El usuario ha sido activado exitosamente.',
+      });
+    } catch (e: any) {
+      console.error('Error al cambiar estado del usuario:', e);
+      toast({
+        title: 'Error al cambiar estado',
+        description: e?.message || 'No se pudo cambiar el estado del usuario. Intenta nuevamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
+  const handleEliminarUsuario = async () => {
+    if (!id) return;
+
+    const stored = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('auth_tokens') || 'null');
+      } catch {
+        return null;
+      }
+    })();
+    const accessToken = tokens?.accessToken || stored?.accessToken;
+
+    if (!accessToken) {
+      toast({
+        title: 'Error de autenticación',
+        description: 'No se encontró token de acceso. Por favor, inicia sesión nuevamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${API_BASE}/v1/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Error ${response.status}: No se pudo eliminar el usuario`);
+      }
+
+      toast({
+        title: 'Usuario eliminado',
+        description: 'El usuario ha sido desactivado exitosamente.',
+      });
+
+      // Redirigir al dashboard después de un breve delay
+      setTimeout(() => {
+        navigate('/admin-dashboard');
+      }, 1500);
+    } catch (e: any) {
+      console.error('Error al eliminar usuario:', e);
+      toast({
+        title: 'Error al eliminar',
+        description: e?.message || 'No se pudo eliminar el usuario. Intenta nuevamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
   };
 
   useEffect(() => {
@@ -77,6 +328,55 @@ const EstudianteDetail = () => {
       try {
         const res = await fetchUserById(accessToken, id);
         setUser(res.data);
+
+        // Intentar cargar información de becario
+        try {
+          let detailResp = await fetch(`${API_BASE}/v1/becarios/${id}`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+
+          let payload: any = null;
+          if (detailResp.ok) {
+            payload = await detailResp.json();
+          } else {
+            // Fallback: listar y buscar por usuarioId
+            const listResp = await fetch(`${API_BASE}/v1/becarios`, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+              }
+            });
+            if (listResp.ok) {
+              const listPayload = await listResp.json();
+              const found = (listPayload?.data?.becarios || []).find((b: any) => b.usuarioId === id);
+              if (found) payload = { data: found };
+            }
+          }
+
+          if (payload?.data) {
+            const b = payload.data;
+            setBecario({
+              id: b.id,
+              tipoBeca: b.tipoBeca,
+              estado: b.estado,
+              periodoInicio: b.periodoInicio,
+              periodoFin: b.periodoFin,
+              horasRequeridas: b.horasRequeridas,
+              horasCompletadas: b.horasCompletadas,
+              plaza: b.plaza ? { id: b.plaza.id, materia: b.plaza.materia, codigo: b.plaza.codigo } : null,
+              observaciones: b.observaciones
+            });
+          } else {
+            setBecario(null);
+          }
+        } catch {
+          setBecario(null);
+        }
       } catch (e: any) {
         setError(e?.message || 'No se pudo cargar el usuario');
       } finally {
@@ -106,23 +406,27 @@ const EstudianteDetail = () => {
       asignaturasAprobadas: parseInt(editData.asignaturasAprobadas), // no provisto por el endpoint
       creditosInscritos: parseInt(editData.creditosInscritos), // no provisto por el endpoint
       
-      // Datos de la beca (no provistos por el endpoint, dejamos placeholders)
-      tipoBeca: "-",
+      // Datos de la beca
+      tipoBeca: becario?.tipoBeca || "-",
       estadoPostulacion: user?.activo ? 'Aprobada' : 'Suspendida',
       fechaPostulacion: "2024-01-15",
       
-      // Documentos (placeholder)
-      documentos: [
-        { nombre: "Fotocopia de Cédula de Identidad", estado: "Aprobado" },
-        { nombre: "Flujograma de carrera", estado: "Aprobado" },
-        { nombre: "Histórico de notas", estado: "Aprobado" },
-        { nombre: "Plan de carrera avalado", estado: "Aprobado" },
-      ],
+      // Documentos (dinámicos desde usuario)
+      documentos: (() => {
+        const docs: Array<{ nombre: string; id: string }> = [];
+        const u: any = user || {};
+        if (u.fotocopiaCedulaId) docs.push({ nombre: "Fotocopia de Cédula de Identidad", id: u.fotocopiaCedulaId });
+        if (u.flujogramaCarreraId) docs.push({ nombre: "Flujograma de Carrera", id: u.flujogramaCarreraId });
+        if (u.historicoNotasId) docs.push({ nombre: "Histórico de Notas", id: u.historicoNotasId });
+        if (u.planCarreraAvaladoId) docs.push({ nombre: "Plan de Carrera Avalado", id: u.planCarreraAvaladoId });
+        if (u.curriculumDeportivoId) docs.push({ nombre: "Currículum Deportivo", id: u.curriculumDeportivoId });
+        return docs;
+      })(),
       
       // Información adicional (placeholder)
       observaciones: ""
     };
-  }, [user, editData, id]);
+  }, [user, editData, id, becario]);
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -159,11 +463,11 @@ const EstudianteDetail = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/admin-dashboard")}
+              onClick={() => navigate(-1)}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Dashboard
+              Regresar
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">Detalles del Estudiante</h1>
@@ -189,34 +493,80 @@ const EstudianteDetail = () => {
           {/* Botones de acción */}
           <div className="flex justify-end space-x-3 mb-6">
             {!isEditing ? (
-              <Button 
-                onClick={handleEditarEstudiante}
-                className="bg-gradient-primary hover:opacity-90"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Editar Información
-              </Button>
+              <>
+                <Button
+                  variant={user?.activo ? "outline" : "default"}
+                  onClick={handleToggleStatus}
+                  disabled={isTogglingStatus}
+                  className={user?.activo ? "border-orange/40 hover:bg-orange/10 hover:border-orange/60" : "bg-green-600 hover:bg-green-700"}
+                >
+                  {isTogglingStatus ? (
+                    <>Procesando...</>
+                  ) : user?.activo ? (
+                    <>Desactivar Usuario</>
+                  ) : (
+                    <>Activar Usuario</>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar Usuario
+                </Button>
+                <Button
+                  onClick={handleEditarEstudiante}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar Información
+                </Button>
+              </>
             ) : (
               <div className="flex space-x-2">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={handleCancelarEdicion}
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button 
+                <Button
+                  type="button"
                   onClick={handleGuardarCambios}
+                  disabled={isSaving}
                   className="bg-gradient-primary hover:opacity-90"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Guardar Cambios
+                  {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Resumen del Estudiante */}
+          {/* Alert informativo cuando está en modo edición */}
+          {isEditing && (
+            <Alert className="border-orange/30 bg-orange/5">
+              <Info className="h-4 w-4 text-orange" />
+              <AlertTitle className="text-orange font-semibold">Campos Editables</AlertTitle>
+              <AlertDescription className="text-sm text-muted-foreground mt-2">
+                Solo se pueden modificar los siguientes campos del usuario:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li><strong>Nombre</strong> y <strong>Apellido</strong></li>
+                  <li><strong>Teléfono</strong></li>
+                  <li><strong>Carrera</strong></li>
+                  <li><strong>Trimestre</strong></li>
+                </ul>
+                <p className="mt-2 text-xs">
+                  Los demás campos son de solo lectura o están pendientes de implementación en el backend.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Resumen del Estudiante (incluye info de beca) */}
           <Card className="border-orange/20">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -237,10 +587,36 @@ const EstudianteDetail = () => {
                   <p className="text-sm text-muted-foreground">Fecha de Postulación</p>
                   <p className="font-medium">{new Date(estudianteData.fechaPostulacion).toLocaleDateString('es-ES')}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IAA</p>
-                  <p className="font-medium text-primary">{estudianteData.iaa}</p>
-                </div>
+                {becario && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estado</p>
+                    <Badge>{becario.estado}</Badge>
+                  </div>
+                )}
+                {becario && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Período Inicio</p>
+                    <p className="font-medium">{becario.periodoInicio || '-'}</p>
+                  </div>
+                )}
+                {becario && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Horas Requeridas</p>
+                    <p className="font-medium">{becario.horasRequeridas ?? '-'}</p>
+                  </div>
+                )}
+                {becario && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Horas Completadas</p>
+                    <p className="font-medium">{typeof becario.horasCompletadas === 'string' ? becario.horasCompletadas : (becario.horasCompletadas ?? '-')}</p>
+                  </div>
+                )}
+                {becario && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Plaza</p>
+                    <p className="font-medium">{becario.plaza?.materia ? `${becario.plaza.materia}${becario.plaza.codigo ? ` · ${becario.plaza.codigo}` : ''}` : '-'}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -386,8 +762,8 @@ const EstudianteDetail = () => {
                         onChange={(e) => handleInputChange("carrera", e.target.value)}
                         className="mt-1"
                       />
-                    ) : (
-                      <p className="font-medium">{estudianteData.carrera}</p>
+                  ) : (
+                      <p className="font-medium">{user?.carrera || 'N/A'}</p>
                     )}
                   </div>
                   <div>
@@ -402,7 +778,7 @@ const EstudianteDetail = () => {
                         max="15"
                       />
                     ) : (
-                      <p className="font-medium">{estudianteData.trimestreActual}°</p>
+                      <p className="font-medium">{typeof user?.semestre === 'number' ? `${user.semestre}°` : 'N/A'}</p>
                     )}
                   </div>
                   <div>
@@ -418,7 +794,7 @@ const EstudianteDetail = () => {
                         max="20"
                       />
                     ) : (
-                      <p className="font-medium text-primary text-lg">{estudianteData.iaa}</p>
+                      <p className="font-medium text-primary text-lg">{user?.iaa != null ? user.iaa : 'N/A'}</p>
                     )}
                   </div>
                   <div>
@@ -432,7 +808,7 @@ const EstudianteDetail = () => {
                         min="0"
                       />
                     ) : (
-                      <p className="font-medium">{estudianteData.asignaturasAprobadas}</p>
+                      <p className="font-medium">{user?.asignaturasAprobadas != null ? user.asignaturasAprobadas : 'N/A'}</p>
                     )}
                   </div>
                   <div>
@@ -446,7 +822,7 @@ const EstudianteDetail = () => {
                         min="0"
                       />
                     ) : (
-                      <p className="font-medium">{estudianteData.creditosInscritos}</p>
+                      <p className="font-medium">{'N/A'}</p>
                     )}
                   </div>
                 </div>
@@ -464,25 +840,26 @@ const EstudianteDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {estudianteData.documentos.map((documento, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{documento.nombre}</span>
+              {Array.isArray(estudianteData.documentos) && estudianteData.documentos.length > 0 ? (
+                <div className="space-y-3">
+                  {estudianteData.documentos.map((documento: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{documento.nombre}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">Cargado</Badge>
+                        {/* Placeholder descarga si aplica en futuro */}
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {getDocumentoBadge(documento.estado)}
-                      {documento.estado === 'Aprobado' && (
-                        <Button variant="outline" size="sm">
-                          <Download className="h-4 w-4 mr-2" />
-                          Descargar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  No hay documentos cargados para este usuario
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -500,6 +877,34 @@ const EstudianteDetail = () => {
 
         </div>
       </main>
+
+      {/* Alert Dialog de Confirmación */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción desactivará al usuario <strong>{estudianteData.nombreCompleto}</strong> en el sistema.
+              El usuario no podrá acceder a su cuenta hasta que sea reactivado por un administrador.
+              <br />
+              <br />
+              ¿Estás seguro de que deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEliminarUsuario}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

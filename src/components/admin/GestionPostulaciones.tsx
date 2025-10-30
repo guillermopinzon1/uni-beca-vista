@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Eye, Check, X, Clock, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Loader2 } from "lucide-react";
+import { Search, Filter, Eye, Check, X, Clock, User, Mail, Phone, Calendar, FileText, GraduationCap, Download, Loader2, RefreshCw, CheckCircle, Circle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/lib/api";
+import { approveUser } from "@/lib/api/auth";
 
 interface Postulacion {
   id: string;
@@ -46,12 +47,90 @@ const GestionPostulaciones = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBeca, setFilterBeca] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterPeriodo, setFilterPeriodo] = useState("todos");
+  const [sortBy, setSortBy] = useState<"fecha" | "prioridad">("fecha");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedPostulacion, setSelectedPostulacion] = useState<Postulacion | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [postulaciones, setPostulaciones] = useState<Postulacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [checklist, setChecklist] = useState<{[key: string]: boolean}>({});
+
+  // Función para descargar un documento con autenticación
+  const handleDescargarDocumento = async (documentoUrl: string, nombreDocumento: string) => {
+    try {
+      console.log('🔽 INICIO - Descargando documento:', {
+        url: documentoUrl,
+        nombre: nombreDocumento,
+        urlCompleta: documentoUrl
+      });
+
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        toast({
+          title: "Error de autenticación",
+          description: "No se encontró token de acceso",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('🔑 Token disponible, haciendo fetch...');
+
+      // Hacer fetch con el token de autenticación
+      const response = await fetch(documentoUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        }
+      });
+
+      console.log('📡 Respuesta recibida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast({
+            title: "Archivo no encontrado",
+            description: "El archivo físico no existe en el servidor. Contacta al administrador del sistema.",
+            variant: "destructive",
+            duration: 7000
+          });
+          throw new Error(`Archivo no encontrado en el servidor (404)`);
+        }
+        throw new Error(`Error al descargar: ${response.status}`);
+      }
+
+      // Crear blob y descargarlo
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombreDocumento;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Documento descargado",
+        description: `${nombreDocumento} descargado exitosamente`,
+      });
+    } catch (error: any) {
+      console.error('Error descargando documento:', error);
+      toast({
+        title: "Error al descargar",
+        description: error.message || "No se pudo descargar el documento",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Función para cargar postulaciones del API
   const loadPostulaciones = async () => {
@@ -64,7 +143,8 @@ const GestionPostulaciones = () => {
         throw new Error("No hay token de acceso");
       }
 
-      const response = await fetch(`${API_BASE}/v1/postulaciones`, {
+      // Solicitar todas las postulaciones, incluyendo las que no tienen usuarioId
+      const response = await fetch(`${API_BASE}/v1/postulaciones?includeAll=true`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -80,7 +160,7 @@ const GestionPostulaciones = () => {
 
       const data = await response.json();
       const postulacionesRaw = data.data?.postulaciones || data.postulaciones || [];
-      
+
       // Limpiar y convertir los datos para asegurar tipos correctos
       const postulacionesLimpias = postulacionesRaw.map((post: any) => ({
         ...post,
@@ -90,11 +170,68 @@ const GestionPostulaciones = () => {
         asignaturasAprobadas: post.asignaturasAprobadas ? parseInt(post.asignaturasAprobadas) : undefined,
         trimestre: post.trimestre ? parseInt(post.trimestre) || 0 : 0, // Convertir a número, 0 si no es válido
       }));
-      
+
       console.log('Postulaciones originales:', postulacionesRaw);
       console.log('Postulaciones limpias:', postulacionesLimpias);
-      
-      setPostulaciones(postulacionesLimpias);
+
+      // 🔧 FIX: Enriquecer postulaciones con documentos reales de la BD
+      // El campo JSON "documentos" del endpoint /v1/postulaciones tiene un bug del backend
+      // Usamos el endpoint /v1/documents/public/postulacion/:id que consulta la tabla real
+      const postulacionesConDocumentos = await Promise.all(
+        postulacionesLimpias.map(async (post: any) => {
+          try {
+            const docsResponse = await fetch(`${API_BASE}/v1/documents/public/postulacion/${post.id}`);
+            if (docsResponse.ok) {
+              const docsData = await docsResponse.json();
+              const documentosReales = docsData.data?.documentos || [];
+
+              // Mapear documentos al formato esperado por la interfaz
+              const documentosMapeados = documentosReales.map((doc: any) => {
+                // Usar la URL de descarga que ya viene del backend con el ID correcto
+                const downloadUrl = doc.urlDescarga || doc.url;
+                const fullUrl = downloadUrl.startsWith('http')
+                  ? downloadUrl
+                  : `https://srodriguez.intelcondev.org${downloadUrl}`;
+
+                console.log('📄 Mapeando documento para postulación:', {
+                  documentoId: doc.id,
+                  tipoDocumento: doc.tipoDocumento,
+                  nombreOriginal: doc.nombreOriginal,
+                  url_original: doc.url,
+                  urlDescarga: doc.urlDescarga,
+                  fullUrl: fullUrl,
+                  tamano: doc.tamano,
+                  fechaSubida: doc.fechaSubida
+                });
+
+                return {
+                  id: doc.id, // ← IMPORTANTE: Guardar el ID del documento
+                  tipo: doc.tipoDocumento,
+                  nombre: doc.nombreOriginal,
+                  url: fullUrl, // URL completa para fetch con el ID correcto del documento
+                  path: doc.url,
+                  tamano: doc.tamano,
+                  fechaSubida: doc.fechaSubida
+                };
+              });
+
+              return {
+                ...post,
+                documentos: documentosMapeados
+              };
+            }
+          } catch (error) {
+            console.error(`Error cargando documentos para postulación ${post.id}:`, error);
+          }
+
+          // Si falla, retornar con documentos vacíos
+          return post;
+        })
+      );
+
+      console.log('✅ Postulaciones enriquecidas con documentos:', postulacionesConDocumentos);
+
+      setPostulaciones(postulacionesConDocumentos);
     } catch (err: any) {
       setError(err.message || "Error al cargar las postulaciones");
       toast({
@@ -112,10 +249,78 @@ const GestionPostulaciones = () => {
     loadPostulaciones();
   }, []);
 
+  // Función para obtener checklist según tipo de beca
+  const getChecklistForBeca = (tipoBeca: string) => {
+    const checklistMap: {[key: string]: string[]} = {
+      "Excelencia": [
+        "cumple_iaa_minimo",
+        "documentos_completos",
+        "curriculum_actualizado",
+        "carta_motivacion_clara",
+        "evidencia_logros"
+      ],
+      "Ayudantía": [
+        "cumple_iaa_minimo",
+        "documentos_completos",
+        "disponibilidad_horaria",
+        "habilidades_comunicacion",
+        "area_conocimiento"
+      ],
+      "Formación Docente": [
+        "cumple_iaa_minimo",
+        "documentos_completos",
+        "interes_docencia",
+        "capacidad_pedagogica",
+        "compromiso_programa"
+      ]
+    };
+
+    return checklistMap[tipoBeca] || [
+      "cumple_iaa_minimo",
+      "documentos_completos",
+      "informacion_veraz"
+    ];
+  };
+
+  // Función para obtener etiquetas de checklist
+  const getChecklistLabel = (key: string): string => {
+    const labels: {[key: string]: string} = {
+      "cumple_iaa_minimo": "Cumple con el IAA mínimo requerido (≥ 14.0)",
+      "documentos_completos": "Todos los documentos requeridos están presentes",
+      "curriculum_actualizado": "Currículum actualizado y completo",
+      "carta_motivacion_clara": "Carta de motivación clara y coherente",
+      "evidencia_logros": "Evidencias de logros académicos/deportivos/artísticos",
+      "disponibilidad_horaria": "Disponibilidad horaria compatible",
+      "habilidades_comunicacion": "Demuestra habilidades de comunicación",
+      "area_conocimiento": "Dominio del área de conocimiento",
+      "interes_docencia": "Interés genuino en la docencia",
+      "capacidad_pedagogica": "Capacidad pedagógica y didáctica",
+      "compromiso_programa": "Compromiso con el programa de formación",
+      "informacion_veraz": "Información veraz y verificable"
+    };
+    return labels[key] || key;
+  };
+
   const handleVerDetalles = (postulacion: Postulacion) => {
     setSelectedPostulacion(postulacion);
     setMotivoRechazo(""); // Limpiar motivo al abrir modal
+
+    // Inicializar checklist en false
+    const checklistItems = getChecklistForBeca(postulacion.tipoBeca);
+    const initialChecklist: {[key: string]: boolean} = {};
+    checklistItems.forEach(item => {
+      initialChecklist[item] = false;
+    });
+    setChecklist(initialChecklist);
+
     setIsModalOpen(true);
+  };
+
+  const toggleChecklistItem = (key: string) => {
+    setChecklist(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   // Función para cancelar una postulación
@@ -172,8 +377,11 @@ const GestionPostulaciones = () => {
       }
 
       // Log de datos que se van a enviar
+      // WORKAROUND: Enviar horasRequeridas para evitar error de validación del backend
+      // El backend requiere horasRequeridas >= 1, pero por ahora no diferencia por tipoBeca
       const requestBody = {
-        observaciones: observaciones
+        observaciones: observaciones,
+        horasRequeridas: 120 // Temporal: el backend valida min: 1, enviar 120 como default
       };
       
       console.log('=== LOG APROBAR POSTULACIÓN ===');
@@ -224,14 +432,35 @@ const GestionPostulaciones = () => {
       console.log('=== RESPUESTA EXITOSA ===');
       console.log('Success Data:', successData);
 
-      toast({
-        title: "Postulación aprobada",
-        description: "La postulación ha sido aprobada exitosamente"
-      });
+      // Si el backend creó un usuario, aprobarlo automáticamente
+      const newUserId = successData?.data?.usuario?.id || successData?.data?.usuarioId;
+      if (newUserId) {
+        console.log('🔄 Auto-aprobando usuario con ID:', newUserId);
+        try {
+          await approveUser(newUserId, accessToken);
+          console.log('✅ Usuario aprobado automáticamente');
+          toast({
+            title: "Postulación aprobada",
+            description: "La postulación y el usuario han sido aprobados exitosamente. El estudiante ya puede iniciar sesión."
+          });
+        } catch (approveError: any) {
+          console.error('❌ Error al auto-aprobar usuario:', approveError);
+          toast({
+            title: "Postulación aprobada",
+            description: "La postulación fue aprobada, pero hubo un error al aprobar automáticamente el usuario. Deberá aprobarse manualmente.",
+            variant: "default"
+          });
+        }
+      } else {
+        toast({
+          title: "Postulación aprobada",
+          description: "La postulación ha sido aprobada exitosamente"
+        });
+      }
 
       // Recargar las postulaciones para reflejar el cambio
       await loadPostulaciones();
-      
+
       // Cerrar el modal si está abierto
       setIsModalOpen(false);
       setSelectedPostulacion(null);
@@ -379,15 +608,39 @@ const GestionPostulaciones = () => {
     }
   };
 
+  // Extraer períodos únicos de las postulaciones
+  const periodosDisponibles = Array.from(new Set(postulaciones.map(p => p.trimestre?.toString() || "N/A"))).sort();
+
   const filteredPostulaciones = postulaciones.filter(postulacion => {
     const matchesSearch = postulacion.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          postulacion.cedula.includes(searchTerm) ||
                          postulacion.carrera.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesBeca = filterBeca === "todos" || postulacion.tipoBeca === filterBeca;
     const matchesEstado = filterEstado === "todos" || postulacion.estado === filterEstado;
-    
-    return matchesSearch && matchesBeca && matchesEstado;
+    const matchesPeriodo = filterPeriodo === "todos" || (postulacion.trimestre?.toString() || "N/A") === filterPeriodo;
+
+    return matchesSearch && matchesBeca && matchesEstado && matchesPeriodo;
+  });
+
+  // Aplicar ordenamiento
+  const sortedPostulaciones = [...filteredPostulaciones].sort((a, b) => {
+    if (sortBy === "fecha") {
+      const dateA = new Date(a.fechaPostulacion).getTime();
+      const dateB = new Date(b.fechaPostulacion).getTime();
+      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    } else {
+      // Ordenar por prioridad: Pendiente > En Revisión > Rechazada > Aprobada
+      const prioridadMap: { [key: string]: number } = {
+        "Pendiente": 1,
+        "En Revisión": 2,
+        "Rechazada": 3,
+        "Aprobada": 4
+      };
+      const prioridadA = prioridadMap[a.estado] || 999;
+      const prioridadB = prioridadMap[b.estado] || 999;
+      return sortOrder === "asc" ? prioridadA - prioridadB : prioridadB - prioridadA;
+    }
   });
 
   const estadisticas = {
@@ -410,40 +663,80 @@ const GestionPostulaciones = () => {
       {/* Filtros */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, cédula o carrera..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+          <div className="flex flex-col gap-4">
+            {/* Primera fila: Búsqueda y filtros principales */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre, cédula o carrera..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={filterBeca} onValueChange={setFilterBeca}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Tipo de Beca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas las Becas</SelectItem>
+                  <SelectItem value="Excelencia Académica">Excelencia Académica</SelectItem>
+                  <SelectItem value="Ayudantía">Ayudantía</SelectItem>
+                  <SelectItem value="Impacto Social">Impacto Social</SelectItem>
+                  <SelectItem value="Formación Docente">Formación Docente</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterEstado} onValueChange={setFilterEstado}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                  <SelectItem value="En Revisión">En Revisión</SelectItem>
+                  <SelectItem value="Aprobada">Aprobada</SelectItem>
+                  <SelectItem value="Rechazada">Rechazada</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={filterBeca} onValueChange={setFilterBeca}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Tipo de Beca" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas las Becas</SelectItem>
-                <SelectItem value="Excelencia Académica">Excelencia Académica</SelectItem>
-                <SelectItem value="Ayudantía">Ayudantía</SelectItem>
-                <SelectItem value="Impacto Social">Impacto Social</SelectItem>
-                <SelectItem value="Formación Docente">Formación Docente</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterEstado} onValueChange={setFilterEstado}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                <SelectItem value="En Revisión">En Revisión</SelectItem>
-                <SelectItem value="Aprobada">Aprobada</SelectItem>
-                <SelectItem value="Rechazada">Rechazada</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Segunda fila: Filtro de período y ordenamiento */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <Select value={filterPeriodo} onValueChange={setFilterPeriodo}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Período Académico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los Períodos</SelectItem>
+                  {periodosDisponibles.map((periodo) => (
+                    <SelectItem key={periodo} value={periodo}>
+                      {periodo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as "fecha" | "prioridad")}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fecha">Fecha de recepción</SelectItem>
+                  <SelectItem value="prioridad">Prioridad</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
+                <SelectTrigger className="w-full md:w-40">
+                  <SelectValue placeholder="Orden" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">{sortBy === "fecha" ? "Más reciente" : "Mayor prioridad"}</SelectItem>
+                  <SelectItem value="asc">{sortBy === "fecha" ? "Más antigua" : "Menor prioridad"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -495,7 +788,19 @@ const GestionPostulaciones = () => {
       {/* Tabla de postulaciones */}
       <Card>
         <CardHeader>
-          <CardTitle>Postulaciones ({filteredPostulaciones.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Postulaciones ({sortedPostulaciones.length})</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadPostulaciones}
+              disabled={loading}
+              className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Recargar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -526,7 +831,7 @@ const GestionPostulaciones = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPostulaciones.map((postulacion) => (
+              {sortedPostulaciones.map((postulacion) => (
                 <TableRow key={postulacion.id}>
                   <TableCell>
                     <div>
@@ -643,7 +948,7 @@ const GestionPostulaciones = () => {
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <div className="flex-1">
                           <Label className="text-sm text-muted-foreground">Correo Electrónico</Label>
-                          <p className="font-medium">{selectedPostulacion.correoElectronico}</p>
+                          <p className="font-medium">{selectedPostulacion.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -688,7 +993,7 @@ const GestionPostulaciones = () => {
                       </div>
                       <div>
                         <Label className="text-sm text-muted-foreground">Trimestre actual</Label>
-                        <p className="font-medium">{selectedPostulacion.semestre}°</p>
+                        <p className="font-medium">{selectedPostulacion.trimestre || 'N/A'}</p>
                       </div>
                       <div>
                         <Label className="text-sm text-muted-foreground">Índice Académico Acumulado (IAA)</Label>
@@ -729,17 +1034,70 @@ const GestionPostulaciones = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className="bg-green-100 text-green-800 border-green-200">Recibido</Badge>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => window.open(documento.url, '_blank')}
+                            onClick={() => handleDescargarDocumento(documento.url, documento.nombre)}
                           >
                             <Download className="h-4 w-4 mr-2" />
-                            Ver
+                            Descargar
                           </Button>
                         </div>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Checklist de Requisitos */}
+              <Card className="border-orange/20">
+                <CardHeader>
+                  <h3 className="text-lg font-semibold text-primary flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Checklist de Verificación - {selectedPostulacion.tipoBeca}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Verificación sistemática de requisitos según el reglamento del programa
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {getChecklistForBeca(selectedPostulacion.tipoBeca).map((item) => (
+                      <div
+                        key={item}
+                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => toggleChecklistItem(item)}
+                      >
+                        <div className="flex-shrink-0">
+                          {checklist[item] ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <label className="flex-1 text-sm font-medium cursor-pointer">
+                          {getChecklistLabel(item)}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Progreso del checklist */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Progreso de verificación</span>
+                      <span className="font-semibold text-primary">
+                        {Object.values(checklist).filter(v => v).length} / {Object.keys(checklist).length}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(Object.values(checklist).filter(v => v).length / Object.keys(checklist).length) * 100}%`
+                        }}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -777,7 +1135,7 @@ const GestionPostulaciones = () => {
                       />
                     </div>
                     <div className="flex gap-4">
-                      <Button 
+                      <Button
                         className="bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => handleAprobarPostulacion(selectedPostulacion.id)}
                       >

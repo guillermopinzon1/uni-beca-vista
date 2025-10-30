@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, Calendar } from "lucide-react";
+import { Upload, FileText, Calendar, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -38,6 +38,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
   const { toast } = useToast();
   const [uploading, setUploading] = useState<string | null>(null);
   const [documentos, setDocumentos] = useState<Array<{ tipo: string; nombre: string; file: File }>>([]);
+  const [showOptionalAcademicData, setShowOptionalAcademicData] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     nombre: "",
     cedula: "",
@@ -109,57 +110,109 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
   };
 
   // Función para mapear el título del programa al tipo de beca válido
+  // Valores permitidos por el backend: 'Ayudantía', 'Impacto', 'Excelencia', 'Exoneración de Pago', 'Formación Docente'
   const getTipoBeca = (programTitle: string): string => {
+    // Normalizar el título para búsqueda (minúsculas y sin acentos)
+    const titleLower = programTitle.toLowerCase();
+
+    // Si contiene "excelencia" en el título → Excelencia
+    if (titleLower.includes('excelencia')) {
+      return "Excelencia";
+    }
+
+    // Si contiene "formación" o "docente" → Formación Docente
+    if (titleLower.includes('formación') || titleLower.includes('formacion') || titleLower.includes('docente')) {
+      return "Formación Docente";
+    }
+
+    // Si contiene "ayudantía" → Ayudantía
+    if (titleLower.includes('ayudantía') || titleLower.includes('ayudantia')) {
+      return "Ayudantía";
+    }
+
+    // Si contiene "impacto" → Impacto
+    if (titleLower.includes('impacto')) {
+      return "Impacto";
+    }
+
+    // Si contiene "exoneración" → Exoneración de Pago
+    if (titleLower.includes('exoneración') || titleLower.includes('exoneracion')) {
+      return "Exoneración de Pago";
+    }
+
+    // Fallback: mapeo exacto como backup
     const mapeoBecas: { [key: string]: string } = {
       "Programa de Excelencia": "Excelencia",
-      "Beca de Formación Docente": "Exoneración de Pago",
-      "Programa de Ayudantía": "Ayudantía",
       "Excelencia Académica": "Excelencia",
-      "Formación Docente": "Exoneración de Pago",
+      "Excelencia": "Excelencia",
+      "Beca de Formación Docente": "Formación Docente",
+      "Formación Docente": "Formación Docente",
+      "Programa de Ayudantía": "Ayudantía",
       "Ayudantía": "Ayudantía",
-      "Impacto Social": "Impacto"
+      "Programa de Impacto": "Impacto",
+      "Impacto Social": "Impacto",
+      "Impacto": "Impacto",
+      "Programa de Exoneración": "Exoneración de Pago",
+      "Exoneración de Pago": "Exoneración de Pago",
+      "Exoneración": "Exoneración de Pago"
     };
+
     return mapeoBecas[programTitle] || "Ayudantía";
   };
 
-  // Función para generar URL temporal para documentos
-  const generateTempUrl = (fileName: string): string => {
-    return `https://srodriguez.intelcondev.org/documentos/${fileName}`;
-  };
+  // Tipos de documentos permitidos
+  const TIPOS_DOCUMENTO = [
+    'cedula',
+    'historico_notas',
+    'flujograma_carrera',
+    'plan_carrera_avalado',
+    'curriculum',
+    'carta_motivacion',
+    'certificados_logros',
+    'constancia_laboral',
+    'comprobante_ingresos'
+  ];
 
-  // Función para generar path temporal para documentos
-  const generateTempPath = (fileName: string): string => {
-    return `/uploads/documentos/${fileName}`;
+  // Validación de archivos
+  const validarArchivo = (archivo: File): string | null => {
+    // Tamaño máximo: 10MB
+    if (archivo.size > 10485760) {
+      return 'El archivo excede 10MB';
+    }
+
+    // Tipos permitidos
+    const permitidos = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!permitidos.includes(archivo.type)) {
+      return 'Solo PDF, JPG, PNG permitidos';
+    }
+
+    return null; // válido
   };
 
   // Función para enviar la postulación
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      // Ya no se requiere autenticación para postular
 
       // Validar campos requeridos
       const requiredFields = ['nombre', 'cedula', 'email', 'telefono', 'fechaNacimiento', 'estadoCivil', 'tipoPostulante', 'carrera'];
       const missingFields = requiredFields.filter(field => !formData[field as keyof FormData]);
-      
+
       if (missingFields.length > 0) {
-        toast({ 
-          title: "Campos requeridos", 
-          description: `Por favor complete: ${missingFields.join(', ')}`, 
-          variant: "destructive" 
+        toast({
+          title: "Campos requeridos",
+          description: `Por favor complete: ${missingFields.join(', ')}`,
+          variant: "destructive"
         });
         return;
       }
 
-      // Preparar documentos con URLs temporales
-      const documentosSubidos = documentos.map(doc => ({
-        tipo: doc.tipo,
-        nombre: doc.nombre,
-        url: generateTempUrl(doc.nombre),
-        path: generateTempPath(doc.nombre)
-      }));
+      // PASO 1: Crear postulación SIN documentos
+      toast({
+        title: "Creando postulación...",
+        description: "Procesando su solicitud",
+      });
 
-      // Preparar el body del endpoint
       const postulacionBody = {
         nombre: formData.nombre,
         cedula: formData.cedula,
@@ -174,8 +227,8 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
         promedioBachillerato: formData.promedioBachillerato,
         asignaturasAprobadas: formData.asignaturasAprobadas,
         creditosInscritos: formData.creditosInscritos,
-        tipoBeca: getTipoBeca(programTitle),
-        documentos: documentosSubidos
+        tipoBeca: getTipoBeca(programTitle)
+        // NO incluir documentos aquí
       };
 
       const response = await fetch(`${API_BASE}/v1/postulaciones`, {
@@ -224,17 +277,175 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
       }
 
       const data = await response.json();
-      
-      // Mostrar estado de éxito visual
-      setShowSuccess(true);
-      
-      // Mostrar mensaje de éxito más vistoso
-      toast({ 
-        title: "🎉 ¡Postulación Enviada Exitosamente!", 
-        description: "Su postulación ha sido recibida y está siendo procesada. Recibirá una confirmación por correo electrónico.",
-        duration: 5000
+
+      // ⚠️ CRÍTICO: Guardar el postulacionId para subir documentos
+      const postulacionId = data.data.id;
+
+      if (!postulacionId) {
+        throw new Error("No se recibió el ID de la postulación");
+      }
+
+      // DEBUG: Verificar que tenemos el ID correcto
+      console.log('✅ Postulación creada con ID:', postulacionId);
+
+      toast({
+        title: "✓ Postulación creada",
+        description: `ID: ${postulacionId.substring(0, 8)}...`,
       });
-      
+
+      // PASO 2: Subir documentos (si hay)
+      let documentosSubidos = 0;
+      let documentosFallidos = 0;
+
+      if (documentos.length > 0) {
+        toast({
+          title: "Subiendo documentos...",
+          description: `Procesando ${documentos.length} documento(s)`,
+        });
+
+        for (let i = 0; i < documentos.length; i++) {
+          const doc = documentos[i];
+
+          // Validar archivo
+          const errorValidacion = validarArchivo(doc.file);
+          if (errorValidacion) {
+            console.error(`Validación falló para ${doc.tipo}:`, errorValidacion);
+            documentosFallidos++;
+            continue;
+          }
+
+          try {
+            // Crear FormData
+            const formDataDoc = new FormData();
+            formDataDoc.append('file', doc.file);
+            formDataDoc.append('tipoDocumento', doc.tipo);
+            formDataDoc.append('postulacionId', postulacionId); // ⚠️ IMPORTANTE
+
+            // DEBUG: Verificar que el FormData tiene los 3 campos
+            console.log('📎 Subiendo documento:', {
+              tipo: doc.tipo,
+              nombre: doc.file.name,
+              postulacionId: postulacionId,
+              formDataEntries: Array.from(formDataDoc.entries()).map(([key, value]) => ({
+                key,
+                value: value instanceof File ? `File: ${value.name}` : value
+              }))
+            });
+
+            // Subir documento
+            const uploadResponse = await fetch(`${API_BASE}/v1/documents/upload`, {
+              method: 'POST',
+              body: formDataDoc
+            });
+
+            if (!uploadResponse.ok) {
+              const error = await uploadResponse.json().catch(() => null);
+              console.error(`❌ Error subiendo ${doc.tipo}:`, {
+                status: uploadResponse.status,
+                statusText: uploadResponse.statusText,
+                error: error
+              });
+
+              // Mostrar toast de error específico
+              toast({
+                title: `Error subiendo ${doc.tipo}`,
+                description: error?.message || `HTTP ${uploadResponse.status}: ${uploadResponse.statusText}`,
+                variant: "destructive",
+                duration: 5000
+              });
+
+              documentosFallidos++;
+              continue;
+            }
+
+            const uploadData = await uploadResponse.json();
+            console.log(`✅ Documento ${doc.tipo} subido:`, uploadData);
+
+            documentosSubidos++;
+
+            // Verificar que el documento quedó asociado
+            console.log(`🔗 Documento ${uploadData.data.id} asociado a postulación ${postulacionId}`);
+
+            // Actualizar progreso
+            toast({
+              title: `Documento ${i + 1}/${documentos.length}`,
+              description: `${doc.tipo} subido correctamente`,
+            });
+
+          } catch (error) {
+            console.error(`❌ Excepción subiendo ${doc.tipo}:`, error);
+
+            // Toast de error para excepciones
+            toast({
+              title: `Error subiendo ${doc.tipo}`,
+              description: error instanceof Error ? error.message : "Error desconocido",
+              variant: "destructive",
+              duration: 5000
+            });
+
+            documentosFallidos++;
+          }
+        }
+      }
+
+      // PASO 3: Verificar que los documentos se asociaron correctamente
+      if (documentosSubidos > 0) {
+        try {
+          console.log('🔍 Verificando documentos asociados a la postulación...');
+          const verifyResponse = await fetch(`${API_BASE}/v1/documents/public/postulacion/${postulacionId}`);
+
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            const documentosAsociados = verifyData.data?.documentos || [];
+            console.log('✅ Documentos verificados en BD:', documentosAsociados);
+
+            if (documentosAsociados.length !== documentosSubidos) {
+              console.warn(`⚠️ Advertencia: Se subieron ${documentosSubidos} pero solo se encontraron ${documentosAsociados.length} asociados`);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error verificando documentos:', error);
+        }
+      }
+
+      // Mostrar resultado final
+      setShowSuccess(true);
+
+      // Determinar el estado del proceso de documentos
+      if (documentos.length > 0) {
+        if (documentosFallidos === 0) {
+          // Éxito total
+          toast({
+            title: "🎉 ¡Postulación Completada!",
+            description: `Postulación registrada exitosamente con ${documentosSubidos} documento(s).`,
+            duration: 7000
+          });
+        } else if (documentosSubidos === 0) {
+          // Todos los documentos fallaron
+          toast({
+            title: "⚠️ Postulación creada con errores",
+            description: `Postulación registrada pero ningún documento se pudo subir. Revisa los errores en consola.`,
+            variant: "destructive",
+            duration: 10000
+          });
+        } else {
+          // Éxito parcial
+          toast({
+            title: "⚠️ Postulación creada con advertencias",
+            description: `${documentosSubidos} documento(s) subido(s), ${documentosFallidos} fallido(s). Revisa los errores.`,
+            variant: "destructive",
+            duration: 10000
+          });
+        }
+      } else {
+        // Sin documentos
+        toast({
+          title: "🎉 ¡Postulación Completada!",
+          description: "Postulación registrada exitosamente. Puede agregar documentos posteriormente.",
+          duration: 7000
+        });
+      }
+
       // Resetear formulario completamente
       setFormData({
         nombre: "",
@@ -257,16 +468,11 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
       setBirthDate(undefined);
       setDocumentos([]);
       setFieldErrors({});
-      
-      // Ocultar estado de éxito después de 5 segundos
+
+      // Ocultar estado de éxito después de 7 segundos
       setTimeout(() => {
         setShowSuccess(false);
-        toast({
-          title: "✅ Proceso Completado",
-          description: "Todos los campos han sido limpiados. Puede realizar una nueva postulación si lo desea.",
-          duration: 3000
-        });
-      }, 5000);
+      }, 7000);
 
     } catch (error: any) {
       toast({ 
@@ -279,21 +485,41 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
     }
   };
 
-  // Función para manejar la subida de documentos (solo guarda localmente)
+  // Función para manejar la subida de documentos (solo guarda localmente hasta el submit)
   const handleUpload = (file: File, tipoDocumento: string) => {
+    // Validar archivo antes de agregarlo
+    const errorValidacion = validarArchivo(file);
+    if (errorValidacion) {
+      toast({
+        title: "Error de validación",
+        description: errorValidacion,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Remover documento anterior del mismo tipo si existe
     setDocumentos(prev => prev.filter(doc => doc.tipo !== tipoDocumento));
-    
+
     // Agregar nuevo documento
     setDocumentos(prev => [...prev, {
       tipo: tipoDocumento,
       nombre: file.name,
       file: file
     }]);
-    
-    toast({ 
-      title: "Documento seleccionado", 
-      description: `${file.name} listo para enviar` 
+
+    toast({
+      title: "Documento seleccionado",
+      description: `${file.name} listo para enviar (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+    });
+  };
+
+  // Función para remover un documento
+  const handleRemoveDocument = (tipoDocumento: string) => {
+    setDocumentos(prev => prev.filter(doc => doc.tipo !== tipoDocumento));
+    toast({
+      title: "Documento removido",
+      description: `Documento ${tipoDocumento} eliminado`
     });
   };
 
@@ -505,7 +731,7 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
             <h3 className="text-lg font-semibold text-foreground">Datos Académicos</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="carrera">Carrera/Programa de estudios</Label>
+                <Label htmlFor="carrera">Carrera/Programa de estudios *</Label>
                 <Select value={formData.carrera} onValueChange={(value) => handleInputChange("carrera", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione su carrera" />
@@ -523,125 +749,255 @@ const UnifiedApplicationForm = ({ programTitle }: UnifiedApplicationFormProps) =
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="trimestre">Trimestre actual (opcional)</Label>
-                <Input 
-                  id="trimestre" 
-                  placeholder="2025-1" 
-                  value={formData.trimestre}
-                  onChange={(e) => handleInputChange("trimestre", e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Formato: AÑO-TRIMESTRE (ej: 2025-1) - Campo opcional</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="iaa">Índice Académico Acumulado (IAA)</Label>
-                <Input 
-                  id="iaa" 
-                  type="number" 
-                  step="0.01" 
-                  min="0" 
-                  max="20" 
-                  placeholder="18.50"
-                  value={formData.iaa || ""}
-                  onChange={(e) => handleInputChange("iaa", e.target.value ? parseFloat(e.target.value) : null)}
-                />
-                <p className="text-xs text-muted-foreground">Solo para estudiantes regulares</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="promedioBachillerato">Promedio de notas de bachillerato</Label>
-                <Input 
-                  id="promedioBachillerato" 
-                  type="number" 
-                  step="0.01" 
-                  min="0" 
-                  max="20" 
+                <Label htmlFor="promedioBachillerato">Promedio de notas de bachillerato *</Label>
+                <Input
+                  id="promedioBachillerato"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="20"
                   placeholder="17.50"
                   value={formData.promedioBachillerato || ""}
                   onChange={(e) => handleInputChange("promedioBachillerato", e.target.value ? parseFloat(e.target.value) : null)}
                 />
-                <p className="text-xs text-muted-foreground">Solo para estudiantes de nuevo ingreso</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="asignaturasAprobadas">Número de asignaturas aprobadas</Label>
-                <Input 
-                  id="asignaturasAprobadas" 
-                  type="number" 
-                  placeholder="25" 
-                  value={formData.asignaturasAprobadas || ""}
-                  onChange={(e) => handleInputChange("asignaturasAprobadas", e.target.value ? parseInt(e.target.value) : null)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="creditosInscritos">Número de créditos inscritos este trimestre</Label>
-                <Input 
-                  id="creditosInscritos" 
-                  type="number" 
-                  placeholder="18" 
-                  value={formData.creditosInscritos || ""}
-                  onChange={(e) => handleInputChange("creditosInscritos", e.target.value ? parseInt(e.target.value) : null)}
-                />
+                <p className="text-xs text-muted-foreground">Para estudiantes de nuevo ingreso</p>
               </div>
             </div>
+
+            {/* Botón para mostrar/ocultar datos académicos opcionales */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowOptionalAcademicData(!showOptionalAcademicData)}
+              className="w-full mt-4"
+            >
+              {showOptionalAcademicData ? (
+                <>
+                  <ChevronUp className="h-4 w-4 mr-2" />
+                  Ocultar datos académicos opcionales
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4 mr-2" />
+                  Mostrar datos académicos opcionales
+                </>
+              )}
+            </Button>
+
+            {/* Datos académicos opcionales */}
+            {showOptionalAcademicData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="trimestre">Trimestre actual (opcional)</Label>
+                  <Input
+                    id="trimestre"
+                    placeholder="2025-1"
+                    value={formData.trimestre}
+                    onChange={(e) => handleInputChange("trimestre", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Formato: AÑO-TRIMESTRE (ej: 2025-1)</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="iaa">Índice Académico Acumulado (IAA)</Label>
+                  <Input
+                    id="iaa"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="20"
+                    placeholder="18.50"
+                    value={formData.iaa || ""}
+                    onChange={(e) => handleInputChange("iaa", e.target.value ? parseFloat(e.target.value) : null)}
+                  />
+                  <p className="text-xs text-muted-foreground">Solo para estudiantes regulares</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="asignaturasAprobadas">Número de asignaturas aprobadas</Label>
+                  <Input
+                    id="asignaturasAprobadas"
+                    type="number"
+                    placeholder="25"
+                    value={formData.asignaturasAprobadas || ""}
+                    onChange={(e) => handleInputChange("asignaturasAprobadas", e.target.value ? parseInt(e.target.value) : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="creditosInscritos">Número de créditos inscritos este trimestre</Label>
+                  <Input
+                    id="creditosInscritos"
+                    type="number"
+                    placeholder="18"
+                    value={formData.creditosInscritos || ""}
+                    onChange={(e) => handleInputChange("creditosInscritos", e.target.value ? parseInt(e.target.value) : null)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Documentos Requeridos */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">Documentos Requeridos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card className="border-dashed border-2 border-muted-foreground/25">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">Fotocopia de Cédula de Identidad</p>
-                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'cedula')} disabled={!!uploading} />
-                </CardContent>
-              </Card>
-              
-              <Card className="border-dashed border-2 border-muted-foreground/25">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">Flujograma de carrera</p>
-                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'flujograma_carrera')} disabled={!!uploading} />
-                </CardContent>
-              </Card>
-              
-              <Card className="border-dashed border-2 border-muted-foreground/25">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">Histórico de notas</p>
-                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'historico_notas')} disabled={!!uploading} />
-                </CardContent>
-              </Card>
-              
-              <Card className="border-dashed border-2 border-muted-foreground/25">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">Plan de carrera avalado por el Director de Escuela</p>
-                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'plan_carrera_avalado')} disabled={!!uploading} />
-                </CardContent>
-              </Card>
-              
-              <Card className="border-dashed border-2 border-muted-foreground/25">
-                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2">Currículum deportivo o dossier artístico</p>
-                  <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'curriculum')} disabled={!!uploading} />
-                </CardContent>
-              </Card>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Documentos Requeridos</h3>
+              <span className="text-xs text-muted-foreground">PDF, JPG, PNG (máx. 10MB)</span>
             </div>
-            {documentos.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Documentos seleccionados</h4>
-                <div className={`text-sm rounded p-3 ${fieldErrors.documentos ? 'bg-red-50 border border-red-200' : 'bg-muted/30'}`}>
-                    <ul className="list-disc pl-5 space-y-1">
-                    {documentos.map((doc, index) => (
-                      <li key={`${doc.tipo}-${index}`}>{doc.tipo} — {doc.nombre}</li>
-                      ))}
-                    </ul>
-                </div>
-                {fieldErrors.documentos && (
-                  <p className="text-sm text-red-500">{fieldErrors.documentos}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Cédula */}
+              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2 font-medium">Cédula de Identidad</p>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'cedula')}
+                    disabled={!!uploading}
+                    className="text-xs cursor-pointer"
+                  />
+                  {documentos.find(d => d.tipo === 'cedula') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 text-xs text-red-600 hover:text-red-700"
+                      onClick={() => handleRemoveDocument('cedula')}
+                    >
+                      Remover
+                    </Button>
                   )}
-              </div>
+                </CardContent>
+              </Card>
+
+              {/* Histórico de notas */}
+              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2 font-medium">Histórico de Notas</p>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'historico_notas')}
+                    disabled={!!uploading}
+                    className="text-xs cursor-pointer"
+                  />
+                  {documentos.find(d => d.tipo === 'historico_notas') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 text-xs text-red-600 hover:text-red-700"
+                      onClick={() => handleRemoveDocument('historico_notas')}
+                    >
+                      Remover
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Flujograma */}
+              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2 font-medium">Flujograma de Carrera</p>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'flujograma_carrera')}
+                    disabled={!!uploading}
+                    className="text-xs cursor-pointer"
+                  />
+                  {documentos.find(d => d.tipo === 'flujograma_carrera') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 text-xs text-red-600 hover:text-red-700"
+                      onClick={() => handleRemoveDocument('flujograma_carrera')}
+                    >
+                      Remover
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Plan de carrera */}
+              <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2 font-medium">Plan de Carrera Avalado</p>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'plan_carrera_avalado')}
+                    disabled={!!uploading}
+                    className="text-xs cursor-pointer"
+                  />
+                  {documentos.find(d => d.tipo === 'plan_carrera_avalado') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 text-xs text-red-600 hover:text-red-700"
+                      onClick={() => handleRemoveDocument('plan_carrera_avalado')}
+                    >
+                      Remover
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Currículum - Solo Excelencia y Ayudantía */}
+              {(programTitle.includes("Excelencia") || programTitle.includes("Ayudantía")) && (
+                <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                  <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2 font-medium">Currículum/Dossier</p>
+                    <Input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'curriculum')}
+                      disabled={!!uploading}
+                      className="text-xs cursor-pointer"
+                    />
+                    {documentos.find(d => d.tipo === 'curriculum') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 text-xs text-red-600 hover:text-red-700"
+                        onClick={() => handleRemoveDocument('curriculum')}
+                      >
+                        Remover
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Lista de documentos seleccionados */}
+            {documentos.length > 0 && (
+              <Card className="border-green-200 bg-green-50">
+                <CardContent className="p-4">
+                  <h4 className="text-sm font-semibold text-green-900 mb-3">
+                    ✓ Documentos Seleccionados ({documentos.length})
+                  </h4>
+                  <ul className="space-y-2">
+                    {documentos.map((doc, index) => (
+                      <li key={`${doc.tipo}-${index}`} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-green-200">
+                        <span className="flex items-center gap-2 text-green-800">
+                          <FileText className="h-4 w-4" />
+                          <span className="font-medium">{doc.tipo.replace(/_/g, ' ')}</span>
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-green-600">{doc.nombre}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(doc.file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             )}
+
           </div>
 
           {/* Botones de Acción */}

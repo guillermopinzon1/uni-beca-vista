@@ -1,330 +1,639 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Settings, AlertCircle, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { Save, Settings, AlertCircle, CheckCircle, RefreshCw, Plus, X, Award, Users, GraduationCap, Shield, BookOpen } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-interface ConfiguracionBeca {
-  nombre: string;
-  montoMensual: number;
-  promedioMinimo: number;
-  edadMaxima: number;
-  semestreMinimo: number;
-  semestreMaximo: number;
-  duracionMeses: number;
-  requisitoEspecial: string;
-  activa: boolean;
-  cuposDisponibles: number;
-  documentosRequeridos: string[];
-}
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  fetchConfiguracionesBecas,
+  createOrUpdateConfiguracionBeca,
+  TipoBeca,
+  SubtipoExcelencia,
+  ConfiguracionBeca,
+  CreateOrUpdateConfiguracionBecaRequest,
+} from "@/lib/api/configuracion";
+import { Badge } from "@/components/ui/badge";
 
 const ConfiguracionBecas = () => {
-  const [hasChanges, setHasChanges] = useState(false);
-  const [savedMessage, setSavedMessage] = useState(false);
+  const { toast } = useToast();
+  const { tokens } = useAuth();
 
-  // Mock data para configuraciones actuales
-  const [configuraciones, setConfiguraciones] = useState<Record<string, ConfiguracionBeca>>({
-    excelencia: {
-      nombre: "Beca de Excelencia Académica",
-      montoMensual: 500000,
-      promedioMinimo: 18.0,
-      edadMaxima: 25,
-      semestreMinimo: 3,
-      semestreMaximo: 10,
-      duracionMeses: 12,
-      requisitoEspecial: "No haber reprobado materias",
-      activa: true,
-      cuposDisponibles: 50,
-      documentosRequeridos: ["Certificado de notas", "Carta de motivación", "CV actualizado"]
-    },
-    ayudantia: {
-      nombre: "Beca de Ayudantía",
-      montoMensual: 300000,
-      promedioMinimo: 16.0,
-      edadMaxima: 28,
-      semestreMinimo: 4,
-      semestreMaximo: 12,
-      duracionMeses: 6,
-      requisitoEspecial: "Disponibilidad de 20 horas semanales",
-      activa: true,
-      cuposDisponibles: 100,
-      documentosRequeridos: ["Certificado de notas", "Carta de disponibilidad", "Referencias académicas"]
-    },
-    impacto: {
-      nombre: "Beca de Impacto Social",
-      montoMensual: 400000,
-      promedioMinimo: 16.5,
-      edadMaxima: 26,
-      semestreMinimo: 5,
-      semestreMaximo: 11,
-      duracionMeses: 10,
-      requisitoEspecial: "Proyecto de impacto social aprobado",
-      activa: true,
-      cuposDisponibles: 30,
-      documentosRequeridos: ["Certificado de notas", "Propuesta de proyecto", "Carta de motivación", "Referencias"]
-    },
-    formacion: {
-      nombre: "Beca de Formación Docente",
-      montoMensual: 350000,
-      promedioMinimo: 17.0,
-      edadMaxima: 30,
-      semestreMinimo: 6,
-      semestreMaximo: 12,
-      duracionMeses: 8,
-      requisitoEspecial: "Interés comprobado en docencia universitaria",
-      activa: true,
-      cuposDisponibles: 25,
-      documentosRequeridos: ["Certificado de notas", "Ensayo vocacional", "Certificados de cursos", "Referencias"]
-    }
-  });
-
-  const handleSave = () => {
-    // Aquí iría la lógica para guardar las configuraciones
-    setSavedMessage(true);
-    setHasChanges(false);
-    setTimeout(() => setSavedMessage(false), 3000);
-  };
-
-  const handleConfigChange = (tipo: string, campo: string, valor: any) => {
-    setConfiguraciones(prev => ({
-      ...prev,
-      [tipo]: {
-        ...prev[tipo],
-        [campo]: valor
-      }
-    }));
-    setHasChanges(true);
-  };
-
-  const ConfiguracionForm = ({ tipo, config }: { tipo: string; config: ConfiguracionBeca }) => (
-    <div className="space-y-6">
-      {/* Información básica */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Información Básica
-            <Switch 
-              checked={config.activa}
-              onCheckedChange={(checked) => handleConfigChange(tipo, 'activa', checked)}
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={`${tipo}-monto`}>Monto Mensual (Bs.)</Label>
-              <Input
-                id={`${tipo}-monto`}
-                type="number"
-                value={config.montoMensual}
-                onChange={(e) => handleConfigChange(tipo, 'montoMensual', parseInt(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${tipo}-cupos`}>Cupos Disponibles</Label>
-              <Input
-                id={`${tipo}-cupos`}
-                type="number"
-                value={config.cuposDisponibles}
-                onChange={(e) => handleConfigChange(tipo, 'cuposDisponibles', parseInt(e.target.value))}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor={`${tipo}-duracion`}>Duración (meses)</Label>
-            <Input
-              id={`${tipo}-duracion`}
-              type="number"
-              value={config.duracionMeses}
-              onChange={(e) => handleConfigChange(tipo, 'duracionMeses', parseInt(e.target.value))}
-              className="w-32"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Requisitos académicos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Requisitos Académicos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor={`${tipo}-promedio`}>Promedio Mínimo</Label>
-              <Input
-                id={`${tipo}-promedio`}
-                type="number"
-                step="0.1"
-                min="0"
-                max="20"
-                value={config.promedioMinimo}
-                onChange={(e) => handleConfigChange(tipo, 'promedioMinimo', parseFloat(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${tipo}-sem-min`}>Semestre Mínimo</Label>
-              <Input
-                id={`${tipo}-sem-min`}
-                type="number"
-                min="1"
-                max="12"
-                value={config.semestreMinimo}
-                onChange={(e) => handleConfigChange(tipo, 'semestreMinimo', parseInt(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${tipo}-sem-max`}>Semestre Máximo</Label>
-              <Input
-                id={`${tipo}-sem-max`}
-                type="number"
-                min="1"
-                max="12"
-                value={config.semestreMaximo}
-                onChange={(e) => handleConfigChange(tipo, 'semestreMaximo', parseInt(e.target.value))}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={`${tipo}-edad`}>Edad Máxima</Label>
-              <Input
-                id={`${tipo}-edad`}
-                type="number"
-                min="18"
-                max="50"
-                value={config.edadMaxima}
-                onChange={(e) => handleConfigChange(tipo, 'edadMaxima', parseInt(e.target.value))}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Requisitos especiales */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Requisitos Especiales</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor={`${tipo}-especial`}>Requisito Especial</Label>
-            <Textarea
-              id={`${tipo}-especial`}
-              value={config.requisitoEspecial}
-              onChange={(e) => handleConfigChange(tipo, 'requisitoEspecial', e.target.value)}
-              placeholder="Describe requisitos adicionales específicos para esta beca..."
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Documentos requeridos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Documentos Requeridos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {config.documentosRequeridos.map((doc, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm">{doc}</span>
-              </div>
-            ))}
-          </div>
-          <Button variant="outline" size="sm" className="mt-4">
-            Editar Lista de Documentos
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+  const [configuraciones, setConfiguraciones] = useState<ConfiguracionBeca[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<TipoBeca>(TipoBeca.EXCELENCIA);
+  const [selectedSubtipoExcelencia, setSelectedSubtipoExcelencia] = useState<SubtipoExcelencia | undefined>(
+    SubtipoExcelencia.ACADEMICA
   );
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-primary">Configuración de Becas</h2>
-          <p className="text-muted-foreground">Administración de parámetros y requisitos para cada tipo de beca</p>
-        </div>
-        <div className="flex space-x-2">
-          {hasChanges && (
-            <Alert className="w-auto">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Hay cambios sin guardar</AlertDescription>
-            </Alert>
-          )}
-          <Button 
-            onClick={handleSave}
-            disabled={!hasChanges}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Guardar Cambios
-          </Button>
-        </div>
+  // Estados para el formulario
+  const [formData, setFormData] = useState<CreateOrUpdateConfiguracionBecaRequest>({
+    tipoBeca: TipoBeca.EXCELENCIA,
+    subtipoExcelencia: SubtipoExcelencia.ACADEMICA,
+    cuposDisponibles: 0,
+    duracionMeses: 12,
+    promedioMinimo: 15.0,
+    semestreMinimo: 1,
+    semestreMaximo: 12,
+    edadMaxima: 30,
+    requisitosEspeciales: "",
+    documentosRequeridos: ["Cédula de identidad", "Certificado de notas"],
+  });
+
+  const [hasChanges, setHasChanges] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  useEffect(() => {
+    loadConfiguraciones();
+  }, []);
+
+  useEffect(() => {
+    // Solo actualizar el formulario cuando cambia el tab o subtipo, NO cuando cambian las configuraciones durante la edición
+    const config = findConfig(selectedTab, selectedSubtipoExcelencia);
+    if (config) {
+      setFormData({
+        tipoBeca: config.tipoBeca,
+        subtipoExcelencia: config.subtipoExcelencia,
+        cuposDisponibles: config.cuposDisponibles,
+        duracionMeses: config.duracionMeses,
+        promedioMinimo: config.promedioMinimo,
+        semestreMinimo: config.semestreMinimo,
+        semestreMaximo: config.semestreMaximo,
+        edadMaxima: config.edadMaxima,
+        requisitosEspeciales: config.requisitosEspeciales || "",
+        documentosRequeridos: config.documentosRequeridos,
+      });
+    } else {
+      // Configuración por defecto para nuevo
+      setFormData({
+        tipoBeca: selectedTab,
+        subtipoExcelencia: selectedTab === TipoBeca.EXCELENCIA ? selectedSubtipoExcelencia : undefined,
+        cuposDisponibles: 0,
+        duracionMeses: 12,
+        promedioMinimo: 15.0,
+        semestreMinimo: 1,
+        semestreMaximo: 12,
+        edadMaxima: 30,
+        requisitosEspeciales: "",
+        documentosRequeridos: ["Cédula de identidad", "Certificado de notas"],
+      });
+    }
+    setHasChanges(false);
+    setInitialLoadDone(true);
+  }, [selectedTab, selectedSubtipoExcelencia]);
+
+  const loadConfiguraciones = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar configuraciones', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetchConfiguracionesBecas(accessToken);
+      const newConfigs = response.data.configuraciones;
+      setConfiguraciones(newConfigs);
+
+      // Solo actualizar el formulario si no se ha hecho la carga inicial o si no hay cambios sin guardar
+      if (!initialLoadDone || !hasChanges) {
+        const config = newConfigs.find(
+          (c) =>
+            c.tipoBeca === selectedTab &&
+            (selectedTab !== TipoBeca.EXCELENCIA || c.subtipoExcelencia === selectedSubtipoExcelencia)
+        );
+
+        if (config) {
+          setFormData({
+            tipoBeca: config.tipoBeca,
+            subtipoExcelencia: config.subtipoExcelencia,
+            cuposDisponibles: config.cuposDisponibles,
+            duracionMeses: config.duracionMeses,
+            promedioMinimo: config.promedioMinimo,
+            semestreMinimo: config.semestreMinimo,
+            semestreMaximo: config.semestreMaximo,
+            edadMaxima: config.edadMaxima,
+            requisitosEspeciales: config.requisitosEspeciales || "",
+            documentosRequeridos: config.documentosRequeridos,
+          });
+          setHasChanges(false);
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudieron cargar las configuraciones',
+        variant: 'destructive',
+      });
+      setConfiguraciones([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const findConfig = (tipoBeca: TipoBeca, subtipoExcelencia?: SubtipoExcelencia): ConfiguracionBeca | undefined => {
+    return configuraciones.find(
+      (c) =>
+        c.tipoBeca === tipoBeca &&
+        (tipoBeca !== TipoBeca.EXCELENCIA || c.subtipoExcelencia === subtipoExcelencia)
+    );
+  };
+
+  const handleSave = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para guardar cambios', variant: 'destructive' });
+      return;
+    }
+
+    // Validaciones
+    if (formData.cuposDisponibles <= 0) {
+      toast({ title: 'Error', description: 'Los cupos disponibles deben ser mayores a 0', variant: 'destructive' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Preparar el payload, excluyendo subtipoExcelencia si no es tipo Excelencia
+      const payload: CreateOrUpdateConfiguracionBecaRequest = {
+        ...formData,
+        subtipoExcelencia: formData.tipoBeca === TipoBeca.EXCELENCIA ? formData.subtipoExcelencia : undefined,
+      };
+
+      await createOrUpdateConfiguracionBeca(accessToken, payload);
+
+      toast({
+        title: 'Éxito',
+        description: 'Configuración guardada exitosamente',
+        className: "bg-green-50 border-green-200"
+      });
+
+      setHasChanges(false);
+      await loadConfiguraciones();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo guardar la configuración',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFormChange = useCallback((field: keyof CreateOrUpdateConfiguracionBecaRequest, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  }, []);
+
+  const addDocumento = useCallback(() => {
+    setFormData((prev) => ({
+      ...prev,
+      documentosRequeridos: [...prev.documentosRequeridos, ""],
+    }));
+    setHasChanges(true);
+  }, []);
+
+  const updateDocumento = useCallback((index: number, value: string) => {
+    setFormData((prev) => {
+      const newDocs = [...prev.documentosRequeridos];
+      newDocs[index] = value;
+      return { ...prev, documentosRequeridos: newDocs };
+    });
+    setHasChanges(true);
+  }, []);
+
+  const removeDocumento = useCallback((index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      documentosRequeridos: prev.documentosRequeridos.filter((_, i) => i !== index),
+    }));
+    setHasChanges(true);
+  }, []);
+
+  // Función para obtener el icono según el tipo de beca
+  const getBecaIcon = (tipo: TipoBeca) => {
+    switch (tipo) {
+      case TipoBeca.EXCELENCIA:
+        return Award;
+      case TipoBeca.AYUDANTIA:
+        return Users;
+      case TipoBeca.IMPACTO:
+        return GraduationCap;
+      case TipoBeca.EXONERACION:
+        return Shield;
+      case TipoBeca.FORMACION_DOCENTE:
+        return BookOpen;
+      default:
+        return Settings;
+    }
+  };
+
+  // Función para obtener el color según el tipo de beca
+  const getBecaColor = (tipo: TipoBeca) => {
+    switch (tipo) {
+      case TipoBeca.EXCELENCIA:
+        return "from-yellow-400 to-orange-500";
+      case TipoBeca.AYUDANTIA:
+        return "from-blue-400 to-indigo-500";
+      case TipoBeca.IMPACTO:
+        return "from-green-400 to-emerald-500";
+      case TipoBeca.EXONERACION:
+        return "from-purple-400 to-violet-500";
+      case TipoBeca.FORMACION_DOCENTE:
+        return "from-teal-400 to-cyan-500";
+      default:
+        return "from-gray-400 to-gray-500";
+    }
+  };
+
+  // Memorizar formulario para evitar re-renders innecesarios
+  const configuracionForm = useMemo(() => {
+    const config = findConfig(selectedTab, selectedSubtipoExcelencia);
+    const BecaIcon = getBecaIcon(selectedTab);
+    const gradientColor = getBecaColor(selectedTab);
+
+    return (
+      <div className="space-y-6">
+        {/* Header con estado mejorado */}
+        <Card className="border-0 shadow-md bg-white">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold text-gray-800">
+                  {selectedTab === TipoBeca.EXCELENCIA
+                    ? `${selectedTab} - ${selectedSubtipoExcelencia}`
+                    : selectedTab}
+                </CardTitle>
+                <CardDescription className="text-gray-500 text-sm mt-1">
+                  {config
+                    ? `Última actualización: ${new Date(config.updatedAt).toLocaleDateString('es-VE', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}`
+                    : 'Nueva configuración - Aún no guardada'}
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={handleSave} 
+                disabled={!hasChanges || saving} 
+                size="sm"
+                className={`transition-all duration-200 ${
+                  hasChanges 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3 w-3 mr-1" />
+                    Guardar
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Información básica mejorada */}
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <Settings className="h-5 w-5 text-blue-600" />
+              Información Básica
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Configura los parámetros fundamentales de la beca
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cupos" className="text-sm font-medium text-gray-700">
+                  Cupos Disponibles
+                </Label>
+                <Input
+                  id="cupos"
+                  type="number"
+                  value={formData.cuposDisponibles}
+                  onChange={(e) => handleFormChange('cuposDisponibles', parseInt(e.target.value) || 0)}
+                  min="1"
+                  className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="Ej: 25"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duracion" className="text-sm font-medium text-gray-700">
+                  Duración (meses)
+                </Label>
+                <Input
+                  id="duracion"
+                  type="number"
+                  value={formData.duracionMeses}
+                  onChange={(e) => handleFormChange('duracionMeses', parseInt(e.target.value) || 1)}
+                  min="1"
+                  max="48"
+                  className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="Ej: 12"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Requisitos académicos mejorados */}
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-emerald-100">
+            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-emerald-600" />
+              Requisitos Académicos
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Define los criterios académicos mínimos para la beca
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="promedio" className="text-sm font-medium text-gray-700">
+                  Promedio Mínimo (IAA)
+                </Label>
+                <Input
+                  id="promedio"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="20"
+                  value={formData.promedioMinimo}
+                  onChange={(e) => handleFormChange('promedioMinimo', parseFloat(e.target.value) || 0)}
+                  className="h-11 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
+                  placeholder="Ej: 15.0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sem-min" className="text-sm font-medium text-gray-700">
+                  Semestre Mínimo
+                </Label>
+                <Input
+                  id="sem-min"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={formData.semestreMinimo}
+                  onChange={(e) => handleFormChange('semestreMinimo', parseInt(e.target.value) || 1)}
+                  className="h-11 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
+                  placeholder="Ej: 3"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sem-max" className="text-sm font-medium text-gray-700">
+                  Semestre Máximo
+                </Label>
+                <Input
+                  id="sem-max"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={formData.semestreMaximo}
+                  onChange={(e) => handleFormChange('semestreMaximo', parseInt(e.target.value) || 1)}
+                  className="h-11 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
+                  placeholder="Ej: 10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edad" className="text-sm font-medium text-gray-700">
+                  Edad Máxima
+                </Label>
+                <Input
+                  id="edad"
+                  type="number"
+                  min="18"
+                  max="50"
+                  value={formData.edadMaxima}
+                  onChange={(e) => handleFormChange('edadMaxima', parseInt(e.target.value) || 18)}
+                  className="h-11 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
+                  placeholder="Ej: 25"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Requisitos especiales mejorados */}
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100">
+            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              Requisitos Especiales
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Especifica condiciones adicionales o criterios especiales
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-2">
+              <Label htmlFor="especial" className="text-sm font-medium text-gray-700">
+                Descripción de Requisitos Especiales
+              </Label>
+              <Textarea
+                id="especial"
+                value={formData.requisitosEspeciales}
+                onChange={(e) => handleFormChange('requisitosEspeciales', e.target.value)}
+                placeholder="Describe requisitos adicionales específicos para esta beca..."
+                rows={4}
+                className="border-gray-200 focus:border-amber-500 focus:ring-amber-500 resize-none"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Documentos requeridos mejorados */}
+        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-violet-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-violet-600" />
+                  Documentos Requeridos
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Lista de documentos necesarios para la postulación
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={addDocumento} 
+                variant="outline" 
+                size="sm"
+                className="border-violet-200 text-violet-700 hover:bg-violet-50 hover:border-violet-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Documento
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="space-y-2">
+              {formData.documentosRequeridos.map((doc, index) => (
+                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1">
+                    <Input
+                      value={doc}
+                      onChange={(e) => updateDocumento(index, e.target.value)}
+                      placeholder="Nombre del documento requerido"
+                      className="border-gray-200 focus:border-violet-500 focus:ring-violet-500 bg-white"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeDocumento(index)}
+                    disabled={formData.documentosRequeridos.length <= 1}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+    );
+  }, [selectedTab, selectedSubtipoExcelencia, configuraciones, formData, handleFormChange, addDocumento, updateDocumento, removeDocumento]);
 
-      {savedMessage && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            Configuraciones guardadas exitosamente
-          </AlertDescription>
-        </Alert>
-      )}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Header principal mejorado */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-gray-800">
+              Configuración de Becas
+            </h1>
+            <p className="text-sm text-gray-500">
+              Administra parámetros y requisitos para cada tipo de beca
+            </p>
+          </div>
+        </div>
 
-      {/* Estadísticas generales */}
+        {/* Tabs mejorados */}
+        <Card className="border-0 shadow-lg bg-white">
+          <CardContent className="p-0">
+            <Tabs 
+              value={selectedTab} 
+              onValueChange={(value) => {
+                setSelectedTab(value as TipoBeca);
+                // Resetear subtipo cuando no es Excelencia
+                if (value !== TipoBeca.EXCELENCIA) {
+                  setSelectedSubtipoExcelencia(undefined);
+                } else {
+                  // Si es Excelencia y no hay subtipo seleccionado, usar el primero por defecto
+                  if (!selectedSubtipoExcelencia) {
+                    setSelectedSubtipoExcelencia(SubtipoExcelencia.ACADEMICA);
+                  }
+                }
+              }} 
+              className="w-full"
+            >
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm border border-gray-200 rounded-lg">
+                  <TabsTrigger 
+                    value={TipoBeca.EXCELENCIA} 
+                    className="flex items-center space-x-1 text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:border-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-lg rounded-lg transition-all duration-200"
+                  >
+                    <Award className="h-3 w-3" />
+                    <span>Excelencia</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value={TipoBeca.AYUDANTIA} 
+                    className="flex items-center space-x-1 text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:border-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-lg rounded-lg transition-all duration-200"
+                  >
+                    <Users className="h-3 w-3" />
+                    <span>Ayudantía</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value={TipoBeca.IMPACTO} 
+                    className="flex items-center space-x-1 text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:border-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-lg rounded-lg transition-all duration-200"
+                  >
+                    <GraduationCap className="h-3 w-3" />
+                    <span>Impacto</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value={TipoBeca.EXONERACION} 
+                    className="flex items-center space-x-1 text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:border-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-lg rounded-lg transition-all duration-200"
+                  >
+                    <Shield className="h-3 w-3" />
+                    <span>Exoneración</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value={TipoBeca.FORMACION_DOCENTE} 
+                    className="flex items-center space-x-1 text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:border-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-lg rounded-lg transition-all duration-200"
+                  >
+                    <BookOpen className="h-3 w-3" />
+                    <span>Formación Docente</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-      {/* Tabs para cada tipo de beca */}
-      <Card>
-        <CardContent className="p-6">
-          <Tabs defaultValue="excelencia" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="excelencia" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Excelencia</span>
-              </TabsTrigger>
-              <TabsTrigger value="ayudantia" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Ayudantía</span>
-              </TabsTrigger>
-              <TabsTrigger value="impacto" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Impacto Social</span>
-              </TabsTrigger>
-              <TabsTrigger value="formacion" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Formación Docente</span>
-              </TabsTrigger>
-            </TabsList>
+              <div className="p-6">
+                <TabsContent value={TipoBeca.EXCELENCIA} className="mt-0">
+                  <div className="mb-6">
+                    <Label className="text-sm font-semibold text-gray-700 mb-2 block">
+                      Subtipo de Excelencia
+                    </Label>
+                    <Select
+                      value={selectedSubtipoExcelencia}
+                      onValueChange={(value) => setSelectedSubtipoExcelencia(value as SubtipoExcelencia)}
+                    >
+                      <SelectTrigger className="w-full h-12 border-gray-200 focus:border-yellow-500 focus:ring-yellow-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SubtipoExcelencia.ACADEMICA}>Académica</SelectItem>
+                        <SelectItem value={SubtipoExcelencia.DEPORTIVA}>Deportiva</SelectItem>
+                        <SelectItem value={SubtipoExcelencia.ARTISTICA}>Artística</SelectItem>
+                        <SelectItem value={SubtipoExcelencia.EMPRENDIMIENTO}>Emprendimiento</SelectItem>
+                        <SelectItem value={SubtipoExcelencia.CIVICO}>Cívico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {configuracionForm}
+                </TabsContent>
 
-            <TabsContent value="excelencia" className="mt-6">
-              <ConfiguracionForm tipo="excelencia" config={configuraciones.excelencia} />
-            </TabsContent>
+                <TabsContent value={TipoBeca.AYUDANTIA} className="mt-0">
+                  {configuracionForm}
+                </TabsContent>
 
-            <TabsContent value="ayudantia" className="mt-6">
-              <ConfiguracionForm tipo="ayudantia" config={configuraciones.ayudantia} />
-            </TabsContent>
+                <TabsContent value={TipoBeca.IMPACTO} className="mt-0">
+                  {configuracionForm}
+                </TabsContent>
 
-            <TabsContent value="impacto" className="mt-6">
-              <ConfiguracionForm tipo="impacto" config={configuraciones.impacto} />
-            </TabsContent>
+                <TabsContent value={TipoBeca.EXONERACION} className="mt-0">
+                  {configuracionForm}
+                </TabsContent>
 
-            <TabsContent value="formacion" className="mt-6">
-              <ConfiguracionForm tipo="formacion" config={configuraciones.formacion} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                <TabsContent value={TipoBeca.FORMACION_DOCENTE} className="mt-0">
+                  {configuracionForm}
+                </TabsContent>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

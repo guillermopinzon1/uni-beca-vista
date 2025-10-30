@@ -1,0 +1,1248 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  BarChart3,
+  Users,
+  FileText,
+  Clock,
+  TrendingUp,
+  AlertTriangle,
+  Download,
+  RefreshCw,
+  XCircle,
+  Timer,
+  Award,
+  Target,
+  Brain,
+  Shield,
+  TrendingDown
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import {
+  getReportesActividadesGlobales,
+  type ReportesActividadesGlobales
+} from "@/lib/api/estadisticas";
+import {
+  getInformeEjecutivo,
+  getReporteOperativo,
+  getDashboardCumplimiento,
+  getAnalisisPredictivo,
+  descargarInformeEjecutivo,
+  descargarReporteOperativo,
+  descargarDashboardCumplimiento,
+  descargarAnalisisPredictivo,
+  type InformeEjecutivo,
+  type ReporteOperativo,
+  type DashboardCumplimiento,
+  type AnalisisPredictivo
+} from "@/lib/api/reportes-ejecutivos";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
+
+const EstadisticasDashboard = () => {
+  const { tokens } = useAuth();
+  const { toast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+
+  // Estados para reportes ejecutivos (4 endpoints)
+  const [informeEjecutivo, setInformeEjecutivo] = useState<InformeEjecutivo | null>(null);
+  const [reporteOperativo, setReporteOperativo] = useState<ReporteOperativo | null>(null);
+  const [dashboardCumplimiento, setDashboardCumplimiento] = useState<DashboardCumplimiento | null>(null);
+  const [analisisPredictivo, setAnalisisPredictivo] = useState<AnalisisPredictivo | null>(null);
+
+  // Estado para reportes de actividades globales (1 endpoint)
+  const [reportesActividades, setReportesActividades] = useState<ReportesActividadesGlobales | null>(null);
+
+  const cargarDatos = async () => {
+    try {
+      setLoading(true);
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      // Cargar SOLO los 5 endpoints que existen en el backend
+      // 4 reportes ejecutivos + 1 reporte de actividades
+      const [informeData, operativoData, cumplimientoData, predictivoData, reportesActividadesData] = await Promise.all([
+        getInformeEjecutivo(accessToken).catch((err) => { console.warn('Endpoint informe-ejecutivo no disponible:', err.message); return null; }),
+        getReporteOperativo(accessToken).catch((err) => { console.warn('Endpoint operativo no disponible:', err.message); return null; }),
+        getDashboardCumplimiento(accessToken).catch((err) => { console.warn('Endpoint cumplimiento no disponible:', err.message); return null; }),
+        getAnalisisPredictivo(accessToken, { periodosHistoricos: 8 }).catch((err) => { console.warn('Endpoint predictivo no disponible:', err.message); return null; }),
+        getReportesActividadesGlobales(accessToken, { limit: 50, offset: 0 }).catch((err) => { console.warn('Endpoint reportes/all no disponible:', err.message); return null; })
+      ]);
+
+      setInformeEjecutivo(informeData);
+      setReporteOperativo(operativoData);
+      setDashboardCumplimiento(cumplimientoData);
+      setAnalisisPredictivo(predictivoData);
+      setReportesActividades(reportesActividadesData);
+
+    } catch (error: any) {
+      console.error('Error cargando estadísticas:', error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudieron cargar las estadísticas",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+
+  const handleDescargarReporteEjecutivo = async (tipo: 'informe' | 'operativo' | 'cumplimiento' | 'predictivo', formato: 'pdf' | 'excel') => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) {
+        throw new Error("No hay token de acceso");
+      }
+
+      toast({
+        title: "Generando reporte...",
+        description: "Por favor espere mientras se genera el documento"
+      });
+
+      switch (tipo) {
+        case 'informe':
+          await descargarInformeEjecutivo(accessToken, formato, { incluirGraficos: true, incluirProyecciones: true });
+          break;
+        case 'operativo':
+          await descargarReporteOperativo(accessToken, formato);
+          break;
+        case 'cumplimiento':
+          await descargarDashboardCumplimiento(accessToken, formato);
+          break;
+        case 'predictivo':
+          await descargarAnalisisPredictivo(accessToken, formato, { periodosHistoricos: 8, incluirSimulacion: true });
+          break;
+      }
+
+      toast({
+        title: "Descarga exitosa",
+        description: `Reporte ${tipo} descargado en formato ${formato.toUpperCase()}`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error al descargar",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Verificar cuántos endpoints están disponibles (5 endpoints en total)
+  const endpointsDisponibles = [informeEjecutivo, reporteOperativo, dashboardCumplimiento, analisisPredictivo, reportesActividades].filter(Boolean).length;
+  const todosLosEndpoints = 5;
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Reportes y Estadísticas</h1>
+          <p className="text-muted-foreground mt-2">
+            Panel de control y métricas del sistema de becas
+          </p>
+          {endpointsDisponibles < todosLosEndpoints && (
+            <div className="mt-2 flex items-center gap-2">
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                {endpointsDisponibles} de {todosLosEndpoints} endpoints disponibles
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                (Algunos endpoints del backend no están respondiendo)
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default">
+                <Download className="h-4 w-4 mr-2" />
+                Descargar Reporte
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Seleccionar Reporte</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              {/* Informe Ejecutivo */}
+              {informeEjecutivo && (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Informe Ejecutivo
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('informe', 'pdf')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Informe - PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('informe', 'excel')}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Informe - Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {/* Reporte Operativo */}
+              {reporteOperativo && (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Reporte Operativo
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('operativo', 'pdf')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Operativo - PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('operativo', 'excel')}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Operativo - Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {/* Dashboard Cumplimiento */}
+              {dashboardCumplimiento && (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Dashboard Cumplimiento
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('cumplimiento', 'pdf')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Cumplimiento - PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('cumplimiento', 'excel')}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Cumplimiento - Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {/* Análisis Predictivo */}
+              {analisisPredictivo && (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Análisis Predictivo
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('predictivo', 'pdf')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Predictivo - PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDescargarReporteEjecutivo('predictivo', 'excel')}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Predictivo - Excel
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {endpointsDisponibles === 0 && (
+                <DropdownMenuItem disabled>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  No hay reportes disponibles
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button variant="outline" onClick={cargarDatos}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
+      </div>
+
+      {/* Vista de Reportes de Actividades */}
+      <div className="w-full">
+        {reportesActividades ? (
+            <div className="space-y-4">
+              {/* Header con estadísticas */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Reportes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{reportesActividades.total}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Estudiantes Únicos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{reportesActividades.estadisticas.estudiantesUnicos}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Horas Aprobadas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">
+                      {typeof reportesActividades.estadisticas.horasTotalesAprobadas === 'number'
+                        ? reportesActividades.estadisticas.horasTotalesAprobadas.toFixed(1)
+                        : parseFloat(reportesActividades.estadisticas.horasTotalesAprobadas?.toString() || '0').toFixed(1)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Pendientes Revisión</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-orange-600">{reportesActividades.estadisticas.porEstado.Pendiente}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Distribución por Estado */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por Estado</CardTitle>
+                  <CardDescription>Resumen de reportes según su estado de aprobación</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="text-2xl font-bold text-yellow-700">{reportesActividades.estadisticas.porEstado.Pendiente}</div>
+                      <div className="text-sm text-yellow-600">Pendientes</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="text-2xl font-bold text-green-700">{reportesActividades.estadisticas.porEstado.Aprobada}</div>
+                      <div className="text-sm text-green-600">Aprobadas</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                      <div className="text-2xl font-bold text-red-700">{reportesActividades.estadisticas.porEstado.Rechazada}</div>
+                      <div className="text-sm text-red-600">Rechazadas</div>
+                    </div>
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-2xl font-bold text-blue-700">{reportesActividades.estadisticas.porEstado['En Revisión']}</div>
+                      <div className="text-sm text-blue-600">En Revisión</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tabla de Reportes */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reportes de Actividades Recientes</CardTitle>
+                  <CardDescription>
+                    Mostrando {reportesActividades.reportes.length} de {reportesActividades.total} reportes
+                    {reportesActividades.totalPages > 1 && ` (Página 1 de ${reportesActividades.totalPages})`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Estudiante</TableHead>
+                        <TableHead>Tipo Beca</TableHead>
+                        <TableHead>Período</TableHead>
+                        <TableHead className="text-center">Semana</TableHead>
+                        <TableHead className="text-right">Horas</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-center">Bloqueado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reportesActividades.reportes.map((reporte) => (
+                        <TableRow key={reporte.id}>
+                          <TableCell className="font-medium">
+                            {reporte.estudiante
+                              ? `${reporte.estudiante.nombre} ${reporte.estudiante.apellido}`
+                              : 'Sin nombre'}
+                            {reporte.estudiante?.cedula && (
+                              <div className="text-xs text-muted-foreground">{reporte.estudiante.cedula}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {reporte.beca?.tipoBeca || 'N/A'}
+                            {reporte.beca?.codigo && (
+                              <div className="text-xs text-muted-foreground">{reporte.beca.codigo}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>{reporte.periodoAcademico}</TableCell>
+                          <TableCell className="text-center">{reporte.semana}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {typeof reporte.horasTrabajadas === 'number'
+                              ? reporte.horasTrabajadas.toFixed(1)
+                              : parseFloat(reporte.horasTrabajadas?.toString() || '0').toFixed(1)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              reporte.estado === 'Aprobada' ? 'default' :
+                              reporte.estado === 'Rechazada' ? 'destructive' :
+                              reporte.estado === 'Pendiente' ? 'secondary' : 'outline'
+                            }>
+                              {reporte.estado}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {reporte.bloqueado ? (
+                              <Badge variant="outline" className="bg-gray-100">Sí</Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-50 text-green-700">No</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-muted-foreground">No hay reportes de actividades disponibles</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Informe Ejecutivo */}
+        <TabsContent value="informe-ejecutivo">
+          {informeEjecutivo && informeEjecutivo.resumenEjecutivo && informeEjecutivo.resumenEjecutivo.kpis ? (
+            <div className="space-y-4">
+              {/* Header con botones de descarga */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Informe Ejecutivo - Período {informeEjecutivo.periodo}</CardTitle>
+                      <CardDescription>Resumen general del período académico con KPIs y análisis financiero</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleDescargarReporteEjecutivo('informe', 'pdf')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                      <Button onClick={() => handleDescargarReporteEjecutivo('informe', 'excel')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* KPIs Ejecutivos */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Postulaciones</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{informeEjecutivo.resumenEjecutivo.kpis.totalPostulaciones}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Total Becarios</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{informeEjecutivo.resumenEjecutivo.kpis.totalBecarios}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Tasa de Aceptación</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{informeEjecutivo.resumenEjecutivo.kpis.tasaAceptacion}%</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Análisis Financiero */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Análisis Financiero</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Presupuesto Total</span>
+                      <span className="text-lg font-bold">Bs. {informeEjecutivo.resumenEjecutivo.kpis.presupuestoTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Presupuesto Ejecutado</span>
+                      <span className="text-lg font-bold text-blue-600">Bs. {informeEjecutivo.resumenEjecutivo.kpis.presupuestoEjecutado.toLocaleString()}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Tasa de Ejecución</span>
+                        <span className="text-sm font-medium">{informeEjecutivo.resumenEjecutivo.kpis.tasaEjecucion}%</span>
+                      </div>
+                      <Progress value={informeEjecutivo.resumenEjecutivo.kpis.tasaEjecucion} className="h-2" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Insights */}
+              {informeEjecutivo.resumenEjecutivo.insights && informeEjecutivo.resumenEjecutivo.insights.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Insights Clave
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {informeEjecutivo.resumenEjecutivo.insights.map((insight, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                          <span className="text-sm">{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Recomendaciones */}
+              {informeEjecutivo.recomendaciones && informeEjecutivo.recomendaciones.length > 0 && (
+                <Card className="border-blue-200 bg-blue-50/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-blue-600" />
+                      Recomendaciones Estratégicas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {informeEjecutivo.recomendaciones.map((rec, index) => (
+                        <li key={index} className="flex items-start gap-2 p-2 bg-white rounded border border-blue-200">
+                          <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                          <span className="text-sm">{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-muted-foreground">No hay datos de informe ejecutivo disponibles</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Reporte Operativo */}
+        <TabsContent value="operativo">
+          {reporteOperativo && reporteOperativo.analisisPlazas && reporteOperativo.cargaTrabajo ? (
+            <div className="space-y-4">
+              {/* Header con botones */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Reporte Operativo - Supervisión</CardTitle>
+                      <CardDescription>Análisis de carga de trabajo, estudiantes en riesgo y plazas</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleDescargarReporteEjecutivo('operativo', 'pdf')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                      <Button onClick={() => handleDescargarReporteEjecutivo('operativo', 'excel')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* Análisis de Plazas */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Plazas Ocupadas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">{reporteOperativo.analisisPlazas.ocupadas}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Plazas Disponibles</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">{reporteOperativo.analisisPlazas.disponibles}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Tasa de Ocupación</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{reporteOperativo.analisisPlazas.tasaOcupacion}%</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Necesidad de Plazas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-orange-600">{reporteOperativo.analisisPlazas.necesidadPlazas}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Carga de Trabajo - Supervisores */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Carga de Trabajo - Supervisores</CardTitle>
+                  <CardDescription>Promedio: {reporteOperativo.cargaTrabajo.promedioCarga.toFixed(1)} ayudantes por supervisor</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Supervisor</TableHead>
+                        <TableHead>Departamento</TableHead>
+                        <TableHead className="text-right">Ayudantes</TableHead>
+                        <TableHead className="text-right">Hrs/Semana</TableHead>
+                        <TableHead className="text-right">Reportes Pend.</TableHead>
+                        <TableHead>Nivel de Carga</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reporteOperativo.cargaTrabajo.supervisores && reporteOperativo.cargaTrabajo.supervisores.map((sup, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{sup.supervisor.nombre}</TableCell>
+                          <TableCell>{sup.departamento}</TableCell>
+                          <TableCell className="text-right">{sup.ayudantesAsignados}</TableCell>
+                          <TableCell className="text-right">{sup.horasSemanales}</TableCell>
+                          <TableCell className="text-right">{sup.reportesPendientes}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              sup.nivelCarga === 'alta' ? 'destructive' :
+                              sup.nivelCarga === 'media' ? 'default' : 'secondary'
+                            }>
+                              {sup.nivelCarga}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Estudiantes en Riesgo */}
+              {reporteOperativo.estudiantesRiesgo && reporteOperativo.estudiantesRiesgo.length > 0 && (
+                <Card className="border-red-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      Estudiantes en Riesgo ({reporteOperativo.estudiantesRiesgo.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {reporteOperativo.estudiantesRiesgo.map((est, index) => (
+                        <div key={index} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-medium">{est.estudiante.nombre}</p>
+                              <div className="flex gap-2 mt-2">
+                                {est.factoresRiesgo && est.factoresRiesgo.map((factor, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">{factor}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <Badge variant={
+                              est.nivelRiesgo === 'critico' ? 'destructive' :
+                              est.nivelRiesgo === 'alto' ? 'destructive' : 'default'
+                            }>
+                              {est.nivelRiesgo}
+                            </Badge>
+                          </div>
+                          {est.accionesRecomendadas && est.accionesRecomendadas.length > 0 && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              <strong>Acciones:</strong> {est.accionesRecomendadas.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-muted-foreground">No hay datos operativos disponibles</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Dashboard Cumplimiento */}
+        <TabsContent value="cumplimiento">
+          {dashboardCumplimiento && dashboardCumplimiento.metricas && dashboardCumplimiento.alertas && dashboardCumplimiento.rankings ? (
+            <div className="space-y-4">
+              {/* Header */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Dashboard de Cumplimiento y Rendimiento</CardTitle>
+                      <CardDescription>Métricas en tiempo real - {dashboardCumplimiento.timestamp}</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleDescargarReporteEjecutivo('cumplimiento', 'pdf')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                      <Button onClick={() => handleDescargarReporteEjecutivo('cumplimiento', 'excel')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* Métricas de Cumplimiento */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Cumplimiento Reportes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{dashboardCumplimiento.metricas.cumplimientoReportes}%</div>
+                    <Progress value={dashboardCumplimiento.metricas.cumplimientoReportes} className="mt-2" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Promedio Rendimiento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{dashboardCumplimiento.metricas.promedioRendimiento}%</div>
+                    <Progress value={dashboardCumplimiento.metricas.promedioRendimiento} className="mt-2" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Tasa de Retención</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{dashboardCumplimiento.metricas.tasaRetencion}%</div>
+                    <Progress value={dashboardCumplimiento.metricas.tasaRetencion} className="mt-2" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Cumplimiento Horas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{dashboardCumplimiento.metricas.cumplimientoHoras}%</div>
+                    <Progress value={dashboardCumplimiento.metricas.cumplimientoHoras} className="mt-2" />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Alertas */}
+              <Card className="border-orange-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    Alertas del Sistema
+                  </CardTitle>
+                  <CardDescription>
+                    Críticas: {dashboardCumplimiento.alertas.criticas} | Altas: {dashboardCumplimiento.alertas.altas} | Medias: {dashboardCumplimiento.alertas.medias}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {dashboardCumplimiento.alertas.lista && dashboardCumplimiento.alertas.lista.map((alerta, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{alerta.titulo}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {alerta.afectados} afectado(s) - {alerta.accionRequerida}
+                          </p>
+                        </div>
+                        <Badge variant={alerta.tipo === 'critica' ? 'destructive' : 'default'}>
+                          {alerta.tipo}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Rankings */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-green-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="h-5 w-5 text-green-600" />
+                      Mejores Desempeños
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {dashboardCumplimiento.rankings.mejoresDesempenos && dashboardCumplimiento.rankings.mejoresDesempenos.map((becario, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded">
+                          <span className="text-sm font-medium">{becario.becario.nombre}</span>
+                          <div className="flex gap-2">
+                            <Badge className="bg-green-600">Promedio: {becario.promedio}</Badge>
+                            <Badge className="bg-blue-600">Cumplimiento: {becario.cumplimiento}%</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-orange-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-orange-600" />
+                      Necesitan Apoyo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {dashboardCumplimiento.rankings.necesitanApoyo && dashboardCumplimiento.rankings.necesitanApoyo.map((becario, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-orange-50 rounded">
+                          <div>
+                            <span className="text-sm font-medium">{becario.becario.nombre}</span>
+                            <div className="flex gap-1 mt-1">
+                              {becario.factoresRiesgo && becario.factoresRiesgo.map((factor, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">{factor}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <Badge variant="destructive">Promedio: {becario.promedio}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-muted-foreground">No hay datos de cumplimiento disponibles</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab Análisis Predictivo */}
+        <TabsContent value="predictivo">
+          {analisisPredictivo && analisisPredictivo.configuracion && analisisPredictivo.tendenciasHistoricas && analisisPredictivo.proyecciones && analisisPredictivo.planificacionCapacidad ? (
+            <div className="space-y-4">
+              {/* Header */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Análisis Predictivo y Planificación Estratégica</CardTitle>
+                      <CardDescription>
+                        Basado en {analisisPredictivo.configuracion.periodosHistoricos} períodos históricos
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleDescargarReporteEjecutivo('predictivo', 'pdf')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF
+                      </Button>
+                      <Button onClick={() => handleDescargarReporteEjecutivo('predictivo', 'excel')} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* Tendencias Históricas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Postulaciones
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Tendencia</span>
+                        <Badge variant={
+                          analisisPredictivo.tendenciasHistoricas.postulaciones.tendencia === 'creciente' ? 'default' :
+                          analisisPredictivo.tendenciasHistoricas.postulaciones.tendencia === 'decreciente' ? 'destructive' : 'secondary'
+                        }>
+                          {analisisPredictivo.tendenciasHistoricas.postulaciones.tendencia === 'creciente' && <TrendingUp className="h-3 w-3 mr-1" />}
+                          {analisisPredictivo.tendenciasHistoricas.postulaciones.tendencia === 'decreciente' && <TrendingDown className="h-3 w-3 mr-1" />}
+                          {analisisPredictivo.tendenciasHistoricas.postulaciones.tendencia}
+                        </Badge>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {analisisPredictivo.tendenciasHistoricas.postulaciones.tasaCrecimiento > 0 ? '+' : ''}
+                        {analisisPredictivo.tendenciasHistoricas.postulaciones.tasaCrecimiento.toFixed(1)}%
+                      </div>
+                      <p className="text-xs text-muted-foreground">Tasa de crecimiento</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Becarios
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Tendencia</span>
+                        <Badge variant={
+                          analisisPredictivo.tendenciasHistoricas.becarios.tendencia === 'creciente' ? 'default' :
+                          analisisPredictivo.tendenciasHistoricas.becarios.tendencia === 'decreciente' ? 'destructive' : 'secondary'
+                        }>
+                          {analisisPredictivo.tendenciasHistoricas.becarios.tendencia === 'creciente' && <TrendingUp className="h-3 w-3 mr-1" />}
+                          {analisisPredictivo.tendenciasHistoricas.becarios.tendencia === 'decreciente' && <TrendingDown className="h-3 w-3 mr-1" />}
+                          {analisisPredictivo.tendenciasHistoricas.becarios.tendencia}
+                        </Badge>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {analisisPredictivo.tendenciasHistoricas.becarios.tasaCrecimiento > 0 ? '+' : ''}
+                        {analisisPredictivo.tendenciasHistoricas.becarios.tasaCrecimiento.toFixed(1)}%
+                      </div>
+                      <p className="text-xs text-muted-foreground">Tasa de crecimiento</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      Presupuesto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Tendencia</span>
+                        <Badge variant={
+                          analisisPredictivo.tendenciasHistoricas.presupuesto.tendencia === 'creciente' ? 'default' :
+                          analisisPredictivo.tendenciasHistoricas.presupuesto.tendencia === 'decreciente' ? 'destructive' : 'secondary'
+                        }>
+                          {analisisPredictivo.tendenciasHistoricas.presupuesto.tendencia === 'creciente' && <TrendingUp className="h-3 w-3 mr-1" />}
+                          {analisisPredictivo.tendenciasHistoricas.presupuesto.tendencia === 'decreciente' && <TrendingDown className="h-3 w-3 mr-1" />}
+                          {analisisPredictivo.tendenciasHistoricas.presupuesto.tendencia}
+                        </Badge>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {analisisPredictivo.tendenciasHistoricas.presupuesto.tasaCrecimiento > 0 ? '+' : ''}
+                        {analisisPredictivo.tendenciasHistoricas.presupuesto.tasaCrecimiento.toFixed(1)}%
+                      </div>
+                      <p className="text-xs text-muted-foreground">Tasa de crecimiento</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Proyecciones - Próximo Período */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5" />
+                    Proyecciones - Próximo Período
+                  </CardTitle>
+                  <CardDescription>Escenarios: Optimista, Base y Pesimista</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Postulaciones Proyectadas</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-700">
+                            {analisisPredictivo.proyecciones.proximoPeriodo.postulaciones.optimista}
+                          </div>
+                          <div className="text-xs text-green-600">Optimista</div>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-700">
+                            {analisisPredictivo.proyecciones.proximoPeriodo.postulaciones.base}
+                          </div>
+                          <div className="text-xs text-blue-600">Base</div>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 rounded-lg">
+                          <div className="text-2xl font-bold text-orange-700">
+                            {analisisPredictivo.proyecciones.proximoPeriodo.postulaciones.pesimista}
+                          </div>
+                          <div className="text-xs text-orange-600">Pesimista</div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Intervalo de confianza: [{analisisPredictivo.proyecciones.proximoPeriodo.postulaciones.intervaloConfianza[0]} - {analisisPredictivo.proyecciones.proximoPeriodo.postulaciones.intervaloConfianza[1]}]
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="font-medium mb-2">Presupuesto Necesario</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="text-lg font-bold text-green-700">
+                            Bs. {analisisPredictivo.proyecciones.proximoPeriodo.presupuestoNecesario.optimista.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-green-600">Optimista</div>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="text-lg font-bold text-blue-700">
+                            Bs. {analisisPredictivo.proyecciones.proximoPeriodo.presupuestoNecesario.base.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-blue-600">Base</div>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 rounded-lg">
+                          <div className="text-lg font-bold text-orange-700">
+                            Bs. {analisisPredictivo.proyecciones.proximoPeriodo.presupuestoNecesario.pesimista.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-orange-600">Pesimista</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Planificación de Capacidad */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Planificación de Capacidad</CardTitle>
+                  <CardDescription>Recursos necesarios para el próximo período</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium mb-3">Plazas Requeridas</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Optimista</span>
+                          <span className="font-bold text-green-600">{analisisPredictivo.planificacionCapacidad.plazasRequeridas.optimista}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Base</span>
+                          <span className="font-bold text-blue-600">{analisisPredictivo.planificacionCapacidad.plazasRequeridas.base}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Pesimista</span>
+                          <span className="font-bold text-orange-600">{analisisPredictivo.planificacionCapacidad.plazasRequeridas.pesimista}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-3">Supervisores Necesarios</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Optimista</span>
+                          <span className="font-bold text-green-600">{analisisPredictivo.planificacionCapacidad.supervisoresNecesarios.optimista}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Base</span>
+                          <span className="font-bold text-blue-600">{analisisPredictivo.planificacionCapacidad.supervisoresNecesarios.base}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm">Pesimista</span>
+                          <span className="font-bold text-orange-600">{analisisPredictivo.planificacionCapacidad.supervisoresNecesarios.pesimista}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Simulación Monte Carlo */}
+              {analisisPredictivo.simulacionMonteCarlo && (
+                <Card className="border-purple-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-purple-600" />
+                      Simulación Monte Carlo ({analisisPredictivo.simulacionMonteCarlo.iteraciones.toLocaleString()} iteraciones)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-medium mb-3">Postulaciones Proyectadas</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm">Promedio</span>
+                            <span className="font-bold">{analisisPredictivo.simulacionMonteCarlo.resultados.postulaciones.promedio}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm">Desv. Estándar</span>
+                            <span className="font-bold">{analisisPredictivo.simulacionMonteCarlo.resultados.postulaciones.desviacionEstandar}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm">Percentil 5</span>
+                            <span className="font-bold text-orange-600">{analisisPredictivo.simulacionMonteCarlo.resultados.postulaciones.percentil5}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm">Percentil 95</span>
+                            <span className="font-bold text-green-600">{analisisPredictivo.simulacionMonteCarlo.resultados.postulaciones.percentil95}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium mb-3">Probabilidades</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-sm">Superar capacidad</span>
+                              <span className="text-sm font-medium">{analisisPredictivo.simulacionMonteCarlo.probabilidades.superarCapacidad}%</span>
+                            </div>
+                            <Progress value={analisisPredictivo.simulacionMonteCarlo.probabilidades.superarCapacidad} className="h-2" />
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-1">
+                              <span className="text-sm">Necesitar más presupuesto</span>
+                              <span className="text-sm font-medium">{analisisPredictivo.simulacionMonteCarlo.probabilidades.necesitarMasPresupuesto}%</span>
+                            </div>
+                            <Progress value={analisisPredictivo.simulacionMonteCarlo.probabilidades.necesitarMasPresupuesto} className="h-2" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Recomendaciones Estratégicas */}
+              {analisisPredictivo.recomendacionesEstrategicas && analisisPredictivo.recomendacionesEstrategicas.length > 0 && (
+                <Card className="border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-blue-600" />
+                      Recomendaciones Estratégicas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {analisisPredictivo.recomendacionesEstrategicas.map((rec, index) => (
+                        <div key={index} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <Badge variant={
+                                rec.prioridad === 'alta' ? 'destructive' :
+                                rec.prioridad === 'media' ? 'default' : 'secondary'
+                              } className="mb-2">
+                                {rec.prioridad}
+                              </Badge>
+                              <Badge variant="outline" className="ml-2">{rec.categoria}</Badge>
+                            </div>
+                          </div>
+                          <p className="font-medium text-sm mb-1">{rec.recomendacion}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <strong>Impacto esperado:</strong> {rec.impactoEsperado}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Factores de Riesgo */}
+              {analisisPredictivo.factoresRiesgo && analisisPredictivo.factoresRiesgo.length > 0 && (
+                <Card className="border-red-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-red-600" />
+                      Factores de Riesgo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {analisisPredictivo.factoresRiesgo.map((riesgo, index) => (
+                        <div key={index} className="p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="flex items-start justify-between mb-2">
+                            <p className="font-medium text-sm">{riesgo.factor}</p>
+                            <Badge variant={
+                              riesgo.impacto === 'alto' ? 'destructive' : 'default'
+                            }>
+                              {riesgo.impacto} impacto
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Probabilidad: {riesgo.probabilidad}%</span>
+                            <Progress value={riesgo.probabilidad} className="h-1 w-32" />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            <strong>Mitigación:</strong> {riesgo.mitigacion}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <p className="text-muted-foreground">No hay datos predictivos disponibles</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default EstadisticasDashboard;

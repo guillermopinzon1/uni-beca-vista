@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
+import ChangePasswordRequired from "./pages/ChangePasswordRequired";
 import Requisitos from "./pages/Requisitos";
 import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
@@ -28,6 +29,7 @@ import ExoneracionProgram from "./pages/ExoneracionProgram";
 import ExcelenciaProgram from "./pages/ExcelenciaProgram";
 
 import FormacionDocenteAdmin from "./pages/FormacionDocenteAdmin";
+import FormacionDocenteProgram from "./pages/FormacionDocenteProgram";
 import ExoneracionStudent from "./pages/ExoneracionStudent";
 import ExoneracionCapitalHumano from "./pages/ExoneracionCapitalHumano";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
@@ -52,6 +54,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/cambiar-password-obligatorio" element={<ChangePasswordRequired />} />
               <Route path="/modules" element={<ModuleSelection />} />
           <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
@@ -70,7 +73,8 @@ const App = () => (
         <Route path="/impacto" element={<ImpactoProgram />} />
         <Route path="/exoneracion" element={<ExoneracionProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
-              
+              <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
+
               <Route path="/formacion-docente-admin" element={<FormacionDocenteAdmin />} />
               <Route path="/exoneracion-student" element={<ExoneracionStudent />} />
               <Route path="/exoneracion-capital-humano" element={<ExoneracionCapitalHumano />} />

@@ -8,6 +8,12 @@ interface AuthUser {
   apellido: string;
   role: string;
   activo: boolean;
+  emailVerified?: boolean;
+  firstLogin?: boolean;
+  cedula?: string;
+  telefono?: string;
+  carrera?: string;
+  trimestre?: number;
 }
 
 interface AuthTokens {

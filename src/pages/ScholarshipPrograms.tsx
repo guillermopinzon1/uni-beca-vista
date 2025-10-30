@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { GraduationCap, LogOut, User, UserCheck, ChevronRight, Home, ArrowLeft, Target, Award, BookOpen, CreditCard } from "lucide-react";
+import { GraduationCap, LogOut, ChevronRight, Home, ArrowLeft, Target, Award, CreditCard } from "lucide-react";
 import PasanteAyudantiasModules from "./PasanteAyudantiasModules";
 import AspiranteScholarshipPrograms from "./AspiranteScholarshipPrograms";
 
@@ -18,7 +18,7 @@ const ScholarshipPrograms = () => {
   }, []);
 
   // Show role-specific views
-  if (userRole === "ayudante") {
+  if (userRole === "estudiante") {
     return <PasanteAyudantiasModules />;
   }
 
@@ -31,14 +31,6 @@ const ScholarshipPrograms = () => {
   };
 
   const programs = [
-    {
-      id: 1,
-      title: "Ayudantía",
-      description: "Gestiona tu postulación y seguimiento como ayudante académico o de investigación.",
-      icon: UserCheck,
-      route: "/pasante-ayudantias-modules",
-      available: true
-    },
     {
       id: 2,
       title: "Impacto",

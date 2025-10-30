@@ -1,13 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, LayoutDashboard, Users, FileText, AlertTriangle, DollarSign, GraduationCap } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, FileText, GraduationCap } from "lucide-react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useState } from "react";
 import RequisitosBeneficios from "@/components/exoneracion/RequisitosBeneficios";
-import TutoriasObligatorias from "@/components/exoneracion/TutoriasObligatorias";
-import SituacionesEspeciales from "@/components/exoneracion/SituacionesEspeciales";
-import EstadoFinanciero from "@/components/exoneracion/EstadoFinanciero";
 import AlineacionCarrera from "@/components/exoneracion/AlineacionCarrera";
 
 const ExoneracionProgram = () => {
@@ -23,21 +20,6 @@ const ExoneracionProgram = () => {
       title: "Mi Beneficio de Exoneración",
       icon: LayoutDashboard,
       onClick: () => setActiveModule("mi-beneficio")
-    },
-    {
-      title: "Tutorías Obligatorias DDBE",
-      icon: GraduationCap,
-      onClick: () => setActiveModule("tutorias")
-    },
-    {
-      title: "Situaciones Especiales",
-      icon: AlertTriangle,
-      onClick: () => setActiveModule("situaciones")
-    },
-    {
-      title: "Estado Financiero",
-      icon: DollarSign,
-      onClick: () => setActiveModule("financiero")
     },
     {
       title: "Acceso al Reglamento",
@@ -56,16 +38,6 @@ const ExoneracionProgram = () => {
       title: "Alineación Carrera-Puesto",
       icon: GraduationCap,
       onClick: () => setActiveModule("alineacion")
-    },
-    {
-      title: "Situaciones Especiales",
-      icon: AlertTriangle,
-      onClick: () => setActiveModule("situaciones")
-    },
-    {
-      title: "Estado Financiero",
-      icon: DollarSign,
-      onClick: () => setActiveModule("financiero")
     },
     {
       title: "Acceso al Reglamento",
@@ -145,13 +117,10 @@ const ExoneracionProgram = () => {
                   className={`w-12 h-12 flex items-center justify-center rounded-lg border border-orange/20 transition-all duration-200 ${
                     activeModule === (
                       item.title === "Mi Beneficio de Exoneración" ? "mi-beneficio" :
-                      item.title === "Tutorías Obligatorias DDBE" ? "tutorias" :
                       item.title === "Alineación Carrera-Puesto" ? "alineacion" :
-                      item.title === "Situaciones Especiales" ? "situaciones" :
-                      item.title === "Estado Financiero" ? "financiero" :
                       "reglamento"
-                    ) 
-                      ? "bg-orange/10 border-orange/40" 
+                    )
+                      ? "bg-orange/10 border-orange/40"
                       : "bg-background hover:bg-orange/10 hover:border-orange/40"
                   }`}
                 >
@@ -175,14 +144,8 @@ const ExoneracionProgram = () => {
           <div className="max-w-7xl mx-auto">
             {activeModule === "mi-beneficio" ? (
               <RequisitosBeneficios userType={userType} />
-            ) : activeModule === "tutorias" ? (
-              <TutoriasObligatorias />
             ) : activeModule === "alineacion" ? (
               <AlineacionCarrera />
-            ) : activeModule === "situaciones" ? (
-              <SituacionesEspeciales />
-            ) : activeModule === "financiero" ? (
-              <EstadoFinanciero />
             ) : activeModule === "reglamento" ? (
               <div className="flex justify-center">
                 <ReglamentoAccess becaType="exoneracion" />

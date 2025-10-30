@@ -53,7 +53,7 @@ interface ReporteHoras {
 
 const ListaAyudantes = () => {
   const { toast } = useToast();
-  const { tokens } = useAuth();
+  const { tokens, user } = useAuth();
   const [selectedAyudante, setSelectedAyudante] = useState<Ayudante | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notas, setNotas] = useState("");
@@ -91,7 +91,7 @@ const ListaAyudantes = () => {
   const [limit, setLimit] = useState<number>(20);
   const [offset, setOffset] = useState<number>(0);
   const [selectedDisponibilidad, setSelectedDisponibilidad] = useState<DisponibilidadItem | null>(null);
-  const [supervisorAyudantes, setSupervisorAyudantes] = useState<Array<{ id: string; nombre: string; apellido?: string; email?: string; carrera?: string; semestre?: number }>>([]);
+  const [supervisorAyudantes, setSupervisorAyudantes] = useState<Array<{ id: string; nombre: string; apellido?: string; email?: string; carrera?: string; semestre?: number; cedula?: string; telefono?: string; becaInfo?: any }>>([]);
 
   // Nota: Se eliminó la carga de usuarios (endpoint /users) en esta vista
 
@@ -191,32 +191,69 @@ const ListaAyudantes = () => {
   const loadSupervisorAyudantes = async () => {
     const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
     const accessToken = tokens?.accessToken || stored?.accessToken;
+
     if (!accessToken) {
       toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar ayudantes', variant: 'destructive' });
       return;
     }
+
+    // Obtener el ID del supervisor del usuario autenticado
+    const supervisorId = user?.id;
+    if (!supervisorId) {
+      toast({ title: 'Error', description: 'No se pudo obtener el ID del supervisor', variant: 'destructive' });
+      return;
+    }
+
     try {
-      const resp = await fetch(`${API_BASE}/v1/supervisores/ayudantes`, {
+      // Usar el endpoint con el ID del supervisor
+      const resp = await fetch(`${API_BASE}/v1/supervisores/${supervisorId}/ayudantes`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Accept': 'application/json',
         },
       });
+
       if (!resp.ok) {
         const err = await resp.json().catch(() => null);
         throw new Error(err?.message || `Error ${resp.status}`);
       }
+
       const data = await resp.json();
+      console.log('📊 Respuesta de ayudantes del supervisor:', data);
+
       const list = data?.data?.ayudantes || data?.data || [];
-      const mapped = list.map((u: any) => ({
-        id: u.id,
-        nombre: u.nombre,
-        apellido: u.apellido,
-        email: u.email,
-        carrera: u.carrera,
-        semestre: u.semestre,
+      const mapped = list.map((ayudante: any) => ({
+        id: ayudante.usuario?.id || ayudante.id,
+        nombre: ayudante.usuario?.nombre || ayudante.nombre,
+        apellido: ayudante.usuario?.apellido || ayudante.apellido,
+        email: ayudante.usuario?.email || ayudante.email,
+        carrera: ayudante.usuario?.carrera || ayudante.carrera,
+        semestre: ayudante.usuario?.trimestre || ayudante.usuario?.semestre || ayudante.semestre,
+        cedula: ayudante.usuario?.cedula || ayudante.cedula,
+        telefono: ayudante.usuario?.telefono || ayudante.telefono,
+        becaInfo: {
+          tipoBeca: ayudante.tipoBeca,
+          estado: ayudante.estado,
+          periodoInicio: ayudante.periodoInicio,
+          periodoFin: ayudante.periodoFin,
+          horasRequeridas: ayudante.horasRequeridas,
+          horasCompletadas: ayudante.horasCompletadas,
+          iaaActual: ayudante.iaaActual,
+          plaza: ayudante.plaza,
+          fechaAsignacion: ayudante.fechaAsignacion,
+          observaciones: ayudante.observaciones
+        }
       }));
+
       setSupervisorAyudantes(mapped);
+
+      if (mapped.length === 0) {
+        toast({
+          title: 'Sin ayudantes',
+          description: 'No tienes ayudantes asignados actualmente',
+          variant: 'default'
+        });
+      }
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los ayudantes', variant: 'destructive' });
     }
@@ -269,7 +306,27 @@ const ListaAyudantes = () => {
                     <td className="p-4 text-muted-foreground">{a.carrera || '-'}</td>
                     <td className="p-4 text-muted-foreground">{typeof a.semestre === 'number' ? a.semestre : '-'}</td>
                     <td className="p-4 text-center">
-                      <Button variant="outline" size="sm" className="border-orange/40 hover:bg-orange/10 hover:border-orange/60" onClick={() => setSelectedAyudante({ id: a.id, nombre: a.nombre, apellido: a.apellido || '', cedula: '-', trimestre: 0, horasRegistradas: 0, horasPendientes: 0, reportesHoras: [] })}>Ver</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+                        onClick={() => {
+                          setSelectedAyudante({
+                            id: a.id,
+                            nombre: a.nombre,
+                            apellido: a.apellido || '',
+                            cedula: a.cedula || '-',
+                            trimestre: a.semestre || 0,
+                            horasRegistradas: parseFloat(a.becaInfo?.horasCompletadas || '0'),
+                            horasPendientes: a.becaInfo?.horasRequeridas ? (a.becaInfo.horasRequeridas - parseFloat(a.becaInfo.horasCompletadas || '0')) : 0,
+                            reportesHoras: []
+                          });
+                          setIsModalOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -295,7 +352,114 @@ const ListaAyudantes = () => {
           
           {selectedAyudante && (
             <div className="space-y-6">
-              {/* Información del ayudante removida (cédula, trimestre) */}
+              {/* Información del estudiante becario */}
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-primary mb-4">Información del Estudiante</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nombre Completo</p>
+                    <p className="font-medium text-primary">{selectedAyudante.nombre} {selectedAyudante.apellido}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cédula</p>
+                    <p className="font-medium">{selectedAyudante.cedula}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{supervisorAyudantes.find(a => a.id === selectedAyudante.id)?.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Teléfono</p>
+                    <p className="font-medium">{supervisorAyudantes.find(a => a.id === selectedAyudante.id)?.telefono || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Carrera</p>
+                    <p className="font-medium">{supervisorAyudantes.find(a => a.id === selectedAyudante.id)?.carrera || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Trimestre</p>
+                    <p className="font-medium">{selectedAyudante.trimestre || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Información de la Beca */}
+              {supervisorAyudantes.find(a => a.id === selectedAyudante.id)?.becaInfo && (
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-primary mb-4">Información de la Beca</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(() => {
+                      const becaInfo = supervisorAyudantes.find(a => a.id === selectedAyudante.id)?.becaInfo;
+                      return (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Tipo de Beca</p>
+                            <Badge className="mt-1">{becaInfo?.tipoBeca || '-'}</Badge>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Estado</p>
+                            <Badge variant={becaInfo?.estado === 'Activa' ? 'default' : 'secondary'} className="mt-1">
+                              {becaInfo?.estado || '-'}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Período</p>
+                            <p className="font-medium">{becaInfo?.periodoInicio || '-'} {becaInfo?.periodoFin ? `- ${becaInfo.periodoFin}` : ''}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">IAA Actual</p>
+                            <p className="font-medium">{becaInfo?.iaaActual || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Horas Completadas / Requeridas</p>
+                            <p className="font-medium text-primary">
+                              {parseFloat(becaInfo?.horasCompletadas || '0').toFixed(2)} / {becaInfo?.horasRequeridas || 0} horas
+                            </p>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{ width: `${Math.min((parseFloat(becaInfo?.horasCompletadas || '0') / (becaInfo?.horasRequeridas || 1)) * 100, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Fecha de Asignación</p>
+                            <p className="font-medium">{becaInfo?.fechaAsignacion ? new Date(becaInfo.fechaAsignacion).toLocaleDateString('es-ES') : '-'}</p>
+                          </div>
+                          {becaInfo?.plaza && (
+                            <div className="col-span-2">
+                              <p className="text-sm text-muted-foreground mb-2">Plaza Asignada</p>
+                              <div className="bg-white/50 border border-blue-300 rounded-lg p-3">
+                                <p className="font-semibold text-primary">{becaInfo.plaza.materia}</p>
+                                <div className="grid grid-cols-3 gap-2 mt-2 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Código:</span>
+                                    <span className="ml-1 font-medium">{becaInfo.plaza.codigo}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Departamento:</span>
+                                    <span className="ml-1 font-medium">{becaInfo.plaza.departamento}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Tipo:</span>
+                                    <span className="ml-1 font-medium capitalize">{becaInfo.plaza.tipoAyudantia}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {becaInfo?.observaciones && (
+                            <div className="col-span-2">
+                              <p className="text-sm text-muted-foreground">Observaciones</p>
+                              <p className="text-sm bg-white/50 p-3 rounded border border-blue-300 mt-1">{becaInfo.observaciones}</p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Lista de reportes de horas / Disponibilidad */}
               <div className="space-y-4">

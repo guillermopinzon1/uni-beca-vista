@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Shield } from "lucide-react";
+import { Shield, Clock, Eye, EyeOff } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 import { loginUser, forgotPassword } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,7 @@ const Login = () => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [isForgotPasswordLoading, setIsForgotPasswordLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { loginSuccess } = useAuth();
@@ -41,6 +42,16 @@ const Login = () => {
         apellido: result.data.user.apellido || ""
       }, result.data.tokens);
 
+      // Verificar si es primer login (debe cambiar contraseña)
+      if (result.data.user.firstLogin === true) {
+        toast({
+          title: "Cambio de contraseña requerido",
+          description: "Por seguridad, debes cambiar tu contraseña temporal antes de continuar",
+        });
+        navigate("/cambiar-password-obligatorio");
+        return;
+      }
+
       toast({
         title: "Inicio de sesión exitoso",
         description: result.message || "Bienvenido al Sistema de Gestión de Becas",
@@ -48,10 +59,26 @@ const Login = () => {
 
       // Navegar según el rol que retorna el backend
       const role = result.data.user.role;
-      if (role === "ayudante") {
-        navigate("/modules");
+      const tipoBeca = result.data.user.tipoBeca; // El backend ahora incluye tipoBeca en la respuesta del login
+
+      if (role === "estudiante") {
+        // Redirigir según el tipo de beca del estudiante
+        if (tipoBeca === "Ayudantía") {
+          navigate("/pasante-ayudantias-modules");
+        } else if (tipoBeca === "Excelencia") {
+          navigate("/excelencia");
+        } else if (tipoBeca === "Impacto") {
+          navigate("/impacto");
+        } else if (tipoBeca === "Exoneración de Pago") {
+          navigate("/exoneracion");
+        } else if (tipoBeca === "Formación Docente") {
+          navigate("/formacion-docente");
+        } else {
+          // Fallback: si no coincide ningún tipo, ir a selección de módulos
+          navigate("/modules");
+        }
       } else if (role === "supervisor") {
-        navigate("/ayudantias-dashboard");
+        navigate("/supervisor-laboral-dashboard");
       } else if (role === "mentor") {
         navigate("/mentor-dashboard");
       } else if (role === "admin") {
@@ -66,10 +93,13 @@ const Login = () => {
         navigate("/");
       }
     } catch (err: any) {
+      const errorMessage = err?.message || "Credenciales inválidas";
+      const isPendingApproval = errorMessage.toLowerCase().includes('pendiente de aprobación');
+
       toast({
-        title: "Error de inicio de sesión",
-        description: err?.message || "Credenciales inválidas",
-        variant: "destructive",
+        title: isPendingApproval ? "Cuenta Pendiente de Aprobación" : "Error de inicio de sesión",
+        description: errorMessage,
+        variant: isPendingApproval ? "default" : "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -150,14 +180,30 @@ const Login = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 {/* El rol ahora lo determina el backend a partir del email */}
                 <Button

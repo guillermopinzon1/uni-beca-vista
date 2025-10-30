@@ -1,24 +1,34 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Edit, Users, Building, MapPin, RefreshCw } from "lucide-react";
+import { Search, Plus, Edit, Users, Building, MapPin, RefreshCw, UserPlus, X, Clock, Calendar, AlertCircle, CheckCircle2, ChevronRight, Trash2, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchPlazas, createPlaza, updatePlaza, fetchUsers } from "@/lib/api";
+import { fetchPlazas, createPlaza, updatePlaza, fetchUsers, fetchBecarios, assignBecarioToPlaza, assignSupervisorToPlaza, fetchPlazaById, verificarCompatibilidadHorario, API_BASE } from "@/lib/api";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 interface Plaza {
   id: string;
   nombre: string;
   departamento: string;
   ubicacion: string;
-  supervisor: string;
+  supervisor: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    email: string;
+  };
+  supervisorNombre: string; // Helper para display rápido
   capacidadMaxima: number;
   ayudantesActuales: number;
   tipoActividad: string;
@@ -81,6 +91,47 @@ const GestionPlazas = () => {
   const [loading, setLoading] = useState(false);
   const [supervisores, setSupervisores] = useState<Array<{id: string, nombre: string, apellido?: string, email: string}>>([]);
   const [loadingSupervisores, setLoadingSupervisores] = useState(false);
+  const [loadingPlazaDetails, setLoadingPlazaDetails] = useState(false);
+
+  // Estados para asignar becarios
+  const [isAssigningBecario, setIsAssigningBecario] = useState(false);
+  const [plazaToAssign, setPlazaToAssign] = useState<Plaza | null>(null);
+  const [becarios, setBecarios] = useState<Array<{
+    id: string;
+    usuarioId: string;
+    programaBeca?: string;
+    tipoBeca?: string;
+    estado?: string;
+    plazaAsignada?: string | null;
+    usuario: {
+      id?: string;
+      nombre: string;
+      apellido: string;
+      email: string;
+      cedula?: string;
+      carrera?: string;
+      trimestre?: number;
+    };
+    disponibilidadVerificada?: boolean;
+    disponible?: boolean;
+    // Nuevos campos de compatibilidad
+    bloquesMatcheados?: number;
+    totalBloques?: number;
+    porcentajeCobertura?: number;
+    detallesPorDia?: any;
+  }>>([]);
+  const [loadingBecarios, setLoadingBecarios] = useState(false);
+  const [selectedBecarioId, setSelectedBecarioId] = useState("");
+  const [horasRequeridas, setHorasRequeridas] = useState(10);
+  const [assigningBecario, setAssigningBecario] = useState(false);
+  const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
+
+  // Estado para el panel lateral de detalles
+  const [isPlazaDetailOpen, setIsPlazaDetailOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [isAssigningSupervisor, setIsAssigningSupervisor] = useState(false);
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState("");
+  const [isDeletingPlaza, setIsDeletingPlaza] = useState(false);
 
   console.log('GestionPlazas component rendering');
   
@@ -152,11 +203,12 @@ const GestionPlazas = () => {
         nombre: p.materia,
         departamento: p.departamento,
         ubicacion: p.ubicacion,
-        supervisor: p.supervisor.nombre + (p.supervisor.apellido ? ` ${p.supervisor.apellido}` : ''),
+        supervisor: p.supervisor,
+        supervisorNombre: p.supervisor ? `${p.supervisor.nombre}${p.supervisor.apellido ? ` ${p.supervisor.apellido}` : ''}` : '-',
         capacidadMaxima: p.capacidad,
         ayudantesActuales: p.ocupadas,
         tipoActividad: p.tipoAyudantia,
-        horarios: p.horario.map(h => `${h.dia} ${h.horaInicio}-${h.horaFin}`),
+        horarios: Array.isArray(p.horario) ? p.horario.map(h => `${h.dia} ${h.horaInicio}-${h.horaFin}`) : [],
         estado: p.estado as "Activa" | "Inactiva" | "Completa",
         descripcion: p.descripcionActividades,
         requisitos: p.requisitosEspeciales,
@@ -246,7 +298,29 @@ const GestionPlazas = () => {
       });
       await loadPlazas();
     } catch (e: any) {
-      toast({ title: 'Error', description: e?.message || 'No se pudo crear la plaza', variant: 'destructive' });
+      // Intentar parsear detalles de validación
+      let shown = false;
+      if (typeof e?.message === 'string' && e.message.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(e.message);
+          if (parsed?.errors && Array.isArray(parsed.errors)) {
+            parsed.errors.forEach((err: any) => {
+              toast({
+                title: 'Error de validación',
+                description: `${err.field}: ${err.message}`,
+                variant: 'destructive'
+              });
+            });
+            shown = true;
+          } else if (parsed?.message) {
+            toast({ title: 'Error', description: parsed.message, variant: 'destructive' });
+            shown = true;
+          }
+        } catch {}
+      }
+      if (!shown) {
+        toast({ title: 'Error', description: e?.message || 'No se pudo crear la plaza', variant: 'destructive' });
+      }
     } finally {
       setCreating(false);
     }
@@ -390,13 +464,32 @@ const GestionPlazas = () => {
       console.log('No access token for loading supervisores');
       return;
     }
-    
+
     setLoadingSupervisores(true);
     try {
       console.log('Loading supervisores...');
-      const res = await fetchUsers(accessToken, { role: 'supervisor' });
+      // Usar endpoint correcto con parámetros para obtener todos los supervisores activos
+      const response = await fetch(`${API_BASE}/v1/supervisores/ayudantes/all?activo=true&limit=100&offset=0&conAyudantes=false`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al cargar supervisores');
+      }
+
+      const res = await response.json();
       console.log('Supervisores response:', res);
-      const mapped = res.data.usuarios.map(u => ({
+
+      // Filtrar solo supervisores con plazasAsignadas vacías o que tengan plazas
+      const supervisoresDisponibles = res.data.supervisores.filter((sup: any) =>
+        Array.isArray(sup.plazasAsignadas)
+      );
+
+      const mapped = supervisoresDisponibles.map((u: any) => ({
         id: u.id,
         nombre: u.nombre,
         apellido: u.apellido,
@@ -412,12 +505,339 @@ const GestionPlazas = () => {
     }
   };
 
+  const loadBecarios = async (plazaId: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar becarios', variant: 'destructive' });
+      return;
+    }
+
+    setLoadingBecarios(true);
+    try {
+      // Usar nuevo endpoint que devuelve becarios compatibles con horarios de la plaza
+      const response = await fetch(`${API_BASE}/v1/plazas/${plazaId}/becarios-compatibles?limit=100&offset=0`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al cargar becarios compatibles');
+      }
+
+      const res = await response.json();
+
+      // Los becarios vienen con información de compatibilidad de horarios
+      setBecarios(res.data.becarios || []);
+
+      if (res.data.becarios.length === 0) {
+        toast({
+          title: 'Sin becarios compatibles',
+          description: 'No hay estudiantes disponibles cuyos horarios coincidan con esta plaza',
+          variant: 'default'
+        });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los becarios', variant: 'destructive' });
+      setBecarios([]);
+    } finally {
+      setLoadingBecarios(false);
+    }
+  };
+
+  const handleOpenAssignBecario = async (plaza: Plaza) => {
+    setPlazaToAssign(plaza);
+    setIsAssigningBecario(true);
+    setSelectedBecarioId("");
+    setHorasRequeridas(10);
+
+    // Cargar becarios compatibles con la plaza
+    await loadBecarios(plaza.id);
+  };
+
+  // Ya no necesitamos verificar disponibilidad manualmente
+  // El endpoint /api/v1/plazas/{id}/becarios-compatibles ya devuelve becarios compatibles validados
+
+  const handleAssignBecario = async () => {
+    if (!plazaToAssign || !selectedBecarioId) {
+      toast({ title: 'Error', description: 'Selecciona un becario para asignar', variant: 'destructive' });
+      return;
+    }
+
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para asignar becarios', variant: 'destructive' });
+      return;
+    }
+
+    const becarioSeleccionado = becarios.find(b => b.id === selectedBecarioId);
+    const nombreCompleto = becarioSeleccionado
+      ? `${becarioSeleccionado.usuario.nombre} ${becarioSeleccionado.usuario.apellido}`
+      : 'el estudiante';
+
+    setAssigningBecario(true);
+    try {
+      await assignBecarioToPlaza(accessToken, selectedBecarioId, {
+        plazaId: plazaToAssign.id
+      });
+
+      toast({
+        title: 'Asignación exitosa',
+        description: `${nombreCompleto} ha sido asignado exitosamente a ${plazaToAssign.nombre}`,
+        className: "bg-green-50 border-green-200"
+      });
+
+      setIsAssigningBecario(false);
+      setPlazaToAssign(null);
+      setSelectedBecarioId("");
+
+      // Recargar los detalles de la plaza si está seleccionada
+      if (selectedPlaza && selectedPlaza.id === plazaToAssign.id) {
+        await loadPlazaDetails(plazaToAssign.id);
+      }
+
+      await loadPlazas();
+    } catch (e: any) {
+      const errorMessage = e?.message || 'No se pudo asignar el becario';
+
+      // Manejo específico para errores de horario/disponibilidad
+      if (errorMessage.toLowerCase().includes('horario') ||
+          errorMessage.toLowerCase().includes('compatible') ||
+          errorMessage.toLowerCase().includes('disponibilidad')) {
+        toast({
+          title: 'Incompatibilidad de Horarios',
+          description: (
+            <div className="space-y-2">
+              <p className="font-medium">{errorMessage}</p>
+              <p className="text-xs mt-2">
+                <strong>Horarios de la plaza:</strong><br />
+                {plazaToAssign.horarios.join(', ')}
+              </p>
+              <p className="text-xs mt-2 bg-yellow-50 border border-yellow-200 rounded p-2">
+                📋 <strong>Solución:</strong> El estudiante necesita registrar su disponibilidad horaria en el sistema antes de poder ser asignado a esta plaza.
+              </p>
+            </div>
+          ),
+          variant: 'destructive',
+          duration: 10000
+        });
+      } else {
+        toast({
+          title: 'Error al asignar estudiante',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      }
+    } finally {
+      setAssigningBecario(false);
+    }
+  };
+
+  const handleUnassignBecario = async (plazaId: string, becarioId: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para desasignar becarios', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      // Usar nuevo endpoint PUT /api/v1/becarios/:id/remover-plaza
+      const response = await fetch(`${API_BASE}/v1/becarios/${becarioId}/remover-plaza`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al desasignar becario de la plaza');
+      }
+
+      toast({ title: 'Éxito', description: 'Becario desasignado exitosamente de la plaza' });
+
+      // Recargar los detalles de la plaza actual si está abierta
+      if (selectedPlaza && selectedPlaza.id === plazaId) {
+        await loadPlazaDetails(plazaId);
+      }
+
+      await loadPlazas();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudo desasignar el becario', variant: 'destructive' });
+    }
+  };
+
+  const loadPlazaDetails = async (plazaId: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para cargar detalles', variant: 'destructive' });
+      return;
+    }
+
+    setLoadingPlazaDetails(true);
+    try {
+      const res = await fetchPlazaById(accessToken, plazaId);
+      const p = res.data;
+
+      const plazaDetallada: Plaza = {
+        id: p.id,
+        nombre: p.materia,
+        departamento: p.departamento,
+        ubicacion: p.ubicacion,
+        supervisor: p.supervisor,
+        supervisorNombre: p.supervisor ? `${p.supervisor.nombre}${p.supervisor.apellido ? ` ${p.supervisor.apellido}` : ''}` : '-',
+        capacidadMaxima: p.capacidad,
+        ayudantesActuales: p.ocupadas,
+        tipoActividad: p.tipoAyudantia,
+        horarios: p.horario.map(h => `${h.dia} ${h.horaInicio}-${h.horaFin}`),
+        estado: p.estado as "Activa" | "Inactiva" | "Completa",
+        descripcion: p.descripcionActividades,
+        requisitos: p.requisitosEspeciales,
+        fechaCreacion: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : 'N/A',
+        materia: p.materia,
+        codigo: p.codigo,
+        profesor: p.profesor,
+        capacidad: p.capacidad,
+        ocupadas: p.ocupadas,
+        horario: p.horario,
+        tipoAyudantia: p.tipoAyudantia,
+        descripcionActividades: p.descripcionActividades,
+        requisitosEspeciales: p.requisitosEspeciales,
+        horasSemana: p.horasSemana,
+        periodoAcademico: p.periodoAcademico,
+        fechaInicio: p.fechaInicio,
+        fechaFin: p.fechaFin,
+        supervisorResponsable: p.supervisorResponsable,
+        observaciones: p.observaciones,
+        estudiantesAsignados: p.estudiantesAsignados || []
+      };
+
+      setSelectedPlaza(plazaDetallada);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'No se pudieron cargar los detalles de la plaza', variant: 'destructive' });
+    } finally {
+      setLoadingPlazaDetails(false);
+    }
+  };
+
+  const handleOpenPlazaDetails = (plaza: Plaza) => {
+    setSelectedPlaza(plaza);
+    setIsPlazaDetailOpen(true);
+    loadPlazaDetails(plaza.id);
+  };
+
+  // Función para parsear horarios y verificar compatibilidad
+  // Nota: Esta es una verificación básica del lado del cliente
+  // El backend hace la validación real con la disponibilidad del estudiante
+  const parseTimeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const checkScheduleOverlap = (plazaHorario: Array<{dia: string, horaInicio: string, horaFin: string}>, becarioDisponibilidad: any): boolean => {
+    // Esta es una verificación simplificada
+    // El backend tiene la lógica completa de validación
+    return true; // Temporalmente aceptamos todos, el backend validará
+  };
+
+  // Función para asignar supervisor a plaza
+  const handleAssignSupervisorToPlaza = async () => {
+    if (!selectedPlaza || !selectedSupervisorId) {
+      toast({ title: 'Error', description: 'Selecciona un supervisor', variant: 'destructive' });
+      return;
+    }
+
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para asignar supervisor', variant: 'destructive' });
+      return;
+    }
+
+    setIsAssigningSupervisor(true);
+    try {
+      await assignSupervisorToPlaza(accessToken, selectedPlaza.id, {
+        supervisorResponsable: selectedSupervisorId
+      });
+
+      toast({
+        title: 'Supervisor asignado',
+        description: 'El supervisor ha sido asignado exitosamente a la plaza',
+        className: "bg-green-50 border-green-200"
+      });
+
+      // Recargar detalles de la plaza
+      await loadPlazaDetails(selectedPlaza.id);
+      await loadPlazas();
+      setSelectedSupervisorId("");
+    } catch (e: any) {
+      toast({
+        title: 'Error al asignar supervisor',
+        description: e?.message || 'No se pudo asignar el supervisor',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsAssigningSupervisor(false);
+    }
+  };
+
+  // Función para eliminar plaza
+  const handleDeletePlaza = async () => {
+    if (!selectedPlaza) return;
+
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: 'Sin sesión', description: 'Inicia sesión para eliminar plaza', variant: 'destructive' });
+      return;
+    }
+
+    setIsDeletingPlaza(true);
+    try {
+      const response = await fetch(`${API_BASE}/v1/plazas/${selectedPlaza.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar la plaza');
+      }
+
+      toast({
+        title: 'Plaza eliminada',
+        description: 'La plaza ha sido eliminada exitosamente',
+        className: "bg-green-50 border-green-200"
+      });
+
+      // Cerrar panel y recargar plazas
+      setIsPlazaDetailOpen(false);
+      setSelectedPlaza(null);
+      await loadPlazas();
+    } catch (e: any) {
+      toast({
+        title: 'Error al eliminar plaza',
+        description: e?.message || 'No se pudo eliminar la plaza',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDeletingPlaza(false);
+    }
+  };
+
   useEffect(() => {
     if (tokens?.accessToken) {
       loadPlazas();
       loadSupervisores();
     }
   }, [tokens?.accessToken, filterDepartamento, filterEstado, searchTerm]);
+
+  // Ya no necesitamos verificar disponibilidad - el endpoint ya trae becarios compatibles
 
   // Mock data (temporal)
   const plazasMock: Plaza[] = [
@@ -558,47 +978,6 @@ const GestionPlazas = () => {
               <DialogTitle>{isEditing ? 'Editar Plaza' : 'Crear Nueva Plaza'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="materia">Materia *</Label>
-                  <Input 
-                    id="materia" 
-                    value={formData.materia}
-                    onChange={(e) => setFormData({...formData, materia: e.target.value})}
-                    placeholder="Ej: Cálculo I" 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="codigo">Código *</Label>
-                  <Input 
-                    id="codigo" 
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({...formData, codigo: e.target.value})}
-                    placeholder="Ej: MAT-101-A" 
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="departamento">Departamento *</Label>
-                  <Input 
-                    id="departamento" 
-                    value={formData.departamento}
-                    onChange={(e) => setFormData({...formData, departamento: e.target.value})}
-                    placeholder="Ej: Matemáticas" 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="profesor">Profesor *</Label>
-                  <Input 
-                    id="profesor" 
-                    value={formData.profesor}
-                    onChange={(e) => setFormData({...formData, profesor: e.target.value})}
-                    placeholder="Ej: Dr. Juan Pérez" 
-                  />
-                </div>
-              </div>
               
               <div>
                 <Label htmlFor="ubicacion">Ubicación *</Label>
@@ -684,7 +1063,7 @@ const GestionPlazas = () => {
                 <Select 
                   value={formData.supervisorResponsable} 
                   onValueChange={(value) => setFormData({...formData, supervisorResponsable: value})}
-                  disabled={loadingSupervisores}
+                  disabled={loadingSupervisores || supervisores.length === 0}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={
@@ -700,11 +1079,7 @@ const GestionPlazas = () => {
                       <SelectItem key={supervisor.id} value={supervisor.id}>
                         {supervisor.nombre} {supervisor.apellido || ''} ({supervisor.email})
                       </SelectItem>
-                    )) : (
-                      <SelectItem value="" disabled>
-                        No hay supervisores disponibles
-                      </SelectItem>
-                    )}
+                    )) : null}
                   </SelectContent>
                 </Select>
                 {supervisores.length === 0 && !loadingSupervisores && (
@@ -900,7 +1275,7 @@ const GestionPlazas = () => {
       </Card>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
@@ -925,226 +1300,593 @@ const GestionPlazas = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">{estadisticas.totalAyudantes}</p>
-              <p className="text-sm text-muted-foreground">Ayudantes Asignados</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{estadisticas.capacidadTotal}</p>
-              <p className="text-sm text-muted-foreground">Capacidad Total</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Tabla de plazas */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-          <CardTitle>Plazas de Ayudantía ({filteredPlazas.length})</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={loadPlazas}
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Recargar
-            </Button>
+      {/* Grid de plazas */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Plazas de Ayudantía ({filteredPlazas.length})</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadPlazas}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Recargar
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <RefreshCw className="h-8 w-8 mr-3 animate-spin text-primary" />
+            <span className="text-lg">Cargando plazas...</span>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Plaza</TableHead>
-                <TableHead>Departamento</TableHead>
-                <TableHead>Supervisor</TableHead>
-                <TableHead>Capacidad</TableHead>
-                <TableHead>Disponibilidad</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="flex items-center justify-center">
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Cargando plazas...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredPlazas.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No se encontraron plazas
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPlazas.map((plaza) => (
-                <TableRow key={plaza.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{plaza.nombre}</p>
-                      <p className="text-sm text-muted-foreground flex items-center">
+        ) : filteredPlazas.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Building className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <p className="text-lg text-muted-foreground">No se encontraron plazas</p>
+              <p className="text-sm text-muted-foreground mt-1">Intenta ajustar los filtros de búsqueda</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredPlazas.map((plaza) => (
+              <Card
+                key={plaza.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer border-l-4"
+                style={{
+                  borderLeftColor: plaza.estado === "Activa" ? "#22c55e" : plaza.estado === "Completa" ? "#3b82f6" : "#9ca3af"
+                }}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg mb-1">{plaza.nombre}</CardTitle>
+                      <CardDescription className="flex items-center text-sm">
                         <MapPin className="h-3 w-3 mr-1" />
                         {plaza.ubicacion}
-                      </p>
+                      </CardDescription>
                     </div>
-                  </TableCell>
-                  <TableCell>{plaza.departamento}</TableCell>
-                  <TableCell>{plaza.supervisor}</TableCell>
-                  <TableCell>
-                    <span className="font-medium">
-                      {plaza.ayudantesActuales}/{plaza.capacidadMaxima}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {getDisponibilidadBadge(plaza.ayudantesActuales, plaza.capacidadMaxima)}
-                  </TableCell>
-                  <TableCell>{getEstadoBadge(plaza.estado)}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setSelectedPlaza(plaza)}
-                          >
-                            <Users className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl">
-                          <DialogHeader>
-                            <DialogTitle>
-                              Detalles de la Plaza - {plaza.nombre}
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
-                              <div className="space-y-4">
-                                <div>
-                                  <h4 className="font-medium mb-2">Información General</h4>
-                                  <div className="space-y-2 text-sm">
-                                    <p><span className="font-medium">Ubicación:</span> {plaza.ubicacion}</p>
-                                    <p><span className="font-medium">Supervisor:</span> {plaza.supervisor}</p>
-                                    <p><span className="font-medium">Tipo:</span> {plaza.tipoActividad}</p>
-                                    <p><span className="font-medium">Capacidad:</span> {plaza.capacidadMaxima} ayudantes</p>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium mb-2">Horarios</h4>
-                                  <ul className="text-sm space-y-1">
-                                    {plaza.horarios.map((horario, index) => (
-                                      <li key={index} className="flex items-center">
-                                        <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                                        {horario}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-                              <div className="space-y-4">
-                                <div>
-                                  <h4 className="font-medium mb-2">Descripción</h4>
-                                  <p className="text-sm text-muted-foreground">{plaza.descripcion}</p>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium mb-2">Requisitos</h4>
-                                  <ul className="text-sm space-y-1">
-                                    {plaza.requisitos.map((requisito, index) => (
-                                      <li key={index} className="flex items-center">
-                                        <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                        {requisito}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <h4 className="font-medium mb-3">Ayudantes Asignados ({plaza.estudiantesAsignados?.length || 0})</h4>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Nombre</TableHead>
-                                    <TableHead>Carrera</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Horas</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {plaza.estudiantesAsignados && plaza.estudiantesAsignados.length > 0 ? (
-                                    plaza.estudiantesAsignados.map((estudiante) => (
-                                      <TableRow key={estudiante.id}>
-                                        <TableCell>
-                                          <div>
-                                            <p className="font-medium">{estudiante.usuario.nombre} {estudiante.usuario.apellido}</p>
-                                            <p className="text-sm text-muted-foreground">Trimestre {estudiante.usuario.trimestre}</p>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>{estudiante.usuario.carrera}</TableCell>
-                                        <TableCell>{estudiante.usuario.email}</TableCell>
-                                        <TableCell>
-                                          <div className="text-sm">
-                                            <p>{estudiante.horasCompletadas}/{estudiante.horasRequeridas} hrs</p>
-                                            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                                              <div 
-                                                className="bg-blue-600 h-2 rounded-full" 
-                                                style={{ 
-                                                  width: `${estudiante.horasRequeridas > 0 ? (estudiante.horasCompletadas / estudiante.horasRequeridas) * 100 : 0}%` 
-                                                }}
-                                              ></div>
-                                            </div>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge className="bg-green-100 text-green-800 border-green-200">
-                                            {estudiante.estado}
-                                          </Badge>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))
-                                  ) : (
-                                    <TableRow>
-                                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                                        No hay ayudantes asignados a esta plaza
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </div>
+                    {getEstadoBadge(plaza.estado)}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Info básica */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Departamento:</span>
+                      <span className="font-medium">{plaza.departamento}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Supervisor:</span>
+                      <span className="font-medium text-xs">{plaza.supervisorNombre}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Tipo:</span>
+                      <Badge variant="outline" className="text-xs">{plaza.tipoActividad}</Badge>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Capacidad visual */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Capacidad</span>
+                      <span className="text-sm font-semibold">
+                        {plaza.ayudantesActuales}/{plaza.capacidadMaxima}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${
+                          (plaza.ayudantesActuales / plaza.capacidadMaxima) * 100 === 100
+                            ? "bg-red-500"
+                            : (plaza.ayudantesActuales / plaza.capacidadMaxima) * 100 >= 75
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
+                        }`}
+                        style={{
+                          width: `${(plaza.ayudantesActuales / plaza.capacidadMaxima) * 100}%`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Horarios compactos */}
+                  <div>
+                    <div className="flex items-center text-sm text-muted-foreground mb-1">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Horarios ({plaza.horarios.length})
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {plaza.horarios.slice(0, 2).map((horario, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {horario.split(' ')[0]}
+                        </Badge>
+                      ))}
+                      {plaza.horarios.length > 2 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{plaza.horarios.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleOpenPlazaDetails(plaza)}
+                    >
+                      <Users className="h-4 w-4 mr-1" />
+                      Ver Detalles
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditPlaza(plaza)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Panel lateral de detalles de plaza */}
+      <Sheet open={isPlazaDetailOpen} onOpenChange={setIsPlazaDetailOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-2xl">{selectedPlaza?.nombre || 'Detalles de Plaza'}</SheetTitle>
+            <SheetDescription>
+              {selectedPlaza?.departamento} • {selectedPlaza?.ubicacion}
+            </SheetDescription>
+          </SheetHeader>
+
+          {loadingPlazaDetails ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary mr-3" />
+              <span>Cargando detalles...</span>
+            </div>
+          ) : selectedPlaza ? (
+            <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+              <div className="space-y-6 mt-6">
+                {/* Información General */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Información General</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Estado</p>
+                        <div className="mt-1">{getEstadoBadge(selectedPlaza.estado)}</div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tipo</p>
+                        <p className="font-medium mt-1">{selectedPlaza.tipoActividad}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Capacidad</p>
+                        <p className="font-medium mt-1">{selectedPlaza.ayudantesActuales}/{selectedPlaza.capacidadMaxima}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Horas/Semana</p>
+                        <p className="font-medium mt-1">{selectedPlaza.horasSemana || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-sm font-medium mb-2">Supervisor Asignado</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">{selectedPlaza.supervisorNombre}</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditMode(true)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Cambiar
+                        </Button>
+                      </div>
+
+                      {editMode && (
+                        <div className="mt-4 p-4 bg-muted/50 rounded-lg space-y-3">
+                          <Label>Seleccionar nuevo supervisor</Label>
+                          <Select value={selectedSupervisorId} onValueChange={setSelectedSupervisorId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un supervisor" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {supervisores.map((sup) => (
+                                <SelectItem key={sup.id} value={sup.id}>
+                                  {sup.nombre} {sup.apellido || ''} ({sup.email})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={handleAssignSupervisorToPlaza}
+                              disabled={!selectedSupervisorId || isAssigningSupervisor}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              {isAssigningSupervisor ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                  Asignando...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="h-4 w-4 mr-2" />
+                                  Guardar
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditMode(false);
+                                setSelectedSupervisorId("");
+                              }}
+                            >
+                              Cancelar
+                            </Button>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button 
-                        variant="ghost" 
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Horarios */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center">
+                      <Clock className="h-5 w-5 mr-2" />
+                      Horarios de Trabajo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedPlaza.horarios.map((horario, index) => (
+                        <div key={index} className="flex items-center p-2 bg-muted rounded-md">
+                          <Calendar className="h-4 w-4 mr-2 text-primary" />
+                          <span className="font-medium">{horario}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Descripción y Requisitos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Descripción y Requisitos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium mb-2">Descripción de Actividades</p>
+                      <p className="text-sm text-muted-foreground">{selectedPlaza.descripcion}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-sm font-medium mb-2">Requisitos Especiales</p>
+                      <ul className="space-y-1">
+                        {selectedPlaza.requisitos.map((requisito, index) => (
+                          <li key={index} className="flex items-start text-sm">
+                            <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span>{requisito}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Estudiantes Asignados */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">
+                        Estudiantes Asignados ({selectedPlaza.estudiantesAsignados?.length || 0})
+                      </CardTitle>
+                      <Button
                         size="sm"
-                        onClick={() => handleEditPlaza(plaza)}
+                        onClick={() => {
+                          handleOpenAssignBecario(selectedPlaza);
+                        }}
+                        className="bg-primary hover:bg-primary/90"
                       >
-                        <Edit className="h-4 w-4" />
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Asignar
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-                ))
+                  </CardHeader>
+                  <CardContent>
+                    {selectedPlaza.estudiantesAsignados && selectedPlaza.estudiantesAsignados.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedPlaza.estudiantesAsignados.map((estudiante) => (
+                          <Card key={estudiante.id} className="border-l-4 border-l-blue-500">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="font-medium">{estudiante.usuario.nombre} {estudiante.usuario.apellido}</p>
+                                  <p className="text-sm text-muted-foreground">{estudiante.usuario.carrera} • Trimestre {estudiante.usuario.trimestre}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{estudiante.usuario.email}</p>
+
+                                  <div className="mt-3">
+                                    <div className="flex items-center justify-between text-sm mb-1">
+                                      <span className="text-muted-foreground">Progreso de Horas</span>
+                                      <span className="font-medium">{estudiante.horasCompletadas}/{estudiante.horasRequeridas} hrs</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className="bg-blue-600 h-2 rounded-full transition-all"
+                                        style={{
+                                          width: `${estudiante.horasRequeridas > 0 ? (estudiante.horasCompletadas / estudiante.horasRequeridas) * 100 : 0}%`
+                                        }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleUnassignBecario(selectedPlaza.id, estudiante.id)}
+                                  className="ml-2"
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No hay estudiantes asignados</p>
+                        <p className="text-xs mt-1">Haz clic en "Asignar" para agregar estudiantes</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Eliminar Plaza */}
+                <Card className="border-red-200 bg-red-50/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-red-700">Zona de Peligro</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-red-800">Eliminar Plaza</p>
+                        <p className="text-xs text-muted-foreground">Esta acción no se puede deshacer</p>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Eliminar
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción eliminará permanentemente la plaza "{selectedPlaza?.nombre}".
+                              {selectedPlaza?.estudiantesAsignados && selectedPlaza.estudiantesAsignados.length > 0 && (
+                                <span className="block mt-2 text-red-600 font-medium">
+                                  ⚠️ Advertencia: Esta plaza tiene {selectedPlaza.estudiantesAsignados.length} estudiante(s) asignado(s).
+                                </span>
+                              )}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDeletePlaza}
+                              disabled={isDeletingPlaza}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              {isDeletingPlaza ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                  Eliminando...
+                                </>
+                              ) : (
+                                'Sí, eliminar plaza'
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </ScrollArea>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
+      {/* Modal para asignar becario - Mejorado */}
+      <Dialog open={isAssigningBecario} onOpenChange={setIsAssigningBecario}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Asignar Estudiante a Plaza</DialogTitle>
+            {plazaToAssign && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline">{plazaToAssign.nombre}</Badge>
+                <span className="text-sm text-muted-foreground">•</span>
+                <span className="text-sm text-muted-foreground">{plazaToAssign.departamento}</span>
+              </div>
+            )}
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[calc(90vh-180px)]">
+            <div className="space-y-4 pr-4">
+              {plazaToAssign && (
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-sm font-medium mb-2">Horarios de la Plaza:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {plazaToAssign.horarios.map((horario, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {horario}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
+              {loadingBecarios || verificandoDisponibilidad ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="h-8 w-8 animate-spin text-primary mr-3" />
+                  <span>
+                    {loadingBecarios ? 'Cargando estudiantes...' : 'Verificando disponibilidad de horarios...'}
+                  </span>
+                </div>
+              ) : becarios.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <AlertCircle className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <p className="text-lg text-muted-foreground">No hay becarios disponibles</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Todos los becarios activos ya tienen plaza asignada o no están disponibles
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Estudiantes compatibles con los horarios de la plaza:</p>
+                    <Badge variant="outline" className="text-xs">
+                      {becarios.length} encontrado{becarios.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                  <div className="grid gap-3">
+                    {becarios.map((becario) => {
+                      // Todos los becarios del endpoint ya son compatibles
+                      return (
+                        <Card
+                          key={becario.id}
+                          className={`transition-all cursor-pointer ${
+                            selectedBecarioId === becario.id
+                              ? 'border-primary border-2 shadow-md'
+                              : 'hover:border-primary/50'
+                          }`}
+                          onClick={() => setSelectedBecarioId(becario.id)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium">
+                                    {becario.usuario.nombre} {becario.usuario.apellido}
+                                  </p>
+                                  {selectedBecarioId === becario.id && (
+                                    <Badge className="bg-primary">
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      Seleccionado
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                  <span>{becario.usuario.carrera || 'Sin carrera'}</span>
+                                  <span>•</span>
+                                  <span>Trimestre {becario.usuario.trimestre || 'N/A'}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">{becario.usuario.email}</p>
+
+                                {/* Indicador de compatibilidad con información del endpoint */}
+                                <div className="mt-3 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="outline" className="text-xs">
+                                      {becario.tipoBeca || becario.programaBeca || 'Ayudantía'}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      {becario.porcentajeCobertura || 100}% Compatible
+                                    </Badge>
+                                  </div>
+
+                                  {/* Mostrar información de bloques matcheados */}
+                                  {becario.bloquesMatcheados !== undefined && becario.totalBloques !== undefined && (
+                                    <div className="text-xs text-muted-foreground">
+                                      <span className="font-medium">{becario.bloquesMatcheados}</span> de <span className="font-medium">{becario.totalBloques}</span> bloques de tiempo coinciden
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight className={`h-5 w-5 transition-transform ${
+                                selectedBecarioId === becario.id ? 'rotate-90' : ''
+                              }`} />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="flex justify-between items-center pt-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              {selectedBecarioId && becarios.find(b => b.id === selectedBecarioId)
+                ? `Asignando a: ${becarios.find(b => b.id === selectedBecarioId)?.usuario.nombre} ${becarios.find(b => b.id === selectedBecarioId)?.usuario.apellido}`
+                : 'Selecciona un estudiante para continuar'}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAssigningBecario(false);
+                  setSelectedBecarioId("");
+                }}
+                disabled={assigningBecario}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleAssignBecario}
+                disabled={assigningBecario || !selectedBecarioId}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {assigningBecario ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Asignando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Asignar Estudiante
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
