@@ -164,12 +164,6 @@ const Register = () => {
       icon: User
     },
     {
-      id: "admin" as RegistrationType,
-      title: "Registro Administrativo",
-      description: "Para personal administrativo",
-      icon: UserCog
-    },
-    {
       id: "supervisor" as RegistrationType,
       title: "Registro Supervisor",
       description: "Para supervisores de plazas",

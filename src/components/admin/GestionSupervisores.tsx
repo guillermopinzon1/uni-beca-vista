@@ -706,8 +706,8 @@ const GestionSupervisores = () => {
                                   <CardContent className="p-4 space-y-3">
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="flex-1">
-                                        <div className="text-sm font-semibold text-foreground line-clamp-1">{plaza.materia}</div>
-                                        <div className="text-xs text-muted-foreground">{plaza.codigo} · {plaza.departamento}</div>
+                                        <div className="text-sm font-semibold text-foreground line-clamp-1">{plaza.nombre}</div>
+                                        <div className="text-xs text-muted-foreground">{plaza.ubicacion}</div>
                                       </div>
                                       <Badge variant="outline" className="text-xs shrink-0">{plaza.estado}</Badge>
                                     </div>
@@ -798,8 +798,8 @@ const GestionSupervisores = () => {
                                     {estudiante.plaza ? (
                                       <div className="space-y-2 pt-2 border-t border-gray-100">
                                         <div className="p-2 bg-green-50 border border-green-200 rounded-md">
-                                          <p className="font-semibold text-xs text-green-800 truncate">{estudiante.plaza.materia}</p>
-                                          <p className="text-[10px] text-green-600">Código: {estudiante.plaza.codigo}</p>
+                                          <p className="font-semibold text-xs text-green-800 truncate">{estudiante.plaza.nombre}</p>
+                                          <p className="text-[10px] text-green-600">{estudiante.plaza.ubicacion}</p>
                                         </div>
                                         <div className="space-y-1.5">
                                           <div className="flex items-center justify-between text-xs">

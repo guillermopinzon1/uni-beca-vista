@@ -159,6 +159,30 @@ const DetalleEstudianteSupervisor = ({ becarioId, isOpen, onClose }: DetalleEstu
               </CardContent>
             </Card>
 
+            {/* Información de Beca */}
+            <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-800">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Información de Beca
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo de Beca</p>
+                  <Badge className="bg-blue-100 text-blue-800 border-blue-200 mt-1">
+                    Ayudantía
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Descuento Aplicado</p>
+                  <Badge className="bg-green-100 text-green-800 border-green-200 text-lg font-bold px-4 py-2 mt-1">
+                    25%
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Plaza Asignada */}
             {becario.plaza && (
               <Card>
@@ -169,17 +193,9 @@ const DetalleEstudianteSupervisor = ({ becarioId, isOpen, onClose }: DetalleEstu
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Materia</p>
-                    <p className="font-medium">{becario.plaza.materia}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Código</p>
-                    <p className="font-medium">{becario.plaza.codigo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Departamento</p>
-                    <p className="font-medium">{becario.plaza.departamento}</p>
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Nombre de la Plaza</p>
+                    <p className="font-medium">{becario.plaza.nombre}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Ubicación</p>

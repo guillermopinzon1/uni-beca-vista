@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, FileUp, Activity, Clock } from "lucide-react";
+import { ArrowLeft, Users, UserCheck, FileText, BarChart3, Building, Settings, FileUp, Activity, Clock, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import EstudiantesBecarios from "@/components/admin/EstudiantesBecarios";
 import GestionUsuarios from "@/components/admin/GestionUsuarios";
@@ -13,13 +13,14 @@ import ConfiguracionBecas from "@/components/admin/ConfiguracionBecas";
 import ConfiguracionSistema from "@/components/admin/ConfiguracionSistema";
 import GestionUsuariosPendientes from "@/components/admin/GestionUsuariosPendientes";
 import EstadisticasDashboard from "@/pages/EstadisticasDashboard";
+import DashboardKPIs from "@/components/admin/DashboardKPIs";
 import { fetchUsers } from "@/lib/api";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { logout, tokens } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [activeModule, setActiveModule] = useState<string | null>("usuarios");
+  const [activeModule, setActiveModule] = useState<string | null>("dashboard");
   const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
 
   // Cargar contador de usuarios pendientes
@@ -46,6 +47,11 @@ const AdminDashboard = () => {
   }, [tokens?.accessToken]);
 
   const sidebarItems = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      onClick: () => setActiveModule("dashboard")
+    },
     {
       title: "Usuarios",
       icon: Users,
@@ -206,7 +212,9 @@ const AdminDashboard = () => {
         {/* Main Content */}
         <main className="flex-1 px-6 py-8">
           <div className="max-w-7xl mx-auto">
-            {activeModule === "usuarios" ? (
+            {activeModule === "dashboard" ? (
+              <DashboardKPIs onNavigateToModule={setActiveModule} />
+            ) : activeModule === "usuarios" ? (
               <GestionUsuarios />
             ) : activeModule === "estudiantes-becarios" ? (
               <EstudiantesBecarios />

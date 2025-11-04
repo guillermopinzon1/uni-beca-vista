@@ -197,19 +197,16 @@ const PlazasAsignadas = () => {
                   {/* Información básica */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">{plaza.materia}</h3>
+                      <h3 className="font-semibold text-lg">{plaza.nombre}</h3>
                       <Badge variant={getEstadoBadge(plaza.estado)}>
                         {plaza.estado}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      <strong>Código:</strong> {plaza.codigo}
+                      <strong>Tipo:</strong> {plaza.tipoAyudantia}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      <strong>Profesor:</strong> {plaza.profesor}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Departamento:</strong> {plaza.departamento}
+                      <strong>Periodo:</strong> {plaza.periodoAcademico}
                     </p>
                   </div>
 
@@ -310,9 +307,14 @@ const PlazasAsignadas = () => {
                       {plaza.estudiantesAsignados.map((estudiante) => (
                         <div key={estudiante.id} className="flex items-center justify-between p-2 bg-muted rounded">
                           <div>
-                            <p className="text-sm font-medium">
-                              {estudiante.usuario.nombre} {estudiante.usuario.apellido}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">
+                                {estudiante.usuario.nombre} {estudiante.usuario.apellido}
+                              </p>
+                              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                                25%
+                              </Badge>
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               {estudiante.usuario.email} • {estudiante.usuario.carrera} - {estudiante.usuario.trimestre}° trimestre
                             </p>

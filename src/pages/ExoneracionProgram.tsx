@@ -82,19 +82,6 @@ const ExoneracionProgram = () => {
                     : "Beneficiario Exoneración - Empleado UNIMET"
                   }
                 </Badge>
-                {userType === "hijo" && (
-                  <Badge variant="outline" className="border-green-400 text-green-700">
-                    Progenitor: Activo ✓
-                  </Badge>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-primary">
-                  {userType === "hijo" ? "Carlos Mendoza" : "María González"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {userType === "hijo" ? "Estudiante - Ing. Industrial" : "Analista de Sistemas - Estudiante"}
-                </p>
               </div>
             </div>
           </div>

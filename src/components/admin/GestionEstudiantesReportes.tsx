@@ -34,6 +34,8 @@ interface Reporte {
     apellido: string;
     email: string;
     cedula: string;
+    tipoBeca?: string;
+    descuentoAplicado?: string;
   };
   supervisor: {
     id: string;
@@ -300,7 +302,9 @@ const GestionEstudiantesReportes = () => {
             nombre: reporte.estudiante?.nombre || reporte.usuario?.nombre || 'N/A',
             apellido: reporte.estudiante?.apellido || reporte.usuario?.apellido || 'N/A',
             email: reporte.estudiante?.email || reporte.usuario?.email || 'N/A',
-            cedula: reporte.estudiante?.cedula || reporte.usuario?.cedula || 'N/A'
+            cedula: reporte.estudiante?.cedula || reporte.usuario?.cedula || 'N/A',
+            tipoBeca: reporte.estudiante?.tipoBeca || reporte.becario?.tipoBeca,
+            descuentoAplicado: reporte.estudiante?.descuentoAplicado || reporte.becario?.descuentoAplicado
           },
           supervisor: {
             id: reporte.supervisor?.id || reporte.supervisorId || 'N/A',
@@ -310,9 +314,8 @@ const GestionEstudiantesReportes = () => {
           },
           plaza: {
             id: reporte.plaza?.id || reporte.plazaId || 'N/A',
-            materia: reporte.plaza?.materia || reporte.plaza?.nombre || 'N/A',
-            codigo: reporte.plaza?.codigo || 'N/A',
-            departamento: reporte.plaza?.departamento || 'N/A',
+            nombre: reporte.plaza?.nombre || 'N/A',
+            ubicacion: reporte.plaza?.ubicacion || 'N/A',
             supervisorResponsable: reporte.plaza?.supervisorResponsable || 'N/A'
           }
         };
@@ -714,9 +717,16 @@ const GestionEstudiantesReportes = () => {
                     <TableRow key={reporte.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">
-                            {reporte.estudiante.nombre} {reporte.estudiante.apellido}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">
+                              {reporte.estudiante.nombre} {reporte.estudiante.apellido}
+                            </p>
+                            {reporte.estudiante.descuentoAplicado && (
+                              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                                {parseFloat(reporte.estudiante.descuentoAplicado).toFixed(0)}%
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             {reporte.estudiante.email}
                           </p>
@@ -734,9 +744,9 @@ const GestionEstudiantesReportes = () => {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{reporte.plaza.materia}</p>
+                          <p className="font-medium">{reporte.plaza.nombre}</p>
                           <p className="text-sm text-muted-foreground">
-                            {reporte.plaza.codigo} - {reporte.plaza.departamento}
+                            {reporte.plaza.ubicacion}
                           </p>
                         </div>
                       </TableCell>
@@ -800,9 +810,19 @@ const GestionEstudiantesReportes = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Estudiante</p>
-                  <p className="font-medium">
-                    {selectedReporte.estudiante.nombre} {selectedReporte.estudiante.apellido}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">
+                      {selectedReporte.estudiante.nombre} {selectedReporte.estudiante.apellido}
+                    </p>
+                    {selectedReporte.estudiante.descuentoAplicado && (
+                      <Badge className="bg-green-100 text-green-800 border-green-200">
+                        {parseFloat(selectedReporte.estudiante.descuentoAplicado).toFixed(0)}%
+                      </Badge>
+                    )}
+                  </div>
+                  {selectedReporte.estudiante.tipoBeca && (
+                    <p className="text-sm text-muted-foreground">{selectedReporte.estudiante.tipoBeca}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Supervisor</p>
@@ -812,7 +832,7 @@ const GestionEstudiantesReportes = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Plaza</p>
-                  <p className="font-medium">{selectedReporte.plaza.materia}</p>
+                  <p className="font-medium">{selectedReporte.plaza.nombre}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Estado</p>

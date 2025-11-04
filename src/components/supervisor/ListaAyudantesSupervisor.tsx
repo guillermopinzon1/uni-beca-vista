@@ -65,7 +65,7 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
       ayudante.usuario.apellido.toLowerCase().includes(searchLower) ||
       ayudante.usuario.email.toLowerCase().includes(searchLower) ||
       ayudante.usuario.cedula.toLowerCase().includes(searchLower) ||
-      ayudante.plaza?.materia.toLowerCase().includes(searchLower)
+      ayudante.plaza?.nombre.toLowerCase().includes(searchLower)
     );
   });
 
@@ -226,48 +226,6 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
               })}
             </TableBody>
           </Table>
-        )}
-
-        {/* Resumen */}
-        {filteredAyudantes.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Horas Completadas</p>
-                <p className="text-xl font-bold">
-                  {filteredAyudantes.reduce((sum, a) => sum + (Number(a.horasCompletadas) || 0), 0).toFixed(1)}h
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Becas Activas</p>
-                <p className="text-xl font-bold">
-                  {filteredAyudantes.filter(a => a.estado === 'Activa').length}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Clock className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Promedio de Progreso</p>
-                <p className="text-xl font-bold">
-                  {Math.round(
-                    filteredAyudantes.reduce((sum, a) => sum + calcularProgreso(Number(a.horasCompletadas) || 0, Number(a.horasRequeridas) || 1), 0) /
-                    filteredAyudantes.length
-                  )}%
-                </p>
-              </div>
-            </div>
-          </div>
         )}
       </CardContent>
     </Card>

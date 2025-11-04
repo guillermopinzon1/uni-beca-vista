@@ -55,7 +55,9 @@ const GestionUsuarios = () => {
     carrera: "",
     trimestre: "",
     departamento: "",
-    cargo: ""
+    cargo: "",
+    necesitaPostulacion: "si",
+    tipoBeca: ""
   });
   const [cedulaData, setCedulaData] = useState({
     tipo: "V",
@@ -117,78 +119,18 @@ const GestionUsuarios = () => {
     setLoadingPostStatus(true);
     setPostStatus("");
     try {
-      // Si el usuario seleccionado es el usuario autenticado, usar los endpoints indicados
-      const authUser = JSON.parse(localStorage.getItem('auth_user') || 'null');
-      if (authUser?.id && authUser.id === userId) {
-        // 1) Intentar obtener beca propia
-        const resMe = await fetch(`${API_BASE}/v1/becarios/me`, {
-          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
-        });
-
-        if (resMe.ok) {
-          setPostStatus('Tienes beca aprobada');
-          return;
-        }
-
-        if (resMe.status !== 404) {
-          // Si hay otro error distinto a 404, marcar desconocido pero continuar al paso 2 como fallback
-        }
-
-        // 2) Buscar postulaciones propias
-        const resPost = await fetch(`${API_BASE}/v1/postulaciones`, {
-          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
-        });
-
-        if (resPost.ok) {
-          const payload = await resPost.json();
-          const lista = payload?.data?.postulaciones || payload?.data || [];
-          if (!Array.isArray(lista) || lista.length === 0) {
-            setPostStatus('No te has postulado');
-            return;
-          }
-          const algunaAprobada = lista.some((p: any) => (p.estado || '').toLowerCase() === 'aprobada');
-          setPostStatus(algunaAprobada ? 'Tienes beca aprobada' : 'Postulado sin aprobar');
-          return;
-        }
-        // Si falla, continuar a fallback administrativo
-      }
-
-      // Fallback administrativo: consultar por usuarioId cuando no es el propio usuario
-      let tieneBeca = false;
-      try {
-        const resB = await fetch(`${API_BASE}/v1/becarios?usuarioId=${userId}&limit=1`, {
-          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
-        });
-        if (resB.ok) {
-          const payload = await resB.json();
-          const becarios = payload?.data?.becarios || payload?.data || [];
-          tieneBeca = Array.isArray(becarios) && becarios.some((b: any) => (b.estado || '').toLowerCase().includes('activa') || (b.estado || '').toLowerCase().includes('aprob'));
-        }
-      } catch {}
-
-      if (tieneBeca) {
-        setPostStatus('Tienes beca aprobada');
+      // Únicamente consultar becarios y derivar estado por presencia de usuarioId
+      const res = await fetch(`${API_BASE}/v1/becarios`, {
+        headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!res.ok) {
+        setPostStatus('Estado desconocido');
         return;
       }
-
-      let postulaciones: any[] = [];
-      try {
-        const resP = await fetch(`${API_BASE}/v1/postulaciones?usuarioId=${userId}&limit=5`, {
-          headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${accessToken}` }
-        });
-        if (resP.ok) {
-          const payload = await resP.json();
-          postulaciones = payload?.data?.postulaciones || payload?.data || [];
-        }
-      } catch {}
-
-      if (!postulaciones || postulaciones.length === 0) {
-        setPostStatus('No se ha postulado');
-        return;
-      }
-
-      const algunaAprobada = postulaciones.some((p: any) => (p.estado || '').toLowerCase() === 'aprobada');
-      setPostStatus(algunaAprobada ? 'Tienes beca aprobada' : 'Postulado sin aprobar');
+      const payload = await res.json();
+      const becarios = payload?.data?.becarios || payload?.data || [];
+      const existe = Array.isArray(becarios) && becarios.some((b: any) => b?.usuario?.id === userId);
+      setPostStatus(existe ? 'Postulacion aprobada' : 'Postulación pendiente');
     } catch {
       setPostStatus('Estado desconocido');
     } finally {
@@ -205,8 +147,8 @@ const GestionUsuarios = () => {
         nombre: editForm.nombre,
         apellido: editForm.apellido,
         telefono: editForm.telefono,
-        departamento: editForm.departamento,
-        cargo: editForm.cargo,
+        departamento: editForm.departamento || 'N/A',
+        cargo: editForm.cargo || 'N/A',
         carrera: editForm.carrera,
         trimestre: editForm.trimestre ? parseInt(editForm.trimestre) : undefined,
         iaa: editForm.iaa ? parseFloat(editForm.iaa) : undefined,
@@ -269,7 +211,9 @@ const GestionUsuarios = () => {
       carrera: "",
       trimestre: "",
       departamento: "",
-      cargo: ""
+      cargo: "",
+      necesitaPostulacion: "si",
+      tipoBeca: ""
     });
     setCedulaData({ tipo: "V", numero: "" });
     setCreateTab("estudiante");
@@ -322,6 +266,52 @@ const GestionUsuarios = () => {
             title: "Usuario creado y aprobado",
             description: `El ${createTab} ha sido registrado y aprobado exitosamente.`,
           });
+          // Registro directo de becario (sin postulación)
+          if (createTab === 'estudiante' && createFormData.necesitaPostulacion === 'no') {
+            try {
+              const directBody: any = {
+                nombre: `${createFormData.nombre} ${createFormData.apellido}`.trim(),
+                cedula: createFormData.cedula || 'N/A',
+                email: createFormData.email,
+                telefono: createFormData.telefono || 'N/A',
+                fechaNacimiento: '1975-01-01',
+                estadoCivil: 'soltero',
+                tipoPostulante: 'estudiante-pregrado',
+                carrera: createFormData.carrera || 'N/A',
+                trimestre: (createFormData.trimestre && String(createFormData.trimestre).length >= 5) ? String(createFormData.trimestre) : '0000-0',
+                iaa: 20,
+                promedioBachillerato: 0,
+                asignaturasAprobadas: 0,
+                creditosInscritos: 3,
+                tipoBeca: createFormData.tipoBeca,
+                documentos: []
+              };
+              const directRes = await fetch(`${API_BASE}/v1/postulaciones/registro-directo`, {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify(directBody)
+              });
+              if (!directRes.ok) {
+                const errJson = await directRes.json().catch(() => null);
+                throw new Error(errJson?.message || `Error en registro directo (${directRes.status})`);
+              }
+              toast({
+                title: 'Becario registrado directamente',
+                description: 'Se creó la postulación aprobada y el registro de becario activo.'
+              });
+              setPostulacionLabel('Postulacion aprobada');
+            } catch (directErr: any) {
+              toast({
+                title: 'Registro directo falló',
+                description: directErr?.message || 'No se pudo completar el registro directo de becario',
+                variant: 'destructive'
+              });
+            }
+          }
         } catch (approveError: any) {
           toast({
             title: "Usuario creado",
@@ -630,6 +620,7 @@ const GestionUsuarios = () => {
                     <div className="flex-1">
                       <Label>Cédula</Label>
                       <p className="mt-1 text-sm font-medium">{selectedUser.cedula || '-'}</p>
+                      <p className="text-xs text-muted-foreground italic mt-0.5">Este campo no se puede editar</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -637,6 +628,7 @@ const GestionUsuarios = () => {
                     <div className="flex-1">
                       <Label>Email</Label>
                       <p className="mt-1 text-sm font-medium">{selectedUser.email || '-'}</p>
+                      <p className="text-xs text-muted-foreground italic mt-0.5">Este campo no se puede editar</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -671,7 +663,7 @@ const GestionUsuarios = () => {
                       <Badge className="bg-gray-300">Cargando...</Badge>
                     ) : (
                       <Badge className={
-                        postStatus.includes('aprob') ? 'bg-green-500' : postStatus.includes('Postulado') ? 'bg-yellow-500' : 'bg-gray-400'
+                        postStatus.toLowerCase().includes('aprob') ? 'bg-green-500' : postStatus.toLowerCase().includes('pend') ? 'bg-yellow-500' : 'bg-gray-400'
                       }>
                         {postStatus || 'Estado desconocido'}
                       </Badge>
@@ -945,6 +937,46 @@ const GestionUsuarios = () => {
                       placeholder="5"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>¿Necesita postulación?</Label>
+                    <Select
+                      value={createFormData.necesitaPostulacion}
+                      onValueChange={(v) => setCreateFormData({ ...createFormData, necesitaPostulacion: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="si">Sí</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {createFormData.necesitaPostulacion === 'no' && (
+                    <div className="space-y-2">
+                      <Label>Tipo de Beca (requerido)</Label>
+                      <Select
+                        value={createFormData.tipoBeca}
+                        onValueChange={(v) => setCreateFormData({ ...createFormData, tipoBeca: v })}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione el tipo de beca" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Ayudantía">Ayudantía</SelectItem>
+                          <SelectItem value="Impacto">Impacto</SelectItem>
+                          <SelectItem value="Excelencia">Excelencia</SelectItem>
+                          <SelectItem value="Exoneración de Pago">Exoneración de Pago</SelectItem>
+                          <SelectItem value="Formación Docente">Formación Docente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 

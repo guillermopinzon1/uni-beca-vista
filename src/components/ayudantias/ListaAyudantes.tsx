@@ -430,15 +430,11 @@ const ListaAyudantes = () => {
                             <div className="col-span-2">
                               <p className="text-sm text-muted-foreground mb-2">Plaza Asignada</p>
                               <div className="bg-white/50 border border-blue-300 rounded-lg p-3">
-                                <p className="font-semibold text-primary">{becaInfo.plaza.materia}</p>
-                                <div className="grid grid-cols-3 gap-2 mt-2 text-sm">
+                                <p className="font-semibold text-primary">{becaInfo.plaza.nombre}</p>
+                                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
                                   <div>
-                                    <span className="text-muted-foreground">Código:</span>
-                                    <span className="ml-1 font-medium">{becaInfo.plaza.codigo}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Departamento:</span>
-                                    <span className="ml-1 font-medium">{becaInfo.plaza.departamento}</span>
+                                    <span className="text-muted-foreground">Ubicación:</span>
+                                    <span className="ml-1 font-medium">{becaInfo.plaza.ubicacion}</span>
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">Tipo:</span>

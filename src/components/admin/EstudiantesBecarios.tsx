@@ -17,6 +17,7 @@ interface EstudianteBecario {
   nombre: string;
   cedula: string;
   tipoBeca: string;
+  descuentoAplicado?: string;
   estado: "Activo" | "Desactivado" | "Suspendido" | "Finalizado";
   emailVerified?: boolean;
   plaza: string;
@@ -132,9 +133,10 @@ const EstudiantesBecarios = () => {
           nombre: usuario.apellido ? `${usuario.nombre} ${usuario.apellido}` : (usuario.nombre || '-'),
           cedula: usuario.cedula || '-',
           tipoBeca: b.tipoBeca || '-',
+          descuentoAplicado: b.descuentoAplicado || '0.00',
           estado: estadoTabla,
           emailVerified: usuario.emailVerified,
-          plaza: b.plaza?.materia || '-',
+          plaza: b.plaza?.nombre || '-',
           horasRequeridas: typeof b.horasRequeridas === 'number' ? b.horasRequeridas : 0,
           horasCompletadas: typeof b.horasCompletadas === 'string' ? parseFloat(b.horasCompletadas) : (b.horasCompletadas || 0),
           fechaInicio: b.periodoInicio || ''
@@ -183,6 +185,7 @@ const EstudiantesBecarios = () => {
       nombre: u.nombre,
       cedula: u.cedula || '-',
       tipoBeca: u.tipoBeca || '-',
+      descuentoAplicado: u.descuentoAplicado || '0.00',
       estado: u.estado as EstudianteBecario['estado'],
       emailVerified: u.emailVerified,
       plaza: u.plaza || '-',
@@ -345,8 +348,7 @@ const EstudiantesBecarios = () => {
                     <TableRow className="bg-muted/50">
                       <TableHead className="font-semibold">Estudiante</TableHead>
                       <TableHead className="font-semibold">Tipo de Beca</TableHead>
-                      <TableHead className="font-semibold">Plaza</TableHead>
-                      <TableHead className="font-semibold">Horas</TableHead>
+                      <TableHead className="font-semibold">Descuento</TableHead>
                       <TableHead className="font-semibold">Estado</TableHead>
                       <TableHead className="text-center font-semibold">Acciones</TableHead>
                     </TableRow>
@@ -370,14 +372,10 @@ const EstudiantesBecarios = () => {
                             {estudiante.tipoBeca}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {estudiante.plaza || '-'}
-                        </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            <span className="font-medium text-foreground">{estudiante.horasCompletadas}</span>
-                            <span className="text-muted-foreground"> / {estudiante.horasRequeridas || 0}</span>
-                          </div>
+                          <Badge className="bg-green-100 text-green-800 border-green-200 font-semibold">
+                            {parseFloat(estudiante.descuentoAplicado || '0').toFixed(0)}%
+                          </Badge>
                         </TableCell>
                         <TableCell>{getEstadoBadge(estudiante.estado, estudiante.emailVerified)}</TableCell>
                         <TableCell className="text-center">
@@ -395,7 +393,7 @@ const EstudiantesBecarios = () => {
                     ))}
                     {filteredEstudiantes.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-16">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
                           <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-20" />
                           <p className="text-lg font-medium">No se encontraron becarios</p>
                           <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>

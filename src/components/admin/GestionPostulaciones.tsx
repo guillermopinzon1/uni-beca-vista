@@ -520,6 +520,9 @@ const GestionPostulaciones = () => {
       console.log('=== RESPUESTA EXITOSA ===');
       console.log('Success Data:', successData);
 
+      // Obtener descuento aplicado desde la respuesta
+      const descuentoAplicado = successData?.data?.estudianteBecario?.descuentoAplicado;
+
       // Si el backend creó un usuario, aprobarlo automáticamente
       const newUserId = successData?.data?.usuario?.id || successData?.data?.usuarioId;
       if (newUserId) {
@@ -529,7 +532,9 @@ const GestionPostulaciones = () => {
           console.log('✅ Usuario aprobado automáticamente');
           toast({
             title: "Postulación aprobada",
-            description: "La postulación y el usuario han sido aprobados exitosamente. El estudiante ya puede iniciar sesión."
+            description: descuentoAplicado
+              ? `La postulación y el usuario han sido aprobados exitosamente. Descuento asignado: ${parseFloat(descuentoAplicado).toFixed(0)}%. El estudiante ya puede iniciar sesión.`
+              : "La postulación y el usuario han sido aprobados exitosamente. El estudiante ya puede iniciar sesión."
           });
         } catch (approveError: any) {
           console.error('❌ Error al auto-aprobar usuario:', approveError);
@@ -542,7 +547,9 @@ const GestionPostulaciones = () => {
       } else {
         toast({
           title: "Postulación aprobada",
-          description: "La postulación ha sido aprobada exitosamente"
+          description: descuentoAplicado
+            ? `La postulación ha sido aprobada exitosamente. Descuento asignado: ${parseFloat(descuentoAplicado).toFixed(0)}%`
+            : "La postulación ha sido aprobada exitosamente"
         });
       }
 
@@ -749,22 +756,22 @@ const GestionPostulaciones = () => {
       </div>
 
       {/* Filtros */}
-      <Card>
+      <Card className="border-orange/20 shadow-sm">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4">
             {/* Primera fila: Búsqueda y filtros principales */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-orange-500" />
                 <Input
                   placeholder="Buscar por nombre, cédula o carrera..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 border-orange/20 focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
               <Select value={filterBeca} onValueChange={setFilterBeca}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 border-orange/20">
                   <SelectValue placeholder="Tipo de Beca" />
                 </SelectTrigger>
                 <SelectContent>
@@ -776,7 +783,7 @@ const GestionPostulaciones = () => {
                 </SelectContent>
               </Select>
               <Select value={filterEstado} onValueChange={setFilterEstado}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-40 border-orange/20">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
@@ -792,7 +799,7 @@ const GestionPostulaciones = () => {
             {/* Segunda fila: Filtro de período y ordenamiento */}
             <div className="flex flex-col md:flex-row gap-4">
               <Select value={filterPeriodo} onValueChange={setFilterPeriodo}>
-                <SelectTrigger className="w-full md:w-48">
+                <SelectTrigger className="w-full md:w-48 border-orange/20">
                   <SelectValue placeholder="Período Académico" />
                 </SelectTrigger>
                 <SelectContent>
@@ -806,7 +813,7 @@ const GestionPostulaciones = () => {
               </Select>
 
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as "fecha" | "prioridad")}>
-                <SelectTrigger className="w-full md:w-48">
+                <SelectTrigger className="w-full md:w-48 border-orange/20">
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
                 <SelectContent>
@@ -816,7 +823,7 @@ const GestionPostulaciones = () => {
               </Select>
 
               <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
-                <SelectTrigger className="w-full md:w-40">
+                <SelectTrigger className="w-full md:w-40 border-orange/20">
                   <SelectValue placeholder="Orden" />
                 </SelectTrigger>
                 <SelectContent>
@@ -830,60 +837,82 @@ const GestionPostulaciones = () => {
       </Card>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">{estadisticas.total}</p>
-              <p className="text-sm text-muted-foreground">Total</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-orange/20 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold text-primary">{estadisticas.total}</p>
+                <p className="text-sm text-muted-foreground font-medium mt-1">Total</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-orange-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-yellow-600">{estadisticas.pendientes}</p>
-              <p className="text-sm text-muted-foreground">Pendientes</p>
+        <Card className="border-yellow-200 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-yellow-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold text-yellow-600">{estadisticas.pendientes}</p>
+                <p className="text-sm text-yellow-700 font-medium mt-1">Pendientes</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-yellow-700" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{estadisticas.enRevision}</p>
-              <p className="text-sm text-muted-foreground">En Revisión</p>
+        <Card className="border-green-200 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold text-green-600">{estadisticas.aprobadas}</p>
+                <p className="text-sm text-green-700 font-medium mt-1">Aprobadas</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-200 to-green-300 flex items-center justify-center">
+                <Check className="h-6 w-6 text-green-700" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{estadisticas.aprobadas}</p>
-              <p className="text-sm text-muted-foreground">Aprobadas</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{estadisticas.rechazadas}</p>
-              <p className="text-sm text-muted-foreground">Rechazadas</p>
+        <Card className="border-red-200 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-red-50 to-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold text-red-600">{estadisticas.rechazadas}</p>
+                <p className="text-sm text-red-700 font-medium mt-1">Rechazadas</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-200 to-red-300 flex items-center justify-center">
+                <X className="h-6 w-6 text-red-700" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabla de postulaciones */}
-      <Card>
-        <CardHeader>
+      <Card className="border-orange/20 shadow-md">
+        <CardHeader className="bg-gradient-to-r from-orange-50 to-white border-b border-orange/10">
           <div className="flex items-center justify-between">
-            <CardTitle>Postulaciones ({sortedPostulaciones.length})</CardTitle>
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Postulaciones</CardTitle>
+                <p className="text-sm text-muted-foreground font-normal">
+                  {sortedPostulaciones.length} {sortedPostulaciones.length === 1 ? 'postulación encontrada' : 'postulaciones encontradas'}
+                </p>
+              </div>
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={loadPostulaciones}
               disabled={loading}
-              className="border-orange/40 hover:bg-orange/10 hover:border-orange/60"
+              className="border-orange/40 hover:bg-orange/10 hover:border-orange/60 transition-all"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Recargar
@@ -907,53 +936,65 @@ const GestionPostulaciones = () => {
           <div className="max-h-96 overflow-y-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Postulante</TableHead>
-                <TableHead>Carrera</TableHead>
-                <TableHead>Trimestre</TableHead>
-                <TableHead>IAA/Promedio</TableHead>
-                <TableHead>Tipo de Beca</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Acciones</TableHead>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead className="font-semibold">Postulante</TableHead>
+                <TableHead className="font-semibold">Carrera</TableHead>
+                <TableHead className="font-semibold">IAA/Promedio</TableHead>
+                <TableHead className="font-semibold">Tipo de Beca</TableHead>
+                <TableHead className="font-semibold">Estado</TableHead>
+                <TableHead className="font-semibold">Fecha</TableHead>
+                <TableHead className="font-semibold text-center">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedPostulaciones.map((postulacion) => (
-                <TableRow key={postulacion.id}>
+                <TableRow key={postulacion.id} className="hover:bg-orange/5 transition-colors">
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{postulacion.nombre}</p>
-                      <p className="text-sm text-muted-foreground">{postulacion.cedula}</p>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm">
+                        {postulacion.nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-primary">{postulacion.nombre}</p>
+                        <p className="text-xs text-muted-foreground">{postulacion.cedula}</p>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>{postulacion.carrera}</TableCell>
-                  <TableCell>{postulacion.trimestre}</TableCell>
                   <TableCell>
-                    <span className="font-medium">{postulacion.iaa || postulacion.promedioBachillerato || 'N/A'}</span>
+                    <div className="flex items-center space-x-2">
+                      <GraduationCap className="h-4 w-4 text-orange-500" />
+                      <span className="text-sm">{postulacion.carrera}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{postulacion.tipoBeca}</Badge>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200">
+                      <span className="font-bold text-orange-700">{postulacion.iaa || postulacion.promedioBachillerato || 'N/A'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50 font-medium">
+                      {postulacion.tipoBeca}
+                    </Badge>
                   </TableCell>
                   <TableCell>{getEstadoBadge(postulacion.estado)}</TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(postulacion.fechaPostulacion).toLocaleDateString()}
+                  <TableCell>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(postulacion.fechaPostulacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                    <div className="flex justify-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         title="Ver detalles"
                         onClick={() => handleVerDetalles(postulacion)}
+                        className="hover:bg-orange-100 hover:text-orange-700 transition-colors"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver detalles
                       </Button>
-                      {postulacion.estado === "En Revisión" && (
-                        <Button variant="ghost" size="sm" className="text-blue-600" title="En proceso">
-                          <Clock className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -991,7 +1032,7 @@ const GestionPostulaciones = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Tipo de Beca</p>
                       <p className="font-medium">{selectedPostulacion.tipoBeca}</p>
@@ -999,10 +1040,6 @@ const GestionPostulaciones = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">Fecha de Postulación</p>
                       <p className="font-medium">{new Date(selectedPostulacion.fechaPostulacion).toLocaleDateString('es-ES')}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Promedio/IAA</p>
-                      <p className="font-medium text-primary text-lg">{selectedPostulacion.iaa}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Carrera</p>
@@ -1078,10 +1115,6 @@ const GestionPostulaciones = () => {
                       <div>
                         <Label className="text-sm text-muted-foreground">Carrera/Programa de estudios</Label>
                         <p className="font-medium">{selectedPostulacion.carrera}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Trimestre actual</Label>
-                        <p className="font-medium">{selectedPostulacion.trimestre || 'N/A'}</p>
                       </div>
                       <div>
                         <Label className="text-sm text-muted-foreground">Índice Académico Acumulado (IAA)</Label>

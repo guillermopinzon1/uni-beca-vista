@@ -256,10 +256,10 @@ const PerfilSupervisor = () => {
                       <div className="flex-1">
                         <CardTitle className="text-base flex items-center gap-2">
                           <BookOpen className="h-4 w-4 text-primary" />
-                          {plaza.materia}
+                          {plaza.nombre}
                         </CardTitle>
                         <CardDescription className="mt-1">
-                          Código: {plaza.codigo}
+                          {plaza.tipoAyudantia}
                         </CardDescription>
                       </div>
                       <Badge
@@ -273,14 +273,7 @@ const PerfilSupervisor = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Departamento</p>
-                          <p className="font-medium">{plaza.departamento}</p>
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 gap-3 text-sm">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <div>

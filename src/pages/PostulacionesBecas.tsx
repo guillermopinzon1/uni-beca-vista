@@ -157,13 +157,6 @@ const PostulacionesBecas = () => {
               <CardContent className="p-6">
                 {selectedConfigs.map((config: any, idx: number) => (
                   <div key={config.id || idx} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Promedio Mínimo</p>
-                        <p className="text-2xl font-bold text-primary">{config.promedioMinimo ?? '-'}</p>
-                      </div>
-                    </div>
-                    
                     <div className="bg-white border border-gray-200 p-4 rounded-lg">
                       <h3 className="font-semibold mb-2">Requisitos Especiales</h3>
                       <p className="text-sm text-muted-foreground">{config.requisitosEspeciales || 'No tiene ningún requisito'}</p>
@@ -185,20 +178,29 @@ const PostulacionesBecas = () => {
                       )}
                     </div>
                     
-                    {config.semestreMinimo && config.semestreMaximo && (
+                    {(config.promedioMinimo !== undefined || config.semestreMinimo && config.semestreMaximo || config.edadMaxima) && (
                       <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
                         <h3 className="font-semibold mb-2">Requisitos Académicos</h3>
                         <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                            <span>Semestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
-                          </div>
+                          {config.promedioMinimo !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span>Promedio mínimo: {config.promedioMinimo}</span>
+                            </div>
+                          )}
+                          {config.semestreMinimo && config.semestreMaximo && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span>Semestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
+                            </div>
+                          )}
                           {config.edadMaxima && (
                             <div className="flex items-center gap-2">
                               <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
                               <span>Edad máxima: {config.edadMaxima} años</span>
                             </div>
                           )}
+                          {/* Cupos no se muestra en requisitos */}
                         </div>
                       </div>
                     )}

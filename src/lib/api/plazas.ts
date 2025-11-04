@@ -6,11 +6,8 @@ export interface PlazaResponse {
   data: {
     plazas: Array<{
       id: string;
-      materia: string;
-      codigo: string;
-      departamento: string;
+      nombre: string;
       ubicacion: string;
-      profesor: string;
       capacidad: number;
       ocupadas: number;
       horario: Array<{
@@ -32,7 +29,6 @@ export interface PlazaResponse {
         nombre: string;
         apellido: string;
         email: string;
-        departamento: string;
       };
       observaciones: string;
       disponibilidad: string;
@@ -65,7 +61,6 @@ export interface PlazaResponse {
 }
 
 export interface FetchPlazasParams {
-  departamento?: string;
   estado?: string;
   tipoAyudantia?: string;
   periodoAcademico?: string;
@@ -77,8 +72,7 @@ export interface FetchPlazasParams {
 
 export async function fetchPlazas(accessToken: string, params?: FetchPlazasParams): Promise<PlazaResponse> {
   const searchParams = new URLSearchParams();
-  
-  if (params?.departamento) searchParams.append('departamento', params.departamento);
+
   if (params?.estado) searchParams.append('estado', params.estado);
   if (params?.tipoAyudantia) searchParams.append('tipoAyudantia', params.tipoAyudantia);
   if (params?.periodoAcademico) searchParams.append('periodoAcademico', params.periodoAcademico);
@@ -110,28 +104,21 @@ export async function fetchPlazas(accessToken: string, params?: FetchPlazasParam
 }
 
 export interface CreatePlazaRequest {
-  materia: string;
-  codigo: string;
-  departamento: string;
+  nombre: string;
   ubicacion: string;
-  profesor: string;
   capacidad: number;
-  ocupadas: number;
   horario: Array<{
     dia: string;
     horaInicio: string;
     horaFin: string;
   }>;
-  estado: string;
   tipoAyudantia: string;
   descripcionActividades: string;
   requisitosEspeciales: string[];
   horasSemana: number;
   periodoAcademico: string;
-  fechaInicio: string;
-  fechaFin: string;
   supervisorResponsable: string;
-  observaciones: string;
+  observaciones?: string;
 }
 
 export interface CreatePlazaResponse {
@@ -139,11 +126,8 @@ export interface CreatePlazaResponse {
   message: string;
   data: {
     id: string;
-    materia: string;
-    codigo: string;
-    departamento: string;
+    nombre: string;
     ubicacion: string;
-    profesor: string;
     capacidad: number;
     ocupadas: number;
     horario: Array<{
@@ -157,8 +141,6 @@ export interface CreatePlazaResponse {
     requisitosEspeciales: string[];
     horasSemana: number;
     periodoAcademico: string;
-    fechaInicio: string;
-    fechaFin: string;
     supervisorResponsable: string;
     observaciones: string;
     createdAt: string;
@@ -198,28 +180,22 @@ export async function createPlaza(accessToken: string, plazaData: CreatePlazaReq
 }
 
 export interface UpdatePlazaRequest {
-  materia: string;
-  codigo: string;
-  departamento: string;
-  ubicacion: string;
-  profesor: string;
-  capacidad: number;
-  ocupadas: number;
-  horario: Array<{
+  nombre?: string;
+  ubicacion?: string;
+  capacidad?: number;
+  horario?: Array<{
     dia: string;
     horaInicio: string;
     horaFin: string;
   }>;
-  estado: string;
-  tipoAyudantia: string;
-  descripcionActividades: string;
-  requisitosEspeciales: string[];
-  horasSemana: number;
-  periodoAcademico: string;
-  fechaInicio: string;
-  fechaFin: string;
-  supervisorResponsable: string;
-  observaciones: string;
+  estado?: string;
+  tipoAyudantia?: string;
+  descripcionActividades?: string;
+  requisitosEspeciales?: string[];
+  horasSemana?: number;
+  periodoAcademico?: string;
+  supervisorResponsable?: string;
+  observaciones?: string;
 }
 
 export interface UpdatePlazaResponse {
@@ -227,11 +203,8 @@ export interface UpdatePlazaResponse {
   message: string;
   data: {
     id: string;
-    materia: string;
-    codigo: string;
-    departamento: string;
+    nombre: string;
     ubicacion: string;
-    profesor: string;
     capacidad: number;
     ocupadas: number;
     horario: Array<{
@@ -245,8 +218,6 @@ export interface UpdatePlazaResponse {
     requisitosEspeciales: string[];
     horasSemana: number;
     periodoAcademico: string;
-    fechaInicio: string;
-    fechaFin: string;
     supervisorResponsable: string;
     observaciones: string;
     updatedAt: string;
@@ -385,10 +356,8 @@ export interface AssignBecarioResponse {
     };
     plaza: {
       id: string;
-      materia: string;
-      codigo: string;
-      departamento: string;
-      profesor: string;
+      nombre: string;
+      ubicacion: string;
       tipoAyudantia: string;
       horasSemana: number;
       capacidad: number;
@@ -574,11 +543,8 @@ export interface PlazaDetailResponse {
   message: string;
   data: {
     id: string;
-    materia: string;
-    codigo: string;
-    departamento: string;
+    nombre: string;
     ubicacion: string;
-    profesor: string;
     capacidad: number;
     ocupadas: number;
     horario: Array<{
@@ -592,15 +558,12 @@ export interface PlazaDetailResponse {
     requisitosEspeciales: string[];
     horasSemana: number;
     periodoAcademico: string;
-    fechaInicio: string;
-    fechaFin: string;
     supervisorResponsable: string;
     supervisor: {
       id: string;
       nombre: string;
       apellido: string;
       email: string;
-      departamento: string;
     };
     observaciones: string;
     disponibilidad: string;

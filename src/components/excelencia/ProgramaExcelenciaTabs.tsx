@@ -101,72 +101,7 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
           </Button>
         </div>
         
-        {/* Mostrar requisitos arriba del formulario */}
-        {config && (
-          <Card className="mb-6 border-0 shadow-lg w-full">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Promedio Mínimo</p>
-                    <p className="text-2xl font-bold text-primary">{config.promedioMinimo ?? '-'}</p>
-                  </div>
-                </div>
-                
-                {config.requisitosEspeciales && (
-                  <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Requisitos Especiales</h3>
-                    <p className="text-sm text-muted-foreground">{config.requisitosEspeciales}</p>
-                  </div>
-                )}
-                
-                <div className="bg-white border border-gray-200 p-4 rounded-lg">
-                  <h3 className="font-semibold mb-3">Documentos Requeridos</h3>
-                  {Array.isArray(config.documentosRequeridos) && config.documentosRequeridos.length > 0 ? (
-                    <ul className="space-y-2">
-                      {config.documentosRequeridos.map((doc: string, i: number) => (
-                        <li key={i} className="flex items-center text-sm">
-                          <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
-                          {doc}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No tiene ningún requisito</p>
-                  )}
-                </div>
-                
-                {(config.semestreMinimo || config.semestreMaximo || config.edadMaxima) && (
-                  <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Requisitos Académicos</h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {config.semestreMinimo && config.semestreMaximo && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                          <span>Semestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
-                        </div>
-                      )}
-                      {config.edadMaxima && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                          <span>Edad máxima: {config.edadMaxima} años</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {!config && (
-          <Card className="mb-6 border-0 shadow-lg w-full">
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground text-center">Este programa no tiene requisitos configurados</p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Requisitos ocultos - No se muestran arriba del formulario para Excelencia */}
         
         <UnifiedApplicationForm 
           programTitle={`Programa de Excelencia - ${program?.title}`}
@@ -211,19 +146,15 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
 
                 {/* Información de la beca (sin monto) */}
                 {program.config ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-white border border-gray-200 p-4 rounded-lg text-center shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Cupos</p>
-                      <p className="text-xl font-semibold text-primary">{program.config.cuposDisponibles}</p>
-                    </div>
-                    <div className="bg-white border border-gray-200 p-4 rounded-lg text-center shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Promedio mínimo</p>
-                      <p className="text-xl font-semibold text-primary">{program.config.promedioMinimo}</p>
-                    </div>
-                    <div className="bg-white border border-gray-200 p-4 rounded-lg text-center shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Duración</p>
-                      <p className="text-xl font-semibold text-primary">{program.config.duracionMeses} meses</p>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
+                    {/* Cupos no se muestra en requisitos */}
+                    {/* Promedio mínimo movido a Requisitos Académicos */}
+                    {program.config.duracionMeses && (
+                      <div className="bg-white border border-gray-200 p-4 rounded-lg text-center shadow-sm">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Duración</p>
+                        <p className="text-xl font-semibold text-primary">{program.config.duracionMeses} meses</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="mb-6">

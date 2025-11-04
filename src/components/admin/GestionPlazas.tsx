@@ -16,11 +16,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchPlazas, createPlaza, updatePlaza, fetchUsers, fetchBecarios, assignBecarioToPlaza, assignSupervisorToPlaza, fetchPlazaById, verificarCompatibilidadHorario, API_BASE } from "@/lib/api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { getAllPostulaciones, aprobarPostulacion, rechazarPostulacion } from "@/lib/api/postulacionesPlazas";
 
 interface Plaza {
   id: string;
   nombre: string;
-  departamento: string;
   ubicacion: string;
   supervisor: {
     id: string;
@@ -38,9 +38,6 @@ interface Plaza {
   requisitos: string[];
   fechaCreacion: string;
   // Propiedades del API para edición
-  materia?: string;
-  codigo?: string;
-  profesor?: string;
   capacidad?: number;
   ocupadas?: number;
   horario?: Array<{
@@ -53,8 +50,6 @@ interface Plaza {
   requisitosEspeciales?: string[];
   horasSemana?: number;
   periodoAcademico?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
   supervisorResponsable?: string;
   observaciones?: string;
   // Datos de estudiantes asignados
@@ -81,7 +76,6 @@ const GestionPlazas = () => {
   const { toast } = useToast();
   const { tokens } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterDepartamento, setFilterDepartamento] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [selectedPlaza, setSelectedPlaza] = useState<Plaza | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -92,6 +86,12 @@ const GestionPlazas = () => {
   const [supervisores, setSupervisores] = useState<Array<{id: string, nombre: string, apellido?: string, email: string}>>([]);
   const [loadingSupervisores, setLoadingSupervisores] = useState(false);
   const [loadingPlazaDetails, setLoadingPlazaDetails] = useState(false);
+
+  // Estados para postulaciones
+  const [postulaciones, setPostulaciones] = useState<any[]>([]);
+  const [loadingPostulaciones, setLoadingPostulaciones] = useState(false);
+  const [showPostulacionesModal, setShowPostulacionesModal] = useState(false);
+  const [selectedPostulacion, setSelectedPostulacion] = useState<any>(null);
 
   // Estados para asignar becarios
   const [isAssigningBecario, setIsAssigningBecario] = useState(false);
@@ -139,22 +139,15 @@ const GestionPlazas = () => {
   useEffect(() => {
     if (isCreating && !isEditing) {
       setFormData({
-        materia: "",
-        codigo: "",
-        departamento: "",
+        nombre: "",
         ubicacion: "",
-        profesor: "",
         capacidad: 1,
-        ocupadas: 0,
         horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
-        estado: "Activa",
         tipoAyudantia: "academica",
         descripcionActividades: "",
         requisitosEspeciales: [""],
-        horasSemana: 0,
+        horasSemana: 10,
         periodoAcademico: "2025-1",
-        fechaInicio: "",
-        fechaFin: "",
         supervisorResponsable: "",
         observaciones: ""
       });
@@ -162,22 +155,15 @@ const GestionPlazas = () => {
   }, [isCreating, isEditing]);
 
   const [formData, setFormData] = useState({
-    materia: "",
-    codigo: "",
-    departamento: "",
+    nombre: "",
     ubicacion: "",
-    profesor: "",
     capacidad: 1,
-    ocupadas: 0,
     horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
-    estado: "Activa",
     tipoAyudantia: "academica",
     descripcionActividades: "",
     requisitosEspeciales: [""],
     horasSemana: 10,
     periodoAcademico: "2025-1",
-    fechaInicio: "",
-    fechaFin: "",
     supervisorResponsable: "",
     observaciones: ""
   });
@@ -191,8 +177,7 @@ const GestionPlazas = () => {
     }
     setLoading(true);
     try {
-      const res = await fetchPlazas(accessToken, { 
-        departamento: filterDepartamento !== 'todos' ? filterDepartamento : undefined,
+      const res = await fetchPlazas(accessToken, {
         estado: filterEstado !== 'todos' ? filterEstado : undefined,
         search: searchTerm || undefined,
         limit: 20,
@@ -200,8 +185,7 @@ const GestionPlazas = () => {
       });
       const mapped = res.data.plazas.map(p => ({
         id: p.id,
-        nombre: p.materia,
-        departamento: p.departamento,
+        nombre: p.nombre,
         ubicacion: p.ubicacion,
         supervisor: p.supervisor,
         supervisorNombre: p.supervisor ? `${p.supervisor.nombre}${p.supervisor.apellido ? ` ${p.supervisor.apellido}` : ''}` : '-',
@@ -214,9 +198,6 @@ const GestionPlazas = () => {
         requisitos: p.requisitosEspeciales,
         fechaCreacion: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : 'N/A',
         // Propiedades del API para edición
-        materia: p.materia,
-        codigo: p.codigo,
-        profesor: p.profesor,
         capacidad: p.capacidad,
         ocupadas: p.ocupadas,
         horario: p.horario,
@@ -225,8 +206,6 @@ const GestionPlazas = () => {
         requisitosEspeciales: p.requisitosEspeciales,
         horasSemana: p.horasSemana,
         periodoAcademico: p.periodoAcademico,
-        fechaInicio: p.fechaInicio,
-        fechaFin: p.fechaFin,
         supervisorResponsable: p.supervisorResponsable,
         observaciones: p.observaciones,
         // Datos de estudiantes asignados
@@ -266,33 +245,32 @@ const GestionPlazas = () => {
       }
       
       const plazaData = {
-        ...formData,
-        requisitosEspeciales: requisitos,
+        nombre: formData.nombre,
+        ubicacion: formData.ubicacion,
+        capacidad: formData.capacidad,
         horario: horarios,
-        fechaInicio: formData.fechaInicio || new Date().toISOString().split('T')[0],
-        fechaFin: formData.fechaFin || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        tipoAyudantia: formData.tipoAyudantia,
+        descripcionActividades: formData.descripcionActividades,
+        requisitosEspeciales: requisitos,
+        horasSemana: formData.horasSemana,
+        periodoAcademico: formData.periodoAcademico,
+        supervisorResponsable: formData.supervisorResponsable,
+        observaciones: formData.observaciones
       };
-      
+
       await createPlaza(accessToken, plazaData);
       toast({ title: 'Éxito', description: 'Plaza creada exitosamente' });
       setIsCreating(false);
       setFormData({
-        materia: "",
-        codigo: "",
-        departamento: "",
+        nombre: "",
         ubicacion: "",
-        profesor: "",
         capacidad: 1,
-        ocupadas: 0,
         horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
-        estado: "Activa",
         tipoAyudantia: "academica",
         descripcionActividades: "",
         requisitosEspeciales: [""],
         horasSemana: 10,
         periodoAcademico: "2025-1",
-        fechaInicio: "",
-        fechaFin: "",
         supervisorResponsable: "",
         observaciones: ""
       });
@@ -329,21 +307,10 @@ const GestionPlazas = () => {
   const handleEditPlaza = (plaza: Plaza) => {
     console.log('Editando plaza:', plaza); // Debug log
     setEditingPlaza(plaza);
-    
-    // Formatear fechas para el input date
-    const formatDate = (dateString: string | undefined) => {
-      if (!dateString) return "";
-      try {
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
-      } catch {
-        return "";
-      }
-    };
 
     // Asegurar que requisitosEspeciales sea un array
-    const requisitos = Array.isArray(plaza.requisitosEspeciales) 
-      ? plaza.requisitosEspeciales 
+    const requisitos = Array.isArray(plaza.requisitosEspeciales)
+      ? plaza.requisitosEspeciales
       : [""];
 
     // Asegurar que horario sea un array
@@ -352,22 +319,15 @@ const GestionPlazas = () => {
       : [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }];
 
     setFormData({
-      materia: plaza.materia || "",
-      codigo: plaza.codigo || "",
-      departamento: plaza.departamento || "",
+      nombre: plaza.nombre || "",
       ubicacion: plaza.ubicacion || "",
-      profesor: plaza.profesor || "",
       capacidad: plaza.capacidad || 1,
-      ocupadas: plaza.ocupadas || 0,
       horario: horario,
-      estado: plaza.estado || "Activa",
       tipoAyudantia: plaza.tipoAyudantia || "academica",
       descripcionActividades: plaza.descripcionActividades || "",
       requisitosEspeciales: requisitos,
       horasSemana: plaza.horasSemana || 10,
-      periodoAcademico: plaza.periodoAcademico || "2025-1", // Valor por defecto para campo requerido
-      fechaInicio: formatDate(plaza.fechaInicio) || new Date().toISOString().split('T')[0],
-      fechaFin: formatDate(plaza.fechaFin) || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      periodoAcademico: plaza.periodoAcademico || "2025-1",
       supervisorResponsable: plaza.supervisorResponsable || "",
       observaciones: plaza.observaciones || ""
     });
@@ -437,22 +397,15 @@ const GestionPlazas = () => {
     setIsEditing(false);
     setEditingPlaza(null);
     setFormData({
-      materia: "",
-      codigo: "",
-      departamento: "",
+      nombre: "",
       ubicacion: "",
-      profesor: "",
       capacidad: 1,
-      ocupadas: 0,
       horario: [{ dia: "Lunes", horaInicio: "08:00", horaFin: "12:00" }],
-      estado: "Activa",
       tipoAyudantia: "academica",
       descripcionActividades: "",
       requisitosEspeciales: [""],
       horasSemana: 10,
       periodoAcademico: "2025-1",
-      fechaInicio: "",
-      fechaFin: "",
       supervisorResponsable: "",
       observaciones: ""
     });
@@ -484,9 +437,9 @@ const GestionPlazas = () => {
       const res = await response.json();
       console.log('Supervisores response:', res);
 
-      // Filtrar solo supervisores con plazasAsignadas vacías o que tengan plazas
+      // Filtrar solo supervisores SIN plazas asignadas (plazasAsignadas debe estar vacío)
       const supervisoresDisponibles = res.data.supervisores.filter((sup: any) =>
-        Array.isArray(sup.plazasAsignadas)
+        Array.isArray(sup.plazasAsignadas) && sup.plazasAsignadas.length === 0
       );
 
       const mapped = supervisoresDisponibles.map((u: any) => ({
@@ -685,8 +638,7 @@ const GestionPlazas = () => {
 
       const plazaDetallada: Plaza = {
         id: p.id,
-        nombre: p.materia,
-        departamento: p.departamento,
+        nombre: p.nombre,
         ubicacion: p.ubicacion,
         supervisor: p.supervisor,
         supervisorNombre: p.supervisor ? `${p.supervisor.nombre}${p.supervisor.apellido ? ` ${p.supervisor.apellido}` : ''}` : '-',
@@ -698,9 +650,6 @@ const GestionPlazas = () => {
         descripcion: p.descripcionActividades,
         requisitos: p.requisitosEspeciales,
         fechaCreacion: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : 'N/A',
-        materia: p.materia,
-        codigo: p.codigo,
-        profesor: p.profesor,
         capacidad: p.capacidad,
         ocupadas: p.ocupadas,
         horario: p.horario,
@@ -709,8 +658,6 @@ const GestionPlazas = () => {
         requisitosEspeciales: p.requisitosEspeciales,
         horasSemana: p.horasSemana,
         periodoAcademico: p.periodoAcademico,
-        fechaInicio: p.fechaInicio,
-        fechaFin: p.fechaFin,
         supervisorResponsable: p.supervisorResponsable,
         observaciones: p.observaciones,
         estudiantesAsignados: p.estudiantesAsignados || []
@@ -830,78 +777,36 @@ const GestionPlazas = () => {
     }
   };
 
+  // Función para cargar postulaciones
+  const loadPostulaciones = async () => {
+    const accessToken = tokens?.accessToken;
+    if (!accessToken) return;
+
+    setLoadingPostulaciones(true);
+    try {
+      const data = await getAllPostulaciones(accessToken, {
+        estado: 'Pendiente',
+        limit: 100
+      });
+      const postulacionesData = data?.data?.postulaciones || [];
+      setPostulaciones(Array.isArray(postulacionesData) ? postulacionesData : []);
+    } catch (error) {
+      console.error('Error cargando postulaciones:', error);
+      setPostulaciones([]);
+    } finally {
+      setLoadingPostulaciones(false);
+    }
+  };
+
   useEffect(() => {
     if (tokens?.accessToken) {
       loadPlazas();
       loadSupervisores();
+      loadPostulaciones();
     }
-  }, [tokens?.accessToken, filterDepartamento, filterEstado, searchTerm]);
+  }, [tokens?.accessToken, filterEstado, searchTerm]);
 
   // Ya no necesitamos verificar disponibilidad - el endpoint ya trae becarios compatibles
-
-  // Mock data (temporal)
-  const plazasMock: Plaza[] = [
-    {
-      id: "1",
-      nombre: "Laboratorio de Sistemas",
-      departamento: "Ingeniería",
-      ubicacion: "Edificio A, Piso 3",
-      supervisor: "Prof. María Fernández",
-      capacidadMaxima: 6,
-      ayudantesActuales: 4,
-      tipoActividad: "Apoyo Técnico",
-      horarios: ["Lunes 8:00-12:00", "Miércoles 14:00-18:00", "Viernes 8:00-12:00"],
-      estado: "Activa",
-      descripcion: "Apoyo en laboratorio de sistemas, mantenimiento de equipos y asistencia en clases prácticas",
-      requisitos: ["Estudiante de Ingeniería", "Promedio mínimo 16", "Conocimientos en sistemas"],
-      fechaCreacion: "2024-01-15"
-    },
-    {
-      id: "2",
-      nombre: "Biblioteca Central",
-      departamento: "Servicios Académicos",
-      ubicacion: "Edificio Central, Planta Baja",
-      supervisor: "Dr. Roberto Sánchez",
-      capacidadMaxima: 8,
-      ayudantesActuales: 8,
-      tipoActividad: "Apoyo Bibliotecario",
-      horarios: ["Lunes a Viernes 8:00-17:00", "Sábados 8:00-13:00"],
-      estado: "Completa",
-      descripcion: "Catalogación, atención al usuario, digitalización de documentos y mantenimiento del acervo",
-      requisitos: ["Cualquier carrera", "Promedio mínimo 15", "Habilidades organizacionales"],
-      fechaCreacion: "2023-09-01"
-    },
-    {
-      id: "3",
-      nombre: "Departamento de Admisión",
-      departamento: "Administración",
-      ubicacion: "Edificio B, Piso 1",
-      supervisor: "Prof. Ana García",
-      capacidadMaxima: 4,
-      ayudantesActuales: 2,
-      tipoActividad: "Apoyo Administrativo",
-      horarios: ["Lunes a Viernes 8:00-16:00"],
-      estado: "Activa",
-      descripcion: "Atención al público, procesamiento de documentos de admisión y apoyo administrativo general",
-      requisitos: ["Estudiante de Administración o carreras afines", "Promedio mínimo 16", "Habilidades de atención al cliente"],
-      fechaCreacion: "2024-02-20"
-    },
-    {
-      id: "4",
-      nombre: "Centro de Investigación",
-      departamento: "Investigación",
-      ubicacion: "Edificio C, Piso 2",
-      supervisor: "Dra. Laura Mendoza",
-      capacidadMaxima: 3,
-      ayudantesActuales: 1,
-      tipoActividad: "Apoyo en Investigación",
-      horarios: ["Martes y Jueves 9:00-15:00"],
-      estado: "Activa",
-      descripcion: "Apoyo en proyectos de investigación, revisión bibliográfica y preparación de materiales",
-      requisitos: ["Estudiante de últimos semestres", "Promedio mínimo 17", "Interés en investigación"],
-      fechaCreacion: "2024-03-10"
-    }
-  ];
 
 
   const getEstadoBadge = (estado: string) => {
@@ -930,13 +835,12 @@ const GestionPlazas = () => {
 
   const filteredPlazas = plazas.filter(plaza => {
     const matchesSearch = plaza.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plaza.supervisor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plaza.supervisorNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          plaza.ubicacion.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDepartamento = filterDepartamento === "todos" || plaza.departamento === filterDepartamento;
+
     const matchesEstado = filterEstado === "todos" || plaza.estado === filterEstado;
-    
-    return matchesSearch && matchesDepartamento && matchesEstado;
+
+    return matchesSearch && matchesEstado;
   });
 
   const estadisticas = {
@@ -949,7 +853,8 @@ const GestionPlazas = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header con título y botón */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-primary">Gestión de Plazas</h2>
           <p className="text-muted-foreground">Administración de plazas de trabajo para ayudantías</p>
@@ -966,9 +871,7 @@ const GestionPlazas = () => {
           }
         }}>
           <DialogTrigger asChild>
-            <Button 
-              className="bg-primary hover:bg-primary/90"
-            >
+            <Button className="bg-primary hover:bg-primary/90 whitespace-nowrap">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Plaza
             </Button>
@@ -978,14 +881,27 @@ const GestionPlazas = () => {
               <DialogTitle>{isEditing ? 'Editar Plaza' : 'Crear Nueva Plaza'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              
+
+              <div>
+                <Label htmlFor="nombre">Nombre de la Plaza *</Label>
+                <Input
+                  id="nombre"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                  placeholder='Ejemplo: "Ayudantía de Laboratorio de Física - Grupo A"'
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ingresa un nombre descriptivo (3-200 caracteres) que identifique claramente esta plaza.
+                </p>
+              </div>
+
               <div>
                 <Label htmlFor="ubicacion">Ubicación *</Label>
-                <Input 
-                  id="ubicacion" 
+                <Input
+                  id="ubicacion"
                   value={formData.ubicacion}
                   onChange={(e) => setFormData({...formData, ubicacion: e.target.value})}
-                  placeholder="Ej: Edificio A, Piso 3, Oficina 301" 
+                  placeholder="Ej: Edificio A, Piso 3, Oficina 301"
                 />
               </div>
               
@@ -1022,27 +938,6 @@ const GestionPlazas = () => {
                       <SelectItem value="administrativa">Administrativa</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="fechaInicio">Fecha Inicio *</Label>
-                  <Input 
-                    id="fechaInicio" 
-                    type="date" 
-                    value={formData.fechaInicio}
-                    onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fechaFin">Fecha Fin *</Label>
-                  <Input 
-                    id="fechaFin" 
-                    type="date" 
-                    value={formData.fechaFin}
-                    onChange={(e) => setFormData({...formData, fechaFin: e.target.value})}
-                  />
                 </div>
               </div>
               
@@ -1247,18 +1142,6 @@ const GestionPlazas = () => {
                 className="pl-9"
               />
             </div>
-            <Select value={filterDepartamento} onValueChange={setFilterDepartamento}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los Departamentos</SelectItem>
-                <SelectItem value="Ingeniería">Ingeniería</SelectItem>
-                <SelectItem value="Administración">Administración</SelectItem>
-                <SelectItem value="Servicios Académicos">Servicios Académicos</SelectItem>
-                <SelectItem value="Investigación">Investigación</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={filterEstado} onValueChange={setFilterEstado}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Estado" />
@@ -1275,7 +1158,7 @@ const GestionPlazas = () => {
       </Card>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
@@ -1297,6 +1180,25 @@ const GestionPlazas = () => {
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-600">{estadisticas.completas}</p>
               <p className="text-sm text-muted-foreground">Completas</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow border-orange-200"
+          onClick={() => setShowPostulacionesModal(true)}
+        >
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-2xl font-bold text-orange-600">{postulaciones.length}</p>
+                {postulaciones.length > 0 && (
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">Postulaciones Pendientes</p>
             </div>
           </CardContent>
         </Card>
@@ -1332,7 +1234,11 @@ const GestionPlazas = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPlazas.map((plaza) => (
+            {filteredPlazas.map((plaza) => {
+              const postulacionesPlaza = postulaciones.filter(p => p.plazaId === plaza.id && p.estado === 'Pendiente');
+              const tienePostulaciones = postulacionesPlaza.length > 0;
+
+              return (
               <Card
                 key={plaza.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer border-l-4"
@@ -1341,9 +1247,19 @@ const GestionPlazas = () => {
                 }}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <CardTitle className="text-lg mb-1">{plaza.nombre}</CardTitle>
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-lg">{plaza.nombre}</CardTitle>
+                        {tienePostulaciones && (
+                          <Badge
+                            variant="outline"
+                            className="bg-orange-50 text-orange-700 border-orange-300 text-xs px-2 py-0.5"
+                          >
+                            {postulacionesPlaza.length} {postulacionesPlaza.length === 1 ? 'postulación' : 'postulaciones'}
+                          </Badge>
+                        )}
+                      </div>
                       <CardDescription className="flex items-center text-sm">
                         <MapPin className="h-3 w-3 mr-1" />
                         {plaza.ubicacion}
@@ -1356,16 +1272,16 @@ const GestionPlazas = () => {
                   {/* Info básica */}
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Departamento:</span>
-                      <span className="font-medium">{plaza.departamento}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Supervisor:</span>
                       <span className="font-medium text-xs">{plaza.supervisorNombre}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Tipo:</span>
                       <Badge variant="outline" className="text-xs">{plaza.tipoActividad}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Periodo:</span>
+                      <span className="font-medium text-xs">{plaza.periodoAcademico || 'N/A'}</span>
                     </div>
                   </div>
 
@@ -1436,7 +1352,8 @@ const GestionPlazas = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -1447,7 +1364,7 @@ const GestionPlazas = () => {
           <SheetHeader>
             <SheetTitle className="text-2xl">{selectedPlaza?.nombre || 'Detalles de Plaza'}</SheetTitle>
             <SheetDescription>
-              {selectedPlaza?.departamento} • {selectedPlaza?.ubicacion}
+              {selectedPlaza?.ubicacion}
             </SheetDescription>
           </SheetHeader>
 
@@ -1882,6 +1799,164 @@ const GestionPlazas = () => {
                     Asignar Estudiante
                   </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sheet para ver postulaciones */}
+      <Sheet open={showPostulacionesModal} onOpenChange={setShowPostulacionesModal}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Postulaciones Pendientes ({postulaciones.length})</SheetTitle>
+            <SheetDescription>
+              Revisa y gestiona las postulaciones de estudiantes a plazas de ayudantía
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-4">
+            {loadingPostulaciones ? (
+              <div className="flex justify-center py-8">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : postulaciones.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground">No hay postulaciones pendientes</p>
+              </div>
+            ) : (
+              postulaciones.map((postulacion) => (
+                <Card key={postulacion.id} className="border-orange/20">
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      {/* Estudiante */}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Estudiante</p>
+                        <p className="font-semibold">
+                          {postulacion.estudianteBecario?.usuario?.nombre} {postulacion.estudianteBecario?.usuario?.apellido}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{postulacion.estudianteBecario?.usuario?.email}</p>
+                      </div>
+
+                      {/* Plaza */}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Plaza</p>
+                        <p className="font-semibold">{postulacion.plaza?.nombre}</p>
+                        <p className="text-sm text-muted-foreground">{postulacion.plaza?.ubicacion}</p>
+                      </div>
+
+                      {/* Compatibilidad */}
+                      {postulacion.compatibilidadHoraria && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Compatibilidad Horaria</p>
+                          <p className="text-lg font-bold text-green-600">{postulacion.compatibilidadHoraria.porcentaje}%</p>
+                        </div>
+                      )}
+
+                      {/* Fecha */}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Fecha de postulación</p>
+                        <p className="text-sm">{new Date(postulacion.fechaPostulacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                      </div>
+
+                      {/* Botones */}
+                      <div className="flex gap-2 pt-4">
+                        <Button
+                          onClick={async () => {
+                            try {
+                              await aprobarPostulacion(tokens?.accessToken!, postulacion.id);
+                              toast({
+                                title: 'Postulación aprobada',
+                                description: 'El becario ha sido asignado a la plaza exitosamente'
+                              });
+                              await Promise.all([loadPostulaciones(), loadPlazas()]);
+                            } catch (error: any) {
+                              toast({
+                                title: 'Error',
+                                description: error.message || 'No se pudo aprobar la postulación',
+                                variant: 'destructive'
+                              });
+                            }
+                          }}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Aprobar
+                        </Button>
+                        <Button
+                          onClick={() => setSelectedPostulacion(postulacion)}
+                          variant="outline"
+                          className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Rechazar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Dialog para rechazar postulación */}
+      <Dialog open={!!selectedPostulacion} onOpenChange={(open) => !open && setSelectedPostulacion(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar Postulación</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="motivoRechazo">Motivo del rechazo *</Label>
+              <Textarea
+                id="motivoRechazo"
+                placeholder="Ingrese el motivo del rechazo..."
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedPostulacion(null)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  const motivo = (document.getElementById('motivoRechazo') as HTMLTextAreaElement)?.value;
+                  if (!motivo?.trim()) {
+                    toast({
+                      title: 'Error',
+                      description: 'Debes ingresar un motivo para el rechazo',
+                      variant: 'destructive'
+                    });
+                    return;
+                  }
+
+                  try {
+                    await rechazarPostulacion(tokens?.accessToken!, selectedPostulacion.id, motivo);
+                    toast({
+                      title: 'Postulación rechazada',
+                      description: 'La postulación ha sido rechazada exitosamente'
+                    });
+                    setSelectedPostulacion(null);
+                    await loadPostulaciones();
+                  } catch (error: any) {
+                    toast({
+                      title: 'Error',
+                      description: error.message || 'No se pudo rechazar la postulación',
+                      variant: 'destructive'
+                    });
+                  }
+                }}
+                variant="destructive"
+                className="flex-1"
+              >
+                Rechazar
               </Button>
             </div>
           </div>

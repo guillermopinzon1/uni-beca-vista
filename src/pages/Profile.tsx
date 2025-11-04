@@ -1,30 +1,64 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  GraduationCap, 
-  LogOut, 
-  User, 
-  ArrowLeft, 
-  Mail, 
-  Phone, 
-  CreditCard, 
+import {
+  GraduationCap,
+  LogOut,
+  User,
+  ArrowLeft,
+  Mail,
+  Phone,
+  CreditCard,
   Calendar,
   UserCheck,
-  Clock
+  Clock,
+  Award
 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, tokens, user } = useAuth();
+  const [becarioData, setBecarioData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const handleLogout = async () => {
     await logout(() => navigate('/'));
   };
 
+  // Load becario data if user is a student
+  useEffect(() => {
+    const loadBecarioData = async () => {
+      try {
+        const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+        if (!accessToken) return;
+
+        const response = await fetch(`${API_BASE}/v1/becarios/me`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setBecarioData(data.data);
+        }
+      } catch (error) {
+        console.error('Error loading becario data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBecarioData();
+  }, [tokens]);
+
   // Mock user data based on the provided structure
-  const userData = {
+  const userData = user || {
     id: 1,
     nombre: "Juan Carlos",
     apellido: "Pérez González",
@@ -168,6 +202,42 @@ const Profile = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Scholarship Information - Only show if user is a becario */}
+            {becarioData && (
+              <div className="lg:col-span-3">
+                <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Award className="h-5 w-5 text-green-600" />
+                      Información de Beca
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Tipo de Beca</label>
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                          {becarioData.tipoBeca}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Descuento Aplicado</label>
+                        <Badge className="bg-green-100 text-green-800 border-green-200 text-lg font-bold px-4 py-2">
+                          {parseFloat(becarioData.descuentoAplicado || '0').toFixed(0)}%
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Estado</label>
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          {becarioData.estado}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Account Details */}
             <div className="lg:col-span-3">
