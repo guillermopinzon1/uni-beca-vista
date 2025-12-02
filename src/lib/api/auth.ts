@@ -290,4 +290,80 @@ export async function changePassword(body: ChangePasswordRequest, accessToken: s
   return payload as ChangePasswordResponse;
 }
 
+export interface UserProfileResponse {
+  success: boolean;
+  data: {
+    id: string;
+    email: string;
+    nombre: string;
+    apellido: string;
+    cedula?: string;
+    telefono?: string;
+    carnet?: string;
+    role: string;
+    carrera?: string;
+    trimestre?: number;
+    iaa?: number;
+    asignaturasAprobadas?: number;
+    activo: boolean;
+    emailVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
 
+export async function getUserProfile(accessToken: string): Promise<UserProfileResponse> {
+  const response = await fetch(`${API_BASE}/v1/auth/profile`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error obteniendo perfil (${response.status})`;
+    throw new Error(message);
+  }
+
+  return payload as UserProfileResponse;
+}
+
+export interface DeleteUserResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    userId: string;
+    message: string;
+  };
+}
+
+export async function deleteUser(userId: string, accessToken: string): Promise<DeleteUserResponse> {
+  const response = await fetch(`${API_BASE}/v1/users/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    let message = payload?.message || `Error eliminando usuario (${response.status})`;
+    if (response.status === 403) {
+      message = 'No tienes permisos para realizar esta acción';
+    } else if (response.status === 404) {
+      message = 'Usuario no encontrado';
+    }
+    throw new Error(message);
+  }
+
+  return payload as DeleteUserResponse;
+}

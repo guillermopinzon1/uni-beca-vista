@@ -29,8 +29,9 @@ export interface EstudianteBecarioDetallado {
   periodoInicio: string;
   periodoFin: string | null;
   horasRequeridas: number;
-  horasCompletadas: number;
+  horasCompletadas: number | string;
   descuentoAplicado: number;
+  trimestresCursados?: number;
   usuario: {
     id: string;
     nombre: string;
@@ -777,4 +778,55 @@ export async function obtenerSupervisorCompleto(
   }
 
   return payload as ObtenerSupervisorCompletoResponse;
+}
+
+// ============================================
+// API FUNCTIONS - Actualizar Horas del Periodo
+// ============================================
+
+export interface ActualizarHorasPeriodoRequest {
+  horasCompletadas: number;
+  periodoAcademico?: string;
+}
+
+export interface ActualizarHorasPeriodoResponse {
+  success: true;
+  message: string;
+  timestamp: string;
+  data: {
+    estudianteBecario: EstudianteBecarioDetallado;
+  };
+}
+
+/**
+ * Actualizar horas completadas del periodo para un becario
+ * PATCH /api/v1/becarios/{becarioId}/horas-periodo
+ */
+export async function actualizarHorasPeriodo(
+  accessToken: string,
+  becarioId: string,
+  data: ActualizarHorasPeriodoRequest
+): Promise<ActualizarHorasPeriodoResponse> {
+  const url = `${API_BASE}/v1/becarios/${becarioId}/horas-periodo`;
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error actualizando horas del periodo (${response.status})`;
+    throw new Error(message);
+  }
+
+  return payload as ActualizarHorasPeriodoResponse;
 }

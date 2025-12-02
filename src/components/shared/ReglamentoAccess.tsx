@@ -23,32 +23,32 @@ const ReglamentoAccess: React.FC<ReglamentoAccessProps> = ({ becaType }) => {
     switch (becaType) {
       case 'excelencia':
         return {
-          title: 'Reglamento - Beca de Excelencia Académica',
+          title: 'REGLAMENTO DEL PROGRAMA DE BENEFICIOS SOCIOECONÓMICOS Y BECAS DE LA UNIVERSIDAD METROPOLITANA',
           description: 'Consulta las normas específicas para la Beca de Excelencia Académica'
         };
       case 'impacto':
         return {
-          title: 'Reglamento - Beca de Impacto Social',
+          title: 'REGLAMENTO DEL PROGRAMA DE BENEFICIOS SOCIOECONÓMICOS Y BECAS DE LA UNIVERSIDAD METROPOLITANA',
           description: 'Consulta las normas específicas para la Beca de Impacto Social'
         };
       case 'exoneracion':
         return {
-          title: 'Reglamento - Exoneración de Aranceles',
+          title: 'REGLAMENTO DEL PROGRAMA DE BENEFICIOS SOCIOECONÓMICOS Y BECAS DE LA UNIVERSIDAD METROPOLITANA',
           description: 'Consulta las normas específicas para la Exoneración de Aranceles'
         };
       case 'ayudantia':
         return {
-          title: 'Reglamento - Programa de Ayudantías',
+          title: 'REGLAMENTO DEL PROGRAMA DE BENEFICIOS SOCIOECONÓMICOS Y BECAS DE LA UNIVERSIDAD METROPOLITANA',
           description: 'Consulta las normas específicas para el Programa de Ayudantías'
         };
       case 'formacion-docente':
         return {
-          title: 'Reglamento - Formación Docente',
+          title: 'REGLAMENTO DEL PROGRAMA DE BENEFICIOS SOCIOECONÓMICOS Y BECAS DE LA UNIVERSIDAD METROPOLITANA',
           description: 'Consulta las normas específicas para la Beca de Formación Docente'
         };
       default:
         return {
-          title: 'Reglamento General',
+          title: 'REGLAMENTO DEL PROGRAMA DE BENEFICIOS SOCIOECONÓMICOS Y BECAS DE LA UNIVERSIDAD METROPOLITANA',
           description: 'Consulta el reglamento general del programa de becas'
         };
     }

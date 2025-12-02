@@ -1,285 +1,279 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  DollarSign, 
-  Shield, 
-  Dumbbell,
-  Shirt,
-  Bus,
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Gift,
+  Award,
+  Info,
+  CheckCircle,
+  XCircle,
+  DollarSign,
   BookOpen,
-  GraduationCap,
-  Phone,
-  Mail,
-  Calendar,
-  Download,
-  HelpCircle,
-  Globe,
   Users,
-  Star
+  AlertTriangle
 } from "lucide-react";
 
 const BeneficiosRecursos = ({ scholarshipType }: { scholarshipType?: string }) => {
-  
-  const getBenefitsData = () => {
-    const commonBenefits = [
-      {
-        titulo: "Cobertura Económica",
-        descripcion: scholarshipType === 'academica' ? "15%, 25% o 50% según estudio socioeconómico" : "15%, 25% o 50% según estudio socioeconómico",
-        icono: <DollarSign className="h-6 w-6" />,
-        valor: "Variable",
-        activo: true
-      },
-      {
-        titulo: "Acompañamiento Integral",
-        descripcion: "Seguimiento trimestral obligatorio",
-        icono: <Users className="h-6 w-6" />,
-        valor: "Incluido",
-        activo: true
-      },
-      {
-        titulo: "Prioridad Académica",
-        descripcion: "Prioridad en inscripción de materias",
-        icono: <BookOpen className="h-6 w-6" />,
-        valor: "Prioridad",
-        activo: true
-      }
-    ];
 
-    const specificBenefits = {
-      academica: [
-        {
-          titulo: "Reconocimiento Lista del Rector",
-          descripcion: "Posibilidad de obtener reconocimientos académicos",
-          icono: <Star className="h-6 w-6" />,
-          valor: "Elegible",
-          activo: true
-        },
-        {
-          titulo: "Acceso a Investigación",
-          descripcion: "Participación en proyectos de investigación",
-          icono: <GraduationCap className="h-6 w-6" />,
-          valor: "Disponible",
-          activo: true
-        }
-      ],
-      deportiva: [
-        {
-          titulo: "Seguro Deportivo",
-          descripcion: "Seguro deportivo incluido",
-          icono: <Shield className="h-6 w-6" />,
-          valor: "Incluido",
-          activo: true
-        },
-        {
-          titulo: "Instalaciones Deportivas",
-          descripcion: "Acceso completo a instalaciones deportivas",
-          icono: <Dumbbell className="h-6 w-6" />,
-          valor: "Acceso total",
-          activo: true
-        },
-        {
-          titulo: "Uniforme de Competencia",
-          descripcion: "Uniforme oficial de competencia",
-          icono: <Shirt className="h-6 w-6" />,
-          valor: "Incluido",
-          activo: true
-        },
-        {
-          titulo: "Transporte",
-          descripcion: "Transporte a competencias nacionales",
-          icono: <Bus className="h-6 w-6" />,
-          valor: "Nacional",
-          activo: true
-        }
-      ],
-      artistica: [
-        {
-          titulo: "Acceso a Espacios Culturales",
-          descripcion: "Uso de auditorios y salas de ensayo",
-          icono: <Globe className="h-6 w-6" />,
-          valor: "Completo",
-          activo: true
-        },
-        {
-          titulo: "Participación en Eventos",
-          descripcion: "Presentaciones en eventos institucionales",
-          icono: <Calendar className="h-6 w-6" />,
-          valor: "Garantizada",
-          activo: true
-        }
-      ],
-      civico: [
-        {
-          titulo: "Red de Contactos Sociales",
-          descripcion: "Conexión con organizaciones comunitarias",
-          icono: <Users className="h-6 w-6" />,
-          valor: "Activa",
-          activo: true
-        },
-        {
-          titulo: "Certificaciones de Impacto",
-          descripcion: "Documentación oficial de trabajo comunitario",
-          icono: <GraduationCap className="h-6 w-6" />,
-          valor: "Incluidas",
-          activo: true
-        }
-      ],
-      emprendimiento: [
-        {
-          titulo: "Incubadora de Emprendimientos",
-          descripcion: "Acceso a la incubadora de startups UNIMET",
-          icono: <Star className="h-6 w-6" />,
-          valor: "Garantizado",
-          activo: true
-        },
-        {
-          titulo: "Mentoría Empresarial",
-          descripcion: "Acompañamiento de emprendedores exitosos",
-          icono: <Users className="h-6 w-6" />,
-          valor: "Personalizada",
-          activo: true
-        }
-      ]
+  const getCoberturaInfo = () => {
+    // Todas las becas de excelencia tienen la misma cobertura base
+    const coberturaBase = {
+      porcentaje: scholarshipType === 'academica' ? '100%' : '25%',
+      descripcion: scholarshipType === 'academica'
+        ? 'Cobertura total del costo de matrícula'
+        : 'Cobertura parcial del costo de matrícula'
     };
 
-    return [...commonBenefits, ...(specificBenefits[scholarshipType as keyof typeof specificBenefits] || specificBenefits.deportiva)];
+    return coberturaBase;
   };
 
-  const beneficiosActivos = getBenefitsData();
-
-  const contactosApoyo = [
-    {
-      cargo: "Directora DDBE",
-      nombre: "Dra. María Rodríguez",
-      telefono: "+58 212-555-0101",
-      email: "mrodriguez@unimet.edu.ve",
-      horario: "Lun-Vie 8:00-16:00"
-    },
-    {
-      cargo: "Coordinador Deportivo",
-      nombre: "Prof. Carlos López",
-      telefono: "+58 212-555-0102", 
-      email: "clopez@unimet.edu.ve",
-      horario: "Lun-Vie 14:00-20:00"
-    }
-  ];
-
-  const oportunidadesAdicionales = [
-    {
-      titulo: "Intercambio Deportivo Internacional",
-      descripcion: "Programa de intercambio con universidades internacionales",
-      fechaLimite: "2025-03-15",
-      tipo: "Intercambio"
-    },
-    {
-      titulo: "Programa de Mentores",
-      descripcion: "Programa de mentores para nuevos atletas",
-      fechaLimite: "Abierto",
-      tipo: "Mentoría"
-    },
-    {
-      titulo: "Becas Complementarias",
-      descripcion: "Becas adicionales por excelencia deportiva",
-      fechaLimite: "2025-02-28",
-      tipo: "Beca"
-    }
-  ];
+  const cobertura = getCoberturaInfo();
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Beneficios y Recursos</h2>
-        <p className="text-muted-foreground">
-          Todos los beneficios activos y recursos de apoyo disponibles para tu beca de excelencia {scholarshipType === 'academica' ? 'académica' : scholarshipType === 'artistica' ? 'artística' : scholarshipType === 'civico' ? 'cívica' : scholarshipType === 'emprendimiento' ? 'de emprendimiento' : 'deportiva'}
-        </p>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <Gift className="h-8 w-8 text-primary" />
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Beneficios y Cobertura</h2>
+            <p className="text-sm text-muted-foreground">
+              Naturaleza del beneficio y recursos disponibles (Art. 9, Art. 3)
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Beneficios Activos */}
-      <Card>
+      {/* Cobertura Principal */}
+      <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
         <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <Star className="h-5 w-5" />
-            <span>Mis Beneficios Activos</span>
+          <CardTitle className="text-xl flex items-center gap-2 text-green-900">
+            <Award className="h-6 w-6" />
+            Cobertura de la Beca
           </CardTitle>
           <CardDescription>
-            Beneficios que tienes disponibles como becario de excelencia {scholarshipType === 'academica' ? 'académica' : scholarshipType === 'artistica' ? 'artística' : scholarshipType === 'civico' ? 'cívica' : scholarshipType === 'emprendimiento' ? 'de emprendimiento' : 'deportiva'}
+            Porcentaje de exoneración otorgado
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {beneficiosActivos.map((beneficio, index) => (
-              <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg bg-card">
-                <div className="text-primary">
-                  {beneficio.icono}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm">{beneficio.titulo}</h3>
-                  <p className="text-xs text-muted-foreground">{beneficio.descripcion}</p>
-                  <Badge variant="outline" className="mt-1 text-xs">
-                    {beneficio.valor}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+          <div className="bg-white p-6 rounded-lg border border-green-200">
+            <div className="text-center mb-4">
+              <div className="text-5xl font-bold text-green-600 mb-2">{cobertura.porcentaje}</div>
+              <p className="text-sm text-green-800">{cobertura.descripcion}</p>
+            </div>
+            <Alert className="bg-green-50 border-green-300">
+              <Info className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-900 text-sm">
+                La beca de excelencia cubre el <strong>{cobertura.porcentaje}</strong> del costo de las asignaturas inscritas
+                según tu plan de estudios vigente de pregrado.
+              </AlertDescription>
+            </Alert>
           </div>
         </CardContent>
       </Card>
 
-      {/* Recursos de Apoyo */}
-      <Card>
+      {/* Qué incluye el beneficio */}
+      <Card className="border-orange/20">
         <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <Phone className="h-5 w-5" />
-            <span>Recursos de Apoyo</span>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            El beneficio INCLUYE
           </CardTitle>
           <CardDescription>
-            Contactos y recursos para resolver dudas y obtener apoyo
+            Conceptos cubiertos por la beca de excelencia
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {contactosApoyo.map((contacto, index) => (
-              <div key={index} className="space-y-4 p-4 border rounded-lg">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-green-900 text-sm">Asignaturas del plan de estudios</p>
+                <p className="text-xs text-green-800">
+                  {cobertura.porcentaje} del costo de las asignaturas inscritas según tu plan de estudios vigente
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-green-900 text-sm">Cuota de inscripción trimestral</p>
+                <p className="text-xs text-green-800">
+                  Incluida en el beneficio de exoneración
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-green-900 text-sm">Arancel de Defensa de Trabajo de Grado</p>
+                <p className="text-xs text-green-800">
+                  Cubierto al momento de la defensa
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Qué NO incluye el beneficio */}
+      <Card className="border-red-200 bg-red-50/30">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-red-900">
+            <XCircle className="h-5 w-5 text-red-600" />
+            El beneficio NO INCLUYE
+          </CardTitle>
+          <CardDescription>
+            Conceptos que debes pagar adicionalmente
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-200">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 text-sm">Asignaturas retiradas o reprobadas</p>
+                <p className="text-xs text-red-800">
+                  Debes pagar el costo completo de asignaturas inscritas y no aprobadas o retiradas (Art. 3-e, Art. 16-b)
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-200">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 text-sm">Asignaturas fuera del plan de estudios</p>
+                <p className="text-xs text-red-800">
+                  Solo se cubren asignaturas que forman parte de tu plan de estudios vigente
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-200">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 text-sm">Asignaturas en período intensivo sin permiso</p>
+                <p className="text-xs text-red-800">
+                  Debes notificar a DDBE si deseas cursar período intensivo (Art. 14-e)
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-200">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 text-sm">Cursos de nivelación o preparatorios</p>
+                <p className="text-xs text-red-800">
+                  No están cubiertos por el beneficio
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-200">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 text-sm">Materiales, libros y recursos académicos</p>
+                <p className="text-xs text-red-800">
+                  Son responsabilidad del estudiante
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-200">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 text-sm">Transporte, alimentación y alojamiento</p>
+                <p className="text-xs text-red-800">
+                  Gastos personales no cubiertos por la beca
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recursos Disponibles */}
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-blue-900">
+            <Users className="h-5 w-5" />
+            Recursos y Apoyo Disponibles
+          </CardTitle>
+          <CardDescription>
+            Servicios de acompañamiento para becarios de excelencia
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-white rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3 mb-2">
+                <BookOpen className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold">{contacto.cargo}</h3>
-                  <p className="text-sm text-muted-foreground">{contacto.nombre}</p>
+                  <h4 className="font-semibold text-blue-900 text-sm mb-1">Acompañamiento Integral DDBE</h4>
+                  <p className="text-xs text-blue-800">
+                    Seguimiento trimestral obligatorio con revisión anual. Orientación académica, personal y profesional
+                    para asegurar tu éxito universitario (Art. 14-h, Art. 3-b).
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Phone className="h-4 w-4" />
-                    <span>{contacto.telefono}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Mail className="h-4 w-4" />
-                    <span>{contacto.email}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Calendar className="h-4 w-4" />
-                    <span>{contacto.horario}</span>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  Agendar cita de asesoría
-                </Button>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-1">
-              <Download className="h-5 w-5" />
-              <span className="text-sm">Descargar reglamento actualizado</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-1">
-              <HelpCircle className="h-5 w-5" />
-              <span className="text-sm">FAQs Excelencia {scholarshipType === 'academica' ? 'Académica' : scholarshipType === 'artistica' ? 'Artística' : scholarshipType === 'civico' ? 'Cívica' : scholarshipType === 'emprendimiento' ? 'Emprendimiento' : 'Deportiva'}</span>
-            </Button>
+            </div>
+            <div className="p-4 bg-white rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3 mb-2">
+                <Users className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm mb-1">Asesoría Académica</h4>
+                  <p className="text-xs text-blue-800">
+                    Apoyo en la planificación de tu carga académica, consultas sobre retiro de asignaturas (Art. 14-d)
+                    y orientación para cambio de carrera si aplica (Art. 14-g).
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-white rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3 mb-2">
+                <Award className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm mb-1">Programas de Reconocimiento</h4>
+                  <p className="text-xs text-blue-800">
+                    Acceso a programas de distinciones académicas como la Lista del Rector (para Excelencia Académica)
+                    y reconocimientos institucionales por logros destacados.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Advertencias Importantes */}
+      <Alert className="bg-yellow-50 border-yellow-200">
+        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        <AlertDescription className="text-yellow-900 text-sm">
+          <strong>Importante:</strong> El incumplimiento de las condiciones de mantenimiento puede resultar en la
+          <strong> suspensión o revocación del beneficio</strong> sin perjuicio de otras acciones que la Universidad
+          considere pertinentes (Art. 50). Los costos de asignaturas retiradas o reprobadas <strong>no están cubiertos</strong> por
+          el beneficio y deberán ser pagados por el estudiante (Art. 3-e, Art. 16).
+        </AlertDescription>
+      </Alert>
+
+      {/* Información de Contacto */}
+      <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2 text-purple-900">
+            <Info className="h-5 w-5" />
+            ¿Tienes dudas sobre tu beneficio?
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-purple-900 mb-3">
+            Para consultas sobre tu cobertura, condiciones de mantenimiento, retiro de asignaturas, período intensivo
+            o cualquier aspecto de tu beca, contacta a:
+          </p>
+          <div className="p-3 bg-white rounded-lg border border-purple-200">
+            <p className="font-semibold text-purple-900 text-sm">
+              Dirección de Desarrollo y Bienestar Estudiantil (DDBE)
+            </p>
+            <p className="text-xs text-purple-800 mt-1">
+              Área responsable del seguimiento y administración de becas de excelencia
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

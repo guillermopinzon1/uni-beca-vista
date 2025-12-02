@@ -271,16 +271,11 @@ const GestionPostulaciones = () => {
       "Excelencia": [
         "cumple_iaa_minimo",
         "documentos_completos",
-        "curriculum_actualizado",
-        "carta_motivacion_clara",
         "evidencia_logros"
       ],
       "Ayudantía": [
         "cumple_iaa_minimo",
-        "documentos_completos",
-        "disponibilidad_horaria",
-        "habilidades_comunicacion",
-        "area_conocimiento"
+        "documentos_completos"
       ],
       "Formación Docente": [
         "cumple_iaa_minimo",
@@ -303,8 +298,6 @@ const GestionPostulaciones = () => {
     const labels: {[key: string]: string} = {
       "cumple_iaa_minimo": "Cumple con el IAA mínimo requerido (≥ 14.0)",
       "documentos_completos": "Todos los documentos requeridos están presentes",
-      "curriculum_actualizado": "Currículum actualizado y completo",
-      "carta_motivacion_clara": "Carta de motivación clara y coherente",
       "evidencia_logros": "Evidencias de logros académicos/deportivos/artísticos",
       "disponibilidad_horaria": "Disponibilidad horaria compatible",
       "habilidades_comunicacion": "Demuestra habilidades de comunicación",
@@ -378,8 +371,6 @@ const GestionPostulaciones = () => {
     keys.forEach(k => {
       if (k === 'cumple_iaa_minimo') computed[k] = cumpleIaa;
       else if (k === 'documentos_completos') computed[k] = reqDocsUnion.length === 0 ? true : allRequiredPresent;
-      else if (k === 'curriculum_actualizado') computed[k] = hasCV;
-      else if (k === 'carta_motivacion_clara') computed[k] = hasCarta;
       else if (k === 'evidencia_logros') computed[k] = hasLogros;
       else computed[k] = false;
     });
@@ -1257,13 +1248,14 @@ const GestionPostulaciones = () => {
                     </div>
                     <div className="flex gap-4">
                       <Button
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => handleAprobarPostulacion(selectedPostulacion.id)}
+                        disabled={!Object.values(checklist).every(v => v === true)}
                       >
                         <Check className="h-4 w-4 mr-2" />
                         Aprobar Postulación
                       </Button>
-                      <Button 
+                      <Button
                         variant="destructive"
                         onClick={() => handleCancelarPostulacion(selectedPostulacion.id)}
                       >

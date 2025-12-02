@@ -541,15 +541,6 @@ const GestionSupervisores = () => {
                 />
               </div>
               <Button
-                variant="outline"
-                size="icon"
-                onClick={fetchSupervisores}
-                disabled={loading}
-                className="border-primary text-primary hover:bg-primary hover:text-white"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button
                 onClick={() => {
                   resetForm();
                   setIsCreateModalOpen(true);
@@ -575,7 +566,7 @@ const GestionSupervisores = () => {
               <p className="mt-2 text-muted-foreground">No se encontraron supervisores</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
               {filteredSupervisores.map((supervisor) => (
                 <Card
                   key={supervisor.id}
@@ -706,7 +697,7 @@ const GestionSupervisores = () => {
                                   <CardContent className="p-4 space-y-3">
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="flex-1">
-                                        <div className="text-sm font-semibold text-foreground line-clamp-1">{plaza.nombre}</div>
+                                        <div className="text-sm font-semibold text-foreground line-clamp-1">{plaza.materia}</div>
                                         <div className="text-xs text-muted-foreground">{plaza.ubicacion}</div>
                                       </div>
                                       <Badge variant="outline" className="text-xs shrink-0">{plaza.estado}</Badge>
@@ -746,6 +737,29 @@ const GestionSupervisores = () => {
                                         </div>
                                       </div>
                                     )}
+                                    {/* Ayudantes de esta plaza */}
+                                    <div className="pt-2 border-t border-gray-100">
+                                      <div className="text-xs text-muted-foreground mb-2 font-medium">Ayudantes Asignados</div>
+                                      {supervisor.estudiantesSupervisionados.filter(est => est.plaza?.id === plaza.id).length > 0 ? (
+                                        <div className="space-y-1.5">
+                                          {supervisor.estudiantesSupervisionados.filter(est => est.plaza?.id === plaza.id).map((estudiante) => (
+                                            <div key={estudiante.id} className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-100">
+                                              <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-[10px] shrink-0">
+                                                {estudiante.usuario.nombre.charAt(0)}{estudiante.usuario.apellido.charAt(0)}
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-xs truncate">
+                                                  {estudiante.usuario.nombre} {estudiante.usuario.apellido}
+                                                </p>
+                                              </div>
+                                              {getEstadoBadge(estudiante.estado)}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-muted-foreground italic">Sin ayudantes asignados</p>
+                                      )}
+                                    </div>
                                   </CardContent>
                                 </Card>
                               ))}

@@ -1,47 +1,54 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, UserPlus, FileText, Clock, Users } from "lucide-react";
+import { ArrowLeft, UserPlus, FileText, Clock, Users, Trophy, BookOpen } from "lucide-react";
 import ModuleCard from "@/components/ModuleCard";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState, useMemo } from "react";
+import { API_BASE } from "@/lib/api";
+import ProgramaExcelenciaTabs from "@/components/excelencia/ProgramaExcelenciaTabs";
+import UnifiedApplicationForm from "@/components/shared/UnifiedApplicationForm";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Home } from "lucide-react";
 
 const AspiranteScholarshipPrograms = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [configs, setConfigs] = useState<Array<any>>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = [
+  const handleProgramSelect = (programId: string) => {
+    setSelectedProgram(programId);
+  };
+
+  const handleBackToPrograms = () => {
+    setSelectedProgram(null);
+  };
+
+  const programs = [
     {
-      title: "Convocatorias Activas",
-      value: "5",
-      change: "3 nuevas esta semana",
-      icon: FileText
+      id: "excelencia",
+      title: "Programa de Excelencia",
+      description: "Para estudiantes destacados en diferentes áreas: académica, deportiva, artística, emprendimiento y compromiso cívico.",
+      icon: Trophy
     },
     {
-      title: "Plazas Disponibles",
-      value: "24",
-      change: "En diferentes departamentos",
+      id: "formacion",
+      title: "Beca de Formación Docente",
+      description: "Para estudiantes interesados en la carrera docente y formación pedagógica.",
+      icon: BookOpen
+    },
+    {
+      id: "ayudantia",
+      title: "Programa de Ayudantía",
+      description: "Para estudiantes que deseen trabajar como ayudantes académicos o de investigación en la universidad.",
       icon: Users
-    },
-    {
-      title: "Tiempo Restante",
-      value: "15 días",
-      change: "Para postularse",
-      icon: Clock
-    },
-    {
-      title: "Mis Postulaciones",
-      value: "0",
-      change: "Aún no has postulado",
-      icon: UserPlus
     }
   ];
 
   const submodules = [
-    {
-      title: "Postularme",
-      description: "Postúlate a las convocatorias de ayudantías disponibles según tu perfil académico",
-      icon: UserPlus,
-      route: "/postulaciones",
-      highlighted: true
-    },
     {
       title: "Requisitos",
       description: "Consulta los requisitos específicos para cada tipo de beca disponible",
@@ -50,6 +57,172 @@ const AspiranteScholarshipPrograms = () => {
       highlighted: false
     }
   ];
+
+  // Cargar configuraciones de becas
+  useEffect(() => {
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await fetch(`${API_BASE}/v1/configuracion/becas`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        const payload = await resp.json();
+        if (!resp.ok) throw new Error(payload?.message || 'No se pudieron cargar las configuraciones');
+        setConfigs(Array.isArray(payload?.data?.configuraciones) ? payload.data.configuraciones : []);
+      } catch (e: any) {
+        setError(e?.message || 'No se pudieron cargar las configuraciones');
+        setConfigs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, []);
+
+  const getConfigsByProgram = (programId: string | null) => {
+    if (!programId) return [] as any[];
+    if (programId === 'excelencia') {
+      return configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia');
+    }
+    if (programId === 'ayudantia') {
+      return configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'ayudantía' || (c.tipoBeca || '').toLowerCase() === 'ayudantia');
+    }
+    if (programId === 'formacion') {
+      return configs.filter(c => (c.tipoBeca || '').toLowerCase().includes('formación') || (c.tipoBeca || '').toLowerCase().includes('formacion'));
+    }
+    return [] as any[];
+  };
+
+  const selectedConfigs = useMemo(() => getConfigsByProgram(selectedProgram), [configs, selectedProgram]);
+
+  // Si se seleccionó un programa, mostrar el formulario
+  if (selectedProgram) {
+    const program = programs.find(p => p.id === selectedProgram);
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b border-orange/20 bg-card">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <img
+                  src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png"
+                  alt="Universidad Metropolitana"
+                  className="h-10"
+                />
+                <div>
+                  <h1 className="font-semibold text-primary">Universidad Metropolitana</h1>
+                  <p className="text-sm text-muted-foreground">Sistema de Postulaciones a Becas</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => navigate(-1)}
+                className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al Inicio
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Breadcrumbs */}
+          <Breadcrumb className="mb-8">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink onClick={() => navigate("/")} className="cursor-pointer">
+                  <Home className="h-4 w-4" />
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink onClick={handleBackToPrograms} className="cursor-pointer">
+                  Postulaciones a Becas
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{program?.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
+          {/* Mostrar requisitos arriba del formulario para Ayudantía y Formación */}
+          {selectedProgram !== "excelencia" && selectedConfigs.length > 0 && (
+            <Card className="mb-6 border-0 shadow-lg w-full">
+              <CardContent className="p-6">
+                {selectedConfigs.map((config: any, idx: number) => (
+                  <div key={config.id || idx} className="space-y-4">
+                    <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-2">Requisitos Especiales</h3>
+                      <p className="text-sm text-muted-foreground">{config.requisitosEspeciales || 'No tiene ningún requisito'}</p>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                      <h3 className="font-semibold mb-3">Documentos Requeridos</h3>
+                      {Array.isArray(config.documentosRequeridos) && config.documentosRequeridos.length > 0 ? (
+                        <ul className="space-y-2">
+                          {config.documentosRequeridos.map((doc: string, i: number) => (
+                            <li key={i} className="flex items-center text-sm">
+                              <div className="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                              {doc}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No tiene ningún requisito</p>
+                      )}
+                    </div>
+
+                    {(config.promedioMinimo !== undefined || config.semestreMinimo && config.semestreMaximo || config.edadMaxima) && (
+                      <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                        <h3 className="font-semibold mb-2">Requisitos Académicos</h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          {config.promedioMinimo !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span>Promedio mínimo: {config.promedioMinimo}</span>
+                            </div>
+                          )}
+                          {config.semestreMinimo && config.semestreMaximo && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span>Trimestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
+                            </div>
+                          )}
+                          {config.edadMaxima && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                              <span>Edad máxima: {config.edadMaxima} años</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Application Form */}
+          {selectedProgram === "excelencia" ? (
+            <ProgramaExcelenciaTabs configuraciones={configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia')} />
+          ) : (
+            <UnifiedApplicationForm
+              programTitle={program?.title || ""}
+              requiredDocuments={Array.from(new Set((selectedConfigs || []).flatMap((c: any) => Array.isArray(c.documentosRequeridos) ? c.documentosRequeridos : [])))}
+            />
+          )}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,10 +246,10 @@ const AspiranteScholarshipPrograms = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <div className="text-right">
-              <p className="text-sm font-medium text-primary">Carlos Eduardo Silva</p>
+              <p className="text-sm font-medium text-primary">{user?.nombre || 'Usuario'}</p>
               <p className="text-xs text-muted-foreground">Aspirante</p>
             </div>
           </div>
@@ -92,21 +265,21 @@ const AspiranteScholarshipPrograms = () => {
             <CardHeader>
               <CardTitle className="text-xl text-primary">¡Bienvenido Aspirante!</CardTitle>
               <CardDescription>
-                Aquí puedes postularte a las diferentes convocatorias de ayudantías disponibles. 
+                Aquí puedes postularte a las diferentes convocatorias de ayudantías disponibles.
                 Revisa los requisitos de cada convocatoria y postúlate a las que mejor se adapten a tu perfil académico.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          {/* Modules Section */}
+          {/* Modules Section - Información */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-3xl font-bold text-primary mb-2">
-                  Postulaciones
+                  Información
                 </h2>
                 <p className="text-muted-foreground">
-                  Accede al sistema de postulaciones para ayudantías
+                  Consulta información sobre los programas de becas
                 </p>
               </div>
             </div>
@@ -125,6 +298,47 @@ const AspiranteScholarshipPrograms = () => {
                     }}
                   />
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Postulaciones Section */}
+          <div className="mb-8">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-primary mb-2">
+                Postulaciones a Becas
+              </h2>
+              <p className="text-muted-foreground">
+                Explora y postúlate a los diferentes programas de becas disponibles en la Universidad Metropolitana
+              </p>
+            </div>
+
+            {/* Programs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto">
+              {programs.map((program) => (
+                <Card
+                  key={program.id}
+                  className="border-orange/20 bg-gradient-card hover:shadow-lg transition-all duration-300 cursor-pointer group flex flex-col"
+                >
+                  <CardHeader className="text-center">
+                    <div className="mx-auto p-3 rounded-full bg-primary/10 w-fit mb-4 group-hover:bg-primary/20 transition-colors">
+                      <program.icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <CardTitle className="text-primary">{program.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center flex flex-col flex-1">
+                    <CardDescription className="mb-6 min-h-[6rem] flex items-center justify-center">
+                      {program.description}
+                    </CardDescription>
+
+                    <Button
+                      onClick={() => handleProgramSelect(program.id)}
+                      className="w-full mt-auto"
+                    >
+                      Postular Ahora
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>

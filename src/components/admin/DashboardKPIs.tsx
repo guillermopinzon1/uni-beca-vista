@@ -60,6 +60,45 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriodo, setSelectedPeriodo] = useState<string>("todos");
+  const [periodos, setPeriodos] = useState<Array<{ id: string; periodoAcademico: string; activo: boolean }>>([]);
+
+  const loadPeriodos = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/v1/configuracion/periodos`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Manejar diferentes estructuras de respuesta
+        let periodosData = [];
+        if (data.data && Array.isArray(data.data)) {
+          periodosData = data.data;
+        } else if (data.data && data.data.periodos && Array.isArray(data.data.periodos)) {
+          periodosData = data.data.periodos;
+        } else if (Array.isArray(data)) {
+          periodosData = data;
+        }
+
+        // Ordenar por fecha de inicio descendente (más reciente primero)
+        periodosData.sort((a: any, b: any) => {
+          const dateA = new Date(a.fechaInicio);
+          const dateB = new Date(b.fechaInicio);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setPeriodos(periodosData);
+      }
+    } catch (error) {
+      console.error('Error loading períodos:', error);
+    }
+  };
 
   const loadKPIs = async () => {
     setLoading(true);
@@ -105,8 +144,13 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
   };
 
   useEffect(() => {
+    loadPeriodos();
     loadKPIs();
   }, [selectedPeriodo]);
+
+  useEffect(() => {
+    loadPeriodos();
+  }, []);
 
   if (loading) {
     return (
@@ -160,10 +204,12 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los períodos</SelectItem>
-              <SelectItem value="2025-1">2025-1</SelectItem>
-              <SelectItem value="2024-3">2024-3</SelectItem>
-              <SelectItem value="2024-2">2024-2</SelectItem>
-              <SelectItem value="2024-1">2024-1</SelectItem>
+              {periodos.map((periodo) => (
+                <SelectItem key={periodo.id} value={periodo.periodoAcademico}>
+                  {periodo.periodoAcademico}
+                  {periodo.activo && ' (Activo)'}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button
@@ -244,7 +290,7 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
           </CardContent>
         </Card>
 
-        {/* Operaciones Pendientes */}
+        {/* Postulaciones Pendientes */}
         <Card
           className="border-orange-200 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-orange-400"
           onClick={() => onNavigateToModule('postulaciones')}
@@ -254,18 +300,18 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
               <div className="p-3 bg-orange-100 rounded-lg">
                 <Clock className="h-6 w-6 text-orange-600" />
               </div>
-              {(kpiData.operaciones.postulacionesPendientes + kpiData.operaciones.reportesPendientes) > 0 && (
+              {Math.max(0, kpiData.operaciones.postulacionesPendientes - 1) > 0 && (
                 <AlertCircle className="h-5 w-5 text-orange-500" />
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Pendientes</p>
+            <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Postulaciones Pendientes</p>
             <p className="text-4xl font-bold text-orange-600 mt-2">
-              {kpiData.operaciones.postulacionesPendientes + kpiData.operaciones.reportesPendientes}
+              {Math.max(0, kpiData.operaciones.postulacionesPendientes - 1)}
             </p>
             <p className="text-xs text-gray-500 mt-2">
-              {kpiData.operaciones.postulacionesPendientes} postulaciones, {kpiData.operaciones.reportesPendientes} reportes · Clic para ver más
+              Requieren revisión · Clic para ver más
             </p>
           </CardContent>
         </Card>
@@ -280,7 +326,7 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
               <div className="p-2 bg-orange-500 rounded-lg">
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
-              Distribución de Becarios por Tipo
+              Distribución de becarios por tipo
             </CardTitle>
             <CardDescription>Becarios activos por programa de becas</CardDescription>
           </CardHeader>
@@ -301,23 +347,6 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
                 </div>
               ))}
             </div>
-
-            {/* Alerta de becarios sin plaza */}
-            {kpiData.becarios.sinPlaza > 0 && (
-              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-yellow-900">
-                      {kpiData.becarios.sinPlaza} becario{kpiData.becarios.sinPlaza !== 1 ? 's' : ''} sin plaza asignada
-                    </p>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Ayudantes que requieren asignación de plaza
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -328,7 +357,7 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
               <div className="p-2 bg-gray-700 rounded-lg">
                 <Building className="h-5 w-5 text-white" />
               </div>
-              Estado de Plazas
+              Estado de plazas
             </CardTitle>
             <CardDescription>Distribución y capacidad de plazas</CardDescription>
           </CardHeader>
@@ -413,7 +442,7 @@ const DashboardKPIs = ({ onNavigateToModule }: DashboardKPIsProps) => {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-gray-900">{kpiData.operaciones.postulacionesPendientes}</p>
+            <p className="text-3xl font-bold text-gray-900">{Math.max(0, kpiData.operaciones.postulacionesPendientes - 1)}</p>
             <p className="text-sm text-gray-600 mt-2">Requieren evaluación</p>
           </CardContent>
         </Card>

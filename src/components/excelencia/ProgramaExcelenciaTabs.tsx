@@ -146,16 +146,7 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
 
                 {/* Información de la beca (sin monto) */}
                 {program.config ? (
-                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
-                    {/* Cupos no se muestra en requisitos */}
-                    {/* Promedio mínimo movido a Requisitos Académicos */}
-                    {program.config.duracionMeses && (
-                      <div className="bg-white border border-gray-200 p-4 rounded-lg text-center shadow-sm">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Duración</p>
-                        <p className="text-xl font-semibold text-primary">{program.config.duracionMeses} meses</p>
-                      </div>
-                    )}
-                  </div>
+                  null
                 ) : (
                   <div className="mb-6">
                     <Card className="border-dashed">
@@ -181,7 +172,7 @@ const ProgramaExcelenciaTabs = ({ configuraciones: configuracionesProp = [] }: P
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                        <span>Semestre: {program.config.semestreMinimo} - {program.config.semestreMaximo}</span>
+                        <span>Trimestre: {program.config.semestreMinimo} - {program.config.semestreMaximo}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>

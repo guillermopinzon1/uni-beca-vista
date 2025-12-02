@@ -4,13 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Eye, RefreshCw, UserCheck } from "lucide-react";
+import { Search, Filter, Eye, RefreshCw, UserCheck, RotateCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchUsers, API_BASE } from "@/lib/api";
+import RenovarBecarioModal from "./RenovarBecarioModal";
+import { formatTrimestresProgress, getTrimestresBadgeColor, canRenewBecario, hasReachedLimit } from "@/lib/helpers/trimestreLimits";
 
 interface EstudianteBecario {
   id: string;
@@ -18,13 +20,14 @@ interface EstudianteBecario {
   cedula: string;
   tipoBeca: string;
   descuentoAplicado?: string;
-  estado: "Activo" | "Desactivado" | "Suspendido" | "Finalizado";
+  estado: "Activo" | "Desactivado" | "Suspendido" | "Finalizado" | "Culminada" | "Incompleta";
   emailVerified?: boolean;
   plaza: string;
   horasRequeridas: number;
   horasCompletadas: number;
   fechaInicio: string;
   fechaFin?: string;
+  trimestresCursados?: number;
 }
 
 
@@ -32,6 +35,16 @@ const EstudiantesBecarios = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { tokens } = useAuth();
+
+  // Función para capitalizar la primera letra de cada palabra
+  const capitalizeWords = (text: string | undefined | null): string => {
+    if (!text) return '';
+    return text
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBeca, setFilterBeca] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -42,6 +55,8 @@ const EstudiantesBecarios = () => {
   const [becarios, setBecarios] = useState<any[]>([]);
   const [becariosLoading, setBecariosLoading] = useState(true);
   const [becariosError, setBecariosError] = useState<string | null>(null);
+  const [becarioToRenew, setBecarioToRenew] = useState<any | null>(null);
+  const [showRenovarModal, setShowRenovarModal] = useState(false);
 
 
 
@@ -95,6 +110,24 @@ const EstudiantesBecarios = () => {
     navigate(`/estudiante/${estudianteId}`);
   };
 
+  const handleRenovarBecario = (estudiante: EstudianteBecario) => {
+    setBecarioToRenew({
+      id: estudiante.id,
+      nombre: estudiante.nombre,
+      tipoBeca: estudiante.tipoBeca,
+      trimestresCursados: estudiante.trimestresCursados || 1,
+      estado: estudiante.estado,
+      horasCompletadas: estudiante.horasCompletadas,
+      horasRequeridas: estudiante.horasRequeridas,
+    });
+    setShowRenovarModal(true);
+  };
+
+  const handleRenovarSuccess = () => {
+    loadBecarios();
+    loadUsuarios();
+  };
+
   // Carga de usuarios desde backend (reemplaza mock)
   const loadUsuarios = async () => {
     const stored = (() => { try { return JSON.parse(localStorage.getItem('auth_tokens') || 'null'); } catch { return null; } })();
@@ -126,7 +159,10 @@ const EstudiantesBecarios = () => {
         const estadoBeca = (b.estado || '').toLowerCase();
         const estadoTabla = estadoBeca === 'activa' ? 'Activo'
           : estadoBeca === 'suspendida' ? 'Suspendido'
+          : estadoBeca === 'culminada' ? 'Culminada'
+          : estadoBeca === 'incompleta' ? 'Incompleta'
           : estadoBeca === 'finalizada' ? 'Finalizado'
+          : estadoBeca === 'cancelada' ? 'Cancelada'
           : 'Activo';
         return {
           id: usuario.id || b.usuarioId || b.id,
@@ -139,7 +175,8 @@ const EstudiantesBecarios = () => {
           plaza: b.plaza?.nombre || '-',
           horasRequeridas: typeof b.horasRequeridas === 'number' ? b.horasRequeridas : 0,
           horasCompletadas: typeof b.horasCompletadas === 'string' ? parseFloat(b.horasCompletadas) : (b.horasCompletadas || 0),
-          fechaInicio: b.periodoInicio || ''
+          fechaInicio: b.periodoInicio || '',
+          trimestresCursados: typeof b.trimestresCursados === 'number' ? b.trimestresCursados : 1
         };
       });
 
@@ -165,13 +202,19 @@ const EstudiantesBecarios = () => {
     // Si está aprobado, mostrar estado normal
     switch (estado) {
       case "Activo":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">✅ Aprobado</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200">✅ Activa</Badge>;
+      case "Culminada":
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">🎓 Culminada</Badge>;
+      case "Incompleta":
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">⚠️ Incompleta</Badge>;
       case "Desactivado":
         return <Badge variant="destructive">🚫 Inactivo</Badge>;
       case "Suspendido":
-        return <Badge variant="destructive">⚠️ Suspendido</Badge>;
+        return <Badge variant="destructive">⚠️ Suspendida</Badge>;
       case "Finalizado":
         return <Badge variant="secondary">Finalizado</Badge>;
+      case "Cancelada":
+        return <Badge variant="destructive">❌ Cancelada</Badge>;
       default:
         return <Badge variant="outline">{estado}</Badge>;
     }
@@ -191,7 +234,8 @@ const EstudiantesBecarios = () => {
       plaza: u.plaza || '-',
       horasRequeridas: typeof u.horasRequeridas === 'number' ? u.horasRequeridas : 0,
       horasCompletadas: typeof u.horasCompletadas === 'number' ? u.horasCompletadas : 0,
-      fechaInicio: u.fechaInicio || ''
+      fechaInicio: u.fechaInicio || '',
+      trimestresCursados: typeof u.trimestresCursados === 'number' ? u.trimestresCursados : 1
     }));
   }, [usuarios]);
 
@@ -348,52 +392,85 @@ const EstudiantesBecarios = () => {
                     <TableRow className="bg-muted/50">
                       <TableHead className="font-semibold">Estudiante</TableHead>
                       <TableHead className="font-semibold">Tipo de Beca</TableHead>
+                      <TableHead className="font-semibold">Trimestres</TableHead>
                       <TableHead className="font-semibold">Descuento</TableHead>
                       <TableHead className="font-semibold">Estado</TableHead>
                       <TableHead className="text-center font-semibold">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEstudiantes.map((estudiante) => (
-                      <TableRow key={estudiante.id} className="hover:bg-muted/30 transition-colors">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-                              {estudiante.nombre?.charAt(0)?.toUpperCase() || 'E'}
+                    {filteredEstudiantes.map((estudiante) => {
+                      const progreso = formatTrimestresProgress(estudiante.trimestresCursados || 1, estudiante.tipoBeca);
+                      const badgeColor = getTrimestresBadgeColor(estudiante.trimestresCursados || 1, estudiante.tipoBeca);
+                      const canRenew = canRenewBecario(estudiante.estado, estudiante.trimestresCursados || 1, estudiante.tipoBeca);
+                      const limitReached = hasReachedLimit(estudiante.trimestresCursados || 1, estudiante.tipoBeca);
+
+                      return (
+                        <TableRow key={estudiante.id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                                {estudiante.nombre?.charAt(0)?.toUpperCase() || 'E'}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{capitalizeWords(estudiante.nombre)}</p>
+                                <p className="text-sm text-muted-foreground">{estudiante.cedula}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-foreground">{estudiante.nombre}</p>
-                              <p className="text-sm text-muted-foreground">{estudiante.cedula}</p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {estudiante.tipoBeca}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className={badgeColor}>
+                                {progreso}
+                              </Badge>
+                              {limitReached && (
+                                <span className="text-xs text-red-600">Límite alcanzado</span>
+                              )}
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            {estudiante.tipoBeca}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800 border-green-200 font-semibold">
-                            {parseFloat(estudiante.descuentoAplicado || '0').toFixed(0)}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getEstadoBadge(estudiante.estado, estudiante.emailVerified)}</TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleVerDetalles(estudiante.id)}
-                            className="hover:bg-orange/10 hover:text-orange-600"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver Detalles
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="bg-green-100 text-green-800 border-green-200 font-semibold">
+                              {parseFloat(estudiante.descuentoAplicado || '0').toFixed(0)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{getEstadoBadge(estudiante.estado, estudiante.emailVerified)}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleVerDetalles(estudiante.id)}
+                                className="hover:bg-orange/10 hover:text-orange-600"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Ver
+                              </Button>
+                              {(estudiante.estado === 'Culminada' || estudiante.estado === 'Incompleta') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRenovarBecario(estudiante)}
+                                  disabled={!canRenew}
+                                  className="hover:bg-green-100 hover:text-green-600 disabled:opacity-50"
+                                  title={limitReached ? 'Límite de trimestres alcanzado' : 'Renovar para siguiente trimestre'}
+                                >
+                                  <RotateCw className="h-4 w-4 mr-1" />
+                                  Renovar
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                     {filteredEstudiantes.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-16">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-16">
                           <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-20" />
                           <p className="text-lg font-medium">No se encontraron becarios</p>
                           <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
@@ -410,6 +487,14 @@ const EstudiantesBecarios = () => {
 
 
       </Tabs>
+
+      {/* Modal de Renovar Becario */}
+      <RenovarBecarioModal
+        open={showRenovarModal}
+        onClose={() => setShowRenovarModal(false)}
+        becario={becarioToRenew}
+        onSuccess={handleRenovarSuccess}
+      />
     </div>
   );
 };

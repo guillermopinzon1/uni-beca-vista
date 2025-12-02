@@ -4,12 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, RefreshCw, UserCheck, Clock, AlertCircle } from "lucide-react";
+import { Search, RefreshCw, UserCheck, Clock, AlertCircle, Eye, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchUsers } from "@/lib/api";
-import { approveUser } from "@/lib/api/auth";
+import { approveUser, deleteUser } from "@/lib/api/auth";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +37,11 @@ interface UsuarioPendiente {
   createdAt: string;
 }
 
-const GestionUsuariosPendientes = () => {
+interface GestionUsuariosPendientesProps {
+  onUserApproved?: () => void;
+}
+
+const GestionUsuariosPendientes = ({ onUserApproved }: GestionUsuariosPendientesProps) => {
   const { toast } = useToast();
   const { tokens } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,8 +49,9 @@ const GestionUsuariosPendientes = () => {
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioPendiente[]>([]);
   const [selectedUser, setSelectedUser] = useState<UsuarioPendiente | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
+  const [showUserDialog, setShowUserDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [processingAction, setProcessingAction] = useState<'approving' | 'deleting' | null>(null);
 
   // Función para cargar usuarios pendientes de aprobación
   const loadUsuariosPendientes = async () => {
@@ -109,12 +115,12 @@ const GestionUsuariosPendientes = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleApproveClick = (usuario: UsuarioPendiente) => {
+  const handleViewUser = (usuario: UsuarioPendiente) => {
     setSelectedUser(usuario);
-    setShowConfirmDialog(true);
+    setShowUserDialog(true);
   };
 
-  const handleApproveConfirm = async () => {
+  const handleApproveUser = async () => {
     if (!selectedUser) return;
 
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
@@ -127,27 +133,79 @@ const GestionUsuariosPendientes = () => {
       return;
     }
 
-    setApprovingUserId(selectedUser.id);
+    setProcessingAction('approving');
     try {
       const result = await approveUser(selectedUser.id, accessToken);
 
       toast({
-        title: "Usuario aprobado",
+        title: "✅ Usuario aprobado",
         description: result.message || `${selectedUser.nombre} ${selectedUser.apellido || ''} ha sido aprobado exitosamente. Se ha enviado un correo de notificación.`,
       });
 
       // Remover usuario de la lista
       setUsuarios(prev => prev.filter(u => u.id !== selectedUser.id));
-      setShowConfirmDialog(false);
+      setShowUserDialog(false);
       setSelectedUser(null);
+
+      // Notificar al componente padre para actualizar el contador
+      if (onUserApproved) {
+        onUserApproved();
+      }
     } catch (err: any) {
       toast({
-        title: "Error al aprobar",
+        title: "❌ Error al aprobar",
         description: err?.message || "No se pudo aprobar el usuario",
         variant: "destructive"
       });
     } finally {
-      setApprovingUserId(null);
+      setProcessingAction(null);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedUser) return;
+
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({
+        title: 'Error',
+        description: 'No se encontró el token de acceso',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setProcessingAction('deleting');
+    try {
+      const result = await deleteUser(selectedUser.id, accessToken);
+
+      toast({
+        title: "🗑️ Usuario eliminado",
+        description: result.message || `${selectedUser.nombre} ${selectedUser.apellido || ''} ha sido eliminado del sistema.`,
+      });
+
+      // Remover usuario de la lista
+      setUsuarios(prev => prev.filter(u => u.id !== selectedUser.id));
+      setShowDeleteConfirm(false);
+      setShowUserDialog(false);
+      setSelectedUser(null);
+
+      // Notificar al componente padre para actualizar el contador
+      if (onUserApproved) {
+        onUserApproved();
+      }
+    } catch (err: any) {
+      toast({
+        title: "❌ Error al eliminar",
+        description: err?.message || "No se pudo eliminar el usuario",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingAction(null);
     }
   };
 
@@ -325,21 +383,11 @@ const GestionUsuariosPendientes = () => {
                       <TableCell>
                         <Button
                           size="sm"
-                          onClick={() => handleApproveClick(usuario)}
-                          disabled={approvingUserId === usuario.id}
-                          className="bg-green-600 hover:bg-green-700"
+                          variant="ghost"
+                          onClick={() => handleViewUser(usuario)}
+                          className="hover:bg-primary/10 hover:text-primary"
                         >
-                          {approvingUserId === usuario.id ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Aprobando...
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Aprobar
-                            </>
-                          )}
+                          <Eye className="h-4 w-4 text-orange-500" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -351,40 +399,236 @@ const GestionUsuariosPendientes = () => {
         </CardContent>
       </Card>
 
-      {/* Dialog de confirmación */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Aprobar este usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedUser && (
-                <div className="space-y-2 pt-4">
-                  <p><strong>Nombre:</strong> {selectedUser.nombre} {selectedUser.apellido || ''}</p>
-                  <p><strong>Email:</strong> {selectedUser.email}</p>
-                  <p><strong>Rol:</strong> {selectedUser.role}</p>
-                  {selectedUser.cedula && <p><strong>Cédula:</strong> {selectedUser.cedula}</p>}
+      {/* Dialog de detalles del usuario */}
+      <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+              <UserCheck className="h-6 w-6" />
+              Detalles del Usuario Pendiente
+            </DialogTitle>
+            <DialogDescription>
+              Revisa la información y decide si aprobar o eliminar este usuario
+            </DialogDescription>
+          </DialogHeader>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                    <p className="text-sm text-blue-900">
-                      Al aprobar este usuario:
-                    </p>
-                    <ul className="text-sm text-blue-800 mt-2 space-y-1 ml-4 list-disc">
-                      <li>Podrá iniciar sesión en el sistema</li>
-                      <li>Recibirá un correo de notificación automático</li>
-                      <li>Tendrá acceso según su rol asignado</li>
+          {selectedUser && (
+            <div className="space-y-6">
+              {/* Información Personal */}
+              <Card className="border-primary/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="h-2 w-2 bg-primary rounded-full"></div>
+                    Información Personal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nombre Completo</p>
+                      <p className="font-medium text-lg">{selectedUser.nombre} {selectedUser.apellido || ''}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Rol</p>
+                      <div className="mt-1">{getRoleBadge(selectedUser.role)}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Correo Electrónico</p>
+                      <p className="font-medium">{selectedUser.email}</p>
+                    </div>
+                    {selectedUser.cedula && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Cédula</p>
+                        <p className="font-medium">{selectedUser.cedula}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedUser.telefono && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Teléfono</p>
+                      <p className="font-medium">{selectedUser.telefono}</p>
+                    </div>
+                  )}
+
+                  {(selectedUser.carrera || selectedUser.departamento) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedUser.carrera && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Carrera</p>
+                          <p className="font-medium">{selectedUser.carrera}</p>
+                        </div>
+                      )}
+                      {selectedUser.departamento && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Departamento</p>
+                          <p className="font-medium">{selectedUser.departamento}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Fecha de Registro</p>
+                    <p className="font-medium">{formatDate(selectedUser.createdAt)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Información sobre aprobación */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-green-100 p-2 rounded-full">
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-900 mb-2">Al aprobar este usuario:</h4>
+                    <ul className="space-y-1 text-sm text-green-800">
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-green-600 rounded-full"></div>
+                        Podrá iniciar sesión en el sistema
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-green-600 rounded-full"></div>
+                        Recibirá un correo de notificación automático
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-green-600 rounded-full"></div>
+                        Tendrá acceso según su rol asignado ({selectedUser.role})
+                      </li>
                     </ul>
                   </div>
+                </div>
+              </div>
+
+              {/* Advertencia sobre eliminación */}
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-red-100 p-2 rounded-full">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-red-900 mb-2">Al eliminar este usuario:</h4>
+                    <ul className="space-y-1 text-sm text-red-800">
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-red-600 rounded-full"></div>
+                        El usuario será desactivado permanentemente
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-red-600 rounded-full"></div>
+                        No podrá acceder al sistema
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 bg-red-600 rounded-full"></div>
+                        Esta acción no se puede deshacer fácilmente
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex justify-between gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowUserDialog(false)}
+              disabled={processingAction !== null}
+            >
+              Cancelar
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleDeleteClick}
+                disabled={processingAction !== null}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {processingAction === 'deleting' ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleApproveUser}
+                disabled={processingAction !== null}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {processingAction === 'approving' ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Aprobando...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Aprobar Usuario
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmación de eliminación */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              ¿Confirmar eliminación?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedUser && (
+                <div className="space-y-3 pt-3">
+                  <p className="text-base">
+                    Estás a punto de eliminar al usuario:
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="font-semibold text-red-900">
+                      {selectedUser.nombre} {selectedUser.apellido || ''}
+                    </p>
+                    <p className="text-sm text-red-700">{selectedUser.email}</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Esta acción desactivará permanentemente el usuario y no podrá acceder al sistema.
+                    ¿Estás seguro de continuar?
+                  </p>
                 </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={processingAction !== null}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleApproveConfirm}
-              className="bg-green-600 hover:bg-green-700"
+              onClick={handleDeleteConfirm}
+              disabled={processingAction !== null}
+              className="bg-red-600 hover:bg-red-700"
             >
-              Aprobar Usuario
+              {processingAction === 'deleting' ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Sí, eliminar usuario
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Gift, Target, BookOpen, Users, Clock, CheckCircle } from "lucide-react";
+import { ArrowLeft, FileText, Gift, Target, BookOpen, Users, Clock, CheckCircle, GraduationCap, UserCheck, Briefcase, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useState } from "react";
 
-const FormacionDocenteProgram = () => {
+const AyudantiasProgram = () => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string>("informacion");
@@ -16,6 +16,11 @@ const FormacionDocenteProgram = () => {
       title: "Información del Programa",
       icon: FileText,
       onClick: () => setActiveModule("informacion")
+    },
+    {
+      title: "Tipos de Ayudantía",
+      icon: Users,
+      onClick: () => setActiveModule("tipos")
     },
     {
       title: "Requisitos",
@@ -45,7 +50,7 @@ const FormacionDocenteProgram = () => {
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="lineGradientFormacion" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="lineGradientAyudantia" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" style={{ stopColor: '#FF6B35', stopOpacity: 0 }} />
               <stop offset="50%" style={{ stopColor: '#FF6B35', stopOpacity: 0.2 }} />
               <stop offset="100%" style={{ stopColor: '#FF6B35', stopOpacity: 0 }} />
@@ -53,14 +58,14 @@ const FormacionDocenteProgram = () => {
           </defs>
 
           {/* Líneas diagonales principales */}
-          <line x1="0" y1="10%" x2="100%" y2="25%" stroke="url(#lineGradientFormacion)" strokeWidth="1.5" opacity="0.4"/>
-          <line x1="0" y1="30%" x2="100%" y2="45%" stroke="url(#lineGradientFormacion)" strokeWidth="2" opacity="0.5"/>
-          <line x1="0" y1="55%" x2="100%" y2="70%" stroke="url(#lineGradientFormacion)" strokeWidth="1.5" opacity="0.35"/>
-          <line x1="0" y1="75%" x2="100%" y2="90%" stroke="url(#lineGradientFormacion)" strokeWidth="1.5" opacity="0.3"/>
+          <line x1="0" y1="10%" x2="100%" y2="25%" stroke="url(#lineGradientAyudantia)" strokeWidth="1.5" opacity="0.4"/>
+          <line x1="0" y1="30%" x2="100%" y2="45%" stroke="url(#lineGradientAyudantia)" strokeWidth="2" opacity="0.5"/>
+          <line x1="0" y1="55%" x2="100%" y2="70%" stroke="url(#lineGradientAyudantia)" strokeWidth="1.5" opacity="0.35"/>
+          <line x1="0" y1="75%" x2="100%" y2="90%" stroke="url(#lineGradientAyudantia)" strokeWidth="1.5" opacity="0.3"/>
 
           {/* Líneas diagonales secundarias */}
-          <line x1="0" y1="85%" x2="100%" y2="70%" stroke="url(#lineGradientFormacion)" strokeWidth="1" opacity="0.25"/>
-          <line x1="0" y1="50%" x2="100%" y2="35%" stroke="url(#lineGradientFormacion)" strokeWidth="1" opacity="0.2"/>
+          <line x1="0" y1="85%" x2="100%" y2="70%" stroke="url(#lineGradientAyudantia)" strokeWidth="1" opacity="0.25"/>
+          <line x1="0" y1="50%" x2="100%" y2="35%" stroke="url(#lineGradientAyudantia)" strokeWidth="1" opacity="0.2"/>
 
           {/* Líneas diagonales adicionales */}
           <line x1="0" y1="0" x2="40%" y2="100%" stroke="#FF6B35" strokeWidth="1" opacity="0.08"/>
@@ -88,9 +93,9 @@ const FormacionDocenteProgram = () => {
               Volver
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-primary">Programa de Formación Docente</h1>
+              <h1 className="text-2xl font-bold text-primary">Programa de Ayudantías</h1>
               <p className="text-sm text-muted-foreground">
-                Profesionalización de docentes en ejercicio
+                Intercambio de valor y desarrollo profesional
               </p>
             </div>
           </div>
@@ -106,8 +111,8 @@ const FormacionDocenteProgram = () => {
 
           <div className="flex items-center space-x-3">
             <Badge variant="outline" className="border-orange/30 text-orange-600">
-              <BookOpen className="h-3 w-3 mr-1" />
-              Formación Docente
+              <Users className="h-3 w-3 mr-1" />
+              Ayudantías
             </Badge>
           </div>
         </div>
@@ -162,14 +167,13 @@ const FormacionDocenteProgram = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p className="text-muted-foreground">
-                      El Programa de Beca Formación Docente tiene como objetivo principal proporcionar a los
-                      docentes en ejercicio la oportunidad de desarrollar las competencias necesarias para
-                      alcanzar altos niveles de eficacia y eficiencia en su rol como educadores.
+                      El Programa Ayudantía de la Universidad Metropolitana tiene por finalidad facilitar el intercambio
+                      de valor entre el estudiante beneficiario y las unidades académicas y administrativas de la Universidad,
+                      mediante el desarrollo de actividades relacionadas con el plan estratégico de la institución.
                     </p>
                     <p className="text-muted-foreground">
-                      Se busca que los beneficiarios adquieran las habilidades para asumir un papel
-                      protagónico y multiplicador en los cambios socioculturales, económicos y políticos
-                      de la actualidad nacional.
+                      Este programa está dirigido a estudiantes activos de pregrado y postgrado que deseen desarrollar
+                      competencias profesionales mientras contribuyen con el quehacer universitario.
                     </p>
                   </CardContent>
                 </Card>
@@ -180,10 +184,9 @@ const FormacionDocenteProgram = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">
-                      Facilitar la profesionalización de docentes en ejercicio, en apego a los principios
-                      que rigen la profesión docente en el país. La Universidad, consciente de la
-                      trascendencia de la labor educativa, espera de los beneficiarios un compromiso cabal
-                      con los requisitos académicos y profesionales establecidos.
+                      Brindar oportunidades de desarrollo profesional a los estudiantes mientras colaboran en
+                      actividades académicas y administrativas, recibiendo una contraprestación económica en forma de
+                      descuento sobre el costo de las asignaturas inscritas.
                     </p>
                   </CardContent>
                 </Card>
@@ -197,31 +200,106 @@ const FormacionDocenteProgram = () => {
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="font-semibold">Apoyo Económico Significativo</p>
+                          <p className="font-semibold">Descuento de Matrícula</p>
                           <p className="text-sm text-muted-foreground">
-                            Descuento considerable sobre el costo de las asignaturas inscritas
+                            Contraprestación económica mensual sobre el costo de las asignaturas inscritas
                           </p>
                         </div>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="font-semibold">Exoneración de Defensa de Trabajo de Grado</p>
+                          <p className="font-semibold">Experiencia Profesional</p>
                           <p className="text-sm text-muted-foreground">
-                            No pagas el arancel de Defensa de Trabajo de Grado
+                            Desarrollo de competencias en entornos académicos y administrativos reales
                           </p>
                         </div>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="font-semibold">Asignaturas por Suficiencia</p>
+                          <p className="font-semibold">Flexibilidad</p>
                           <p className="text-sm text-muted-foreground">
-                            Exoneración del costo de una asignatura por suficiencia (una vez en la carrera)
+                            Horario adaptado a tu carga académica (10 horas semanales)
                           </p>
                         </div>
                       </li>
                     </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeModule === "tipos" && (
+              <div className="space-y-6">
+                <Card className="border-orange/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      Tipos de Ayudantía
+                    </CardTitle>
+                    <CardDescription>
+                      El programa contempla cuatro tipos específicos de ayudantía
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                        <div className="flex items-start gap-3">
+                          <GraduationCap className="h-6 w-6 text-blue-700 mt-1 flex-shrink-0" />
+                          <div>
+                            <h4 className="font-semibold text-blue-900 mb-2">Ayudante Académico</h4>
+                            <p className="text-sm text-blue-800">
+                              Estudiante que se desempeña como asistente del área docente, apoyando en tareas académicas,
+                              elaboración de materiales didácticos o como mentor para acompañar a otros estudiantes.
+                            </p>
+                            <p className="text-xs text-blue-700 mt-2">
+                              No aplica para estudiantes del programa de Preparadurías
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded">
+                        <div className="flex items-start gap-3">
+                          <BookOpen className="h-6 w-6 text-green-700 mt-1 flex-shrink-0" />
+                          <div>
+                            <h4 className="font-semibold text-green-900 mb-2">Ayudante de Investigación</h4>
+                            <p className="text-sm text-green-800">
+                              Estudiante que apoya en investigaciones en curso, realizando tareas experimentales y de
+                              recopilación de datos bajo la dirección de un investigador.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
+                        <div className="flex items-start gap-3">
+                          <UserPlus className="h-6 w-6 text-orange-700 mt-1 flex-shrink-0" />
+                          <div>
+                            <h4 className="font-semibold text-orange-900 mb-2">Embajador Naranja</h4>
+                            <p className="text-sm text-orange-800">
+                              Estudiante que brinda apoyo protocolar en eventos universitarios, actos de grado y en
+                              actividades de promoción y difusión de la oferta académica y planes de apoyo de la Universidad.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-purple-50 border-l-4 border-purple-500 rounded">
+                        <div className="flex items-start gap-3">
+                          <Briefcase className="h-6 w-6 text-purple-700 mt-1 flex-shrink-0" />
+                          <div>
+                            <h4 className="font-semibold text-purple-900 mb-2">Ayudante Administrativo</h4>
+                            <p className="text-sm text-purple-800">
+                              Estudiante que colabora en actividades administrativas como atención al público, gestión
+                              documental, manejo de redes sociales, creación de contenido digital, bases de datos y proyectos
+                              propios de la plaza asignada.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -239,33 +317,42 @@ const FormacionDocenteProgram = () => {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h3 className="font-semibold text-blue-900 mb-2">Requisito Principal</h3>
-                        <p className="text-blue-800">
-                          <strong>Ser docente en ejercicio</strong> al momento de la postulación y mantener esta
-                          condición durante el tiempo que dure su proceso formativo. Esto garantiza que la
-                          formación teórica se complementa con la práctica pedagógica continua.
-                        </p>
+                        <h3 className="font-semibold text-blue-900 mb-2">Requisitos Académicos</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                            <span className="text-blue-800 text-sm">
+                              <strong>Pregrado:</strong> IAA ≥ 12.00 puntos
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                            <span className="text-blue-800 text-sm">
+                              <strong>Postgrado:</strong> IAA ≥ 14.00 puntos
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="space-y-3">
-                        <h3 className="font-semibold">Documentación Requerida</h3>
+                        <h3 className="font-semibold">Requisitos Adicionales</h3>
                         <ul className="space-y-2">
                           <li className="flex items-start gap-2">
                             <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
                             <span className="text-muted-foreground">
-                              Documentos solicitados por la Escuela de Educación
+                              Tener el perfil de competencias y habilidades acordes con las actividades a desarrollar
                             </span>
                           </li>
                           <li className="flex items-start gap-2">
                             <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
                             <span className="text-muted-foreground">
-                              Documentos solicitados por la Dirección de Desarrollo y Bienestar Estudiantil
+                              Realizar la entrevista de evaluación de competencias pautada por la DDBE
                             </span>
                           </li>
                           <li className="flex items-start gap-2">
                             <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
                             <span className="text-muted-foreground">
-                              Constancia de ejercicio docente actual
+                              Disponer preferiblemente de una plaza de ayudantía activa y requerida
                             </span>
                           </li>
                         </ul>
@@ -286,35 +373,21 @@ const FormacionDocenteProgram = () => {
                             <CheckCircle className="h-4 w-4" />
                             IAA Mínimo
                           </h4>
-                          <p className="text-2xl font-bold text-green-700">≥ 14.00</p>
-                          <p className="text-sm text-green-800">puntos al término del año lectivo</p>
+                          <p className="text-sm text-green-800">
+                            Pregrado: ≥ 12.00 puntos<br/>
+                            Postgrado: ≥ 14.00 puntos
+                          </p>
                         </div>
 
                         <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                           <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            Carga Académica
+                            Horas de Dedicación
                           </h4>
-                          <p className="text-2xl font-bold text-purple-700">5 asignaturas</p>
-                          <p className="text-sm text-purple-800">mínimo por trimestre</p>
-                        </div>
-
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                          <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                            <Target className="h-4 w-4" />
-                            Duración Máxima
-                          </h4>
-                          <p className="text-2xl font-bold text-blue-700">8 períodos</p>
-                          <p className="text-sm text-blue-800">regulares consecutivos</p>
-                        </div>
-
-                        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                          <h4 className="font-semibold text-orange-900 mb-2 flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Retiro de Asignaturas
-                          </h4>
-                          <p className="text-sm text-orange-800">
-                            Requiere autorización previa de la DDBE
+                          <p className="text-sm text-purple-800">
+                            10 horas semanales<br/>
+                            120 horas/trimestre regular<br/>
+                            50 horas/período intensivo
                           </p>
                         </div>
                       </div>
@@ -336,42 +409,45 @@ const FormacionDocenteProgram = () => {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
-                        <h3 className="font-semibold text-lg">Exoneraciones Específicas</h3>
+                        <h3 className="font-semibold text-lg">Beneficios Económicos</h3>
                         <div className="space-y-3">
                           <div className="p-4 bg-green-50 border-l-4 border-green-500 rounded">
-                            <h4 className="font-semibold text-green-900">Defensa de Trabajo de Grado</h4>
+                            <h4 className="font-semibold text-green-900">Descuento Mensual</h4>
                             <p className="text-sm text-green-800 mt-1">
-                              No pagas el arancel de Defensa de Trabajo de Grado (a menos que retires
-                              la defensa por motivos distintos al diferimiento)
+                              Contraprestación económica mensual aplicada sobre el costo de las asignaturas inscritas en
+                              períodos regulares o intensivos
                             </p>
                           </div>
 
                           <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-                            <h4 className="font-semibold text-blue-900">Asignaturas por Suficiencia</h4>
+                            <h4 className="font-semibold text-blue-900">Flexibilidad de Pago</h4>
                             <p className="text-sm text-blue-800 mt-1">
-                              Costo de una asignatura por suficiencia exonerado (una vez en la carrera,
-                              con la obligación de aprobarla)
+                              Pago mensual de asignaturas con reconocimiento del descuento asignado
                             </p>
                           </div>
                         </div>
                       </div>
 
                       <div className="space-y-4">
-                        <h3 className="font-semibold text-lg">Acompañamiento</h3>
+                        <h3 className="font-semibold text-lg">Beneficios de Desarrollo</h3>
                         <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                          <h4 className="font-semibold text-purple-900 mb-2">Apoyo Integral</h4>
+                          <h4 className="font-semibold text-purple-900 mb-2">Experiencia Profesional</h4>
                           <ul className="space-y-2 text-sm text-purple-800">
                             <li className="flex items-start gap-2">
                               <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <span>Seguimiento trimestral de tu progreso académico</span>
+                              <span>Desarrollo de competencias laborales en entornos reales</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <span>Revisión anual de condiciones de mantenimiento</span>
+                              <span>Networking con profesores y personal administrativo</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <span>Orientación por parte de la DDBE</span>
+                              <span>Formación integral y profesional continua</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <span>Contribución al plan estratégico de la Universidad</span>
                             </li>
                           </ul>
                         </div>
@@ -382,7 +458,7 @@ const FormacionDocenteProgram = () => {
 
                 <Card className="border-orange/20 bg-orange-50">
                   <CardHeader>
-                    <CardTitle className="text-orange-900">Costos Asumidos por el Beneficiario</CardTitle>
+                    <CardTitle className="text-orange-900">Costos Asumidos por el Ayudante</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2 text-orange-800">
@@ -392,19 +468,15 @@ const FormacionDocenteProgram = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Asignaturas adicionales o no pertenecientes al plan de estudios</span>
+                        <span>Cuota de inscripción trimestral</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Matrícula trimestral (porción no cubierta por el beneficio)</span>
+                        <span>Porción de matrícula no cubierta por el descuento</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Cuota de inscripción</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Aranceles no especificados en las exoneraciones</span>
+                        <span>Aranceles definidos por la Universidad</span>
                       </li>
                     </ul>
                   </CardContent>
@@ -418,82 +490,80 @@ const FormacionDocenteProgram = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Target className="h-5 w-5 text-primary" />
-                      Compromisos del Beneficiario
+                      Compromisos del Ayudante
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h3 className="font-semibold text-blue-900 mb-3">Responsabilidad Profesional</h3>
+                        <h3 className="font-semibold text-blue-900 mb-3">Responsabilidad Académica</h3>
                         <p className="text-blue-800">
-                          El beneficiario deberá reconocer que la Beca de Formación Docente es una inversión
-                          en su desarrollo y en la mejora de la calidad educativa del país. Por tanto, deberá
-                          asumir con responsabilidad y ética el beneficio, en aras de su crecimiento profesional
-                          y en beneficio del sistema educativo venezolano.
+                          El ayudante deberá reconocer que el Programa Ayudantía es una oportunidad de desarrollo
+                          profesional que requiere dedicación y compromiso. Por tanto, deberá cumplir con todas las
+                          actividades asignadas con responsabilidad y ética profesional.
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="font-semibold text-lg mb-4">Compromisos Académicos</h3>
+                        <h3 className="font-semibold text-lg mb-4">Compromisos Específicos</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="p-4 bg-green-50 border-l-4 border-green-500">
                             <h4 className="font-semibold text-green-900 mb-2">Rendimiento Académico</h4>
                             <p className="text-sm text-green-800">
-                              Mantener IAA ≥ 14.00 puntos al término de cada año lectivo
+                              Mantener IAA ≥ 12.00 (pregrado) o ≥ 14.00 (postgrado)
                             </p>
                           </div>
 
                           <div className="p-4 bg-purple-50 border-l-4 border-purple-500">
-                            <h4 className="font-semibold text-purple-900 mb-2">Progresión Constante</h4>
+                            <h4 className="font-semibold text-purple-900 mb-2">Cumplimiento de Horas</h4>
                             <p className="text-sm text-purple-800">
-                              Cursar mínimo 5 asignaturas por trimestre o el remanente para culminar
+                              Completar 120 horas/trimestre o 50 horas/intensivo (10 horas semanales)
                             </p>
                           </div>
 
                           <div className="p-4 bg-orange-50 border-l-4 border-orange-500">
-                            <h4 className="font-semibold text-orange-900 mb-2">Culminación a Tiempo</h4>
+                            <h4 className="font-semibold text-orange-900 mb-2">Plan de Trabajo</h4>
                             <p className="text-sm text-orange-800">
-                              Finalizar estudios en máximo 8 períodos regulares consecutivos
+                              Cumplir con el plan establecido por el supervisor de la plaza
                             </p>
                           </div>
 
                           <div className="p-4 bg-blue-50 border-l-4 border-blue-500">
-                            <h4 className="font-semibold text-blue-900 mb-2">Ejercicio Docente</h4>
+                            <h4 className="font-semibold text-blue-900 mb-2">Carta Compromiso</h4>
                             <p className="text-sm text-blue-800">
-                              Mantener condición de docente en ejercicio durante todo el programa
+                              Cumplir todo lo especificado en la Carta Compromiso firmada
                             </p>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="font-semibold text-lg mb-4">Compromisos Administrativos</h3>
+                        <h3 className="font-semibold text-lg mb-4">Compromisos Éticos</h3>
                         <ul className="space-y-3">
-                          <li className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium">Firma de Carta Compromiso</p>
-                              <p className="text-sm text-muted-foreground">
-                                Cumplir todo lo especificado en la Carta Compromiso del programa
-                              </p>
-                            </div>
-                          </li>
                           <li className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                             <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                             <div>
                               <p className="font-medium">Conducta Ética</p>
                               <p className="text-sm text-muted-foreground">
-                                Observar conducta ajustada a la ética profesional conforme a la Ley del
-                                Ejercicio de la Profesión Docente
+                                Cumplir con los Reglamentos, Normas y Código de Ética de la Universidad
                               </p>
                             </div>
                           </li>
                           <li className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                             <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                             <div>
-                              <p className="font-medium">Acompañamiento Obligatorio</p>
+                              <p className="font-medium">Uso Responsable de Recursos</p>
                               <p className="text-sm text-muted-foreground">
-                                Participar del acompañamiento integral ofrecido por la DDBE
+                                Utilizar adecuadamente los recursos y equipos de la unidad asignada
+                              </p>
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="font-medium">Compromiso de Pago</p>
+                              <p className="text-sm text-muted-foreground">
+                                Cumplir con los compromisos administrativos de pago con la Universidad
                               </p>
                             </div>
                           </li>
@@ -505,34 +575,34 @@ const FormacionDocenteProgram = () => {
 
                 <Card className="border-red-200 bg-red-50">
                   <CardHeader>
-                    <CardTitle className="text-red-900">Causales de Pérdida del Beneficio</CardTitle>
+                    <CardTitle className="text-red-900">Causales de Remoción y Pérdida del Beneficio</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2 text-red-800">
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Abandono voluntario del programa</span>
+                        <span>Incumplimiento de las obligaciones establecidas en el Reglamento</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Incumplimiento de los términos y condiciones aceptados</span>
+                        <span>Incumplimiento de las funciones acordadas con el supervisor</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>No mantener la condición de docente en ejercicio</span>
+                        <span>Conductas inadecuadas o uso indebido de recursos y equipos</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Incumplimiento de pagos a la Universidad</span>
+                        <span>Incumplimiento de compromisos de pago con la Universidad</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0"></div>
-                        <span>Violación del Código de Ética de la Universidad</span>
+                        <span>Incurrir en una sanción disciplinaria</span>
                       </li>
                     </ul>
                     <p className="mt-4 text-sm text-red-900 font-semibold">
-                      Nota: Si pierdes el beneficio por estas causales, no podrás acceder nuevamente
-                      al programa y no podrás retomar estudios con apoyo económico de la Universidad en el futuro.
+                      Nota: El ayudante que pierda el beneficio por estas causales no podrá acceder nuevamente
+                      al programa Ayudantía.
                     </p>
                   </CardContent>
                 </Card>
@@ -541,7 +611,7 @@ const FormacionDocenteProgram = () => {
 
             {activeModule === "reglamento" && (
               <div className="flex justify-center">
-                <ReglamentoAccess becaType="formacion-docente" />
+                <ReglamentoAccess becaType="ayudantias" />
               </div>
             )}
           </div>
@@ -551,4 +621,4 @@ const FormacionDocenteProgram = () => {
   );
 };
 
-export default FormacionDocenteProgram;
+export default AyudantiasProgram;

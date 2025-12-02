@@ -8,16 +8,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check } from "lucide-react";
+import { ChevronsUpDown, Check, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserCog, Shield, CheckCircle, Clock } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
-import { registerUser } from "@/lib/api/auth";
+import { registerUser, loginUser } from "@/lib/api/auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 type RegistrationType = "student" | "admin" | "supervisor";
 
 const Register = () => {
+  const { loginSuccess } = useAuth();
   const [selectedType, setSelectedType] = useState<RegistrationType | null>(null);
   const [formData, setFormData] = useState({
     // Common fields
@@ -48,6 +50,9 @@ const Register = () => {
 
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [isOtherDept, setIsOtherDept] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isOtherCarrera, setIsOtherCarrera] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -119,8 +124,36 @@ const Register = () => {
       // Llamar al endpoint de registro
       const result = await registerUser(registerData);
 
-      // Mostrar mensaje de éxito
-      setShowSuccessMessage(true);
+      console.log('✅ Usuario registrado exitosamente:', result);
+
+      // Si es estudiante, hacer auto-login y redirigir a /modules
+      if (selectedType === "student") {
+        try {
+          // Auto-login para entrar directamente
+          const loginResult = await loginUser({
+            email: formData.email,
+            password: formData.password
+          });
+
+          console.log('🔐 Auto-login exitoso');
+
+          // Guardar en el contexto
+          loginSuccess(loginResult.data.user, loginResult.data.tokens);
+
+          // Redirigir a modules con flag de nuevo registro
+          navigate('/modules', {
+            state: { newRegistration: true, userEmail: formData.email }
+          });
+          return;
+        } catch (loginError) {
+          console.error('❌ Error al hacer auto-login:', loginError);
+          // Si hay error, mostrar el mensaje de éxito normal
+          setShowSuccessMessage(true);
+        }
+      } else {
+        // Para admin y supervisor, mostrar mensaje de éxito normal
+        setShowSuccessMessage(true);
+      }
     } catch (err: any) {
       console.error('Error en registro:', err);
       
@@ -159,7 +192,7 @@ const Register = () => {
   const registrationTypes = [
     {
       id: "student" as RegistrationType,
-      title: "Registro Usuario Estudiante",
+      title: "Registro Usuario",
       description: "Para estudiantes de la universidad",
       icon: User
     },
@@ -309,73 +342,118 @@ const Register = () => {
                           required
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="studentId">Carnet Estudiantil <span className="text-muted-foreground">(opcional)</span></Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="cedula">Cédula</Label>
+                        <div className="flex gap-2">
+                          <Select value={formData.cedulaTipo} onValueChange={(tipo) => handleCedulaChange(tipo, formData.cedulaNumero)}>
+                            <SelectTrigger className="w-20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="V">V</SelectItem>
+                              <SelectItem value="E">E</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <Input
-                            id="studentId"
-                            name="studentId"
-                            type="text"
-                            value={formData.studentId}
-                            onChange={handleChange}
-                            placeholder="2024-0001"
+                            id="cedula"
+                            placeholder="12345678"
+                            value={formData.cedulaNumero}
+                            onChange={(e) => handleCedulaChange(formData.cedulaTipo, e.target.value)}
+                            className="flex-1"
+                            required
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cedula">Cédula</Label>
-                          <div className="flex gap-2">
-                            <Select value={formData.cedulaTipo} onValueChange={(tipo) => handleCedulaChange(tipo, formData.cedulaNumero)}>
-                              <SelectTrigger className="w-20">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="V">V</SelectItem>
-                                <SelectItem value="E">E</SelectItem>
-                              </SelectContent>
-                            </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="studentId">Carnet Estudiantil <span className="text-muted-foreground">(opcional)</span></Label>
+                        <Input
+                          id="studentId"
+                          name="studentId"
+                          type="text"
+                          value={formData.studentId}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 12);
+                            setFormData({ ...formData, studentId: value });
+                          }}
+                          placeholder="20191110205"
+                          maxLength={12}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="carrera">Carrera <span className="text-muted-foreground">(opcional)</span></Label>
+                        <Select
+                          value={isOtherCarrera ? "Otra" : formData.carrera}
+                          onValueChange={(value) => {
+                            if (value === "Otra") {
+                              setIsOtherCarrera(true);
+                              handleSelectChange("carrera", "");
+                            } else {
+                              setIsOtherCarrera(false);
+                              handleSelectChange("carrera", value);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona tu carrera (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {/* Facultad de Ingeniería */}
+                            <SelectItem value="Ingeniería Civil">Ingeniería Civil</SelectItem>
+                            <SelectItem value="Ingeniería Eléctrica">Ingeniería Eléctrica</SelectItem>
+                            <SelectItem value="Ingeniería Mecánica">Ingeniería Mecánica</SelectItem>
+                            <SelectItem value="Ingeniería Química">Ingeniería Química</SelectItem>
+                            <SelectItem value="Ingeniería de Sistemas">Ingeniería de Sistemas</SelectItem>
+                            <SelectItem value="Ingeniería de Producción">Ingeniería de Producción</SelectItem>
+
+                            {/* Facultad de Ciencias Económicas y Sociales */}
+                            <SelectItem value="Ciencias Administrativas">Ciencias Administrativas</SelectItem>
+                            <SelectItem value="Contaduría Pública">Contaduría Pública</SelectItem>
+                            <SelectItem value="Economía Empresarial">Economía Empresarial</SelectItem>
+
+                            {/* Facultad de Ciencias */}
+                            <SelectItem value="Psicología">Psicología</SelectItem>
+                            <SelectItem value="Matemáticas Industriales">Matemáticas Industriales</SelectItem>
+
+                            {/* Facultad de Estudios Jurídicos y Políticos */}
+                            <SelectItem value="Derecho">Derecho</SelectItem>
+                            <SelectItem value="Estudios Liberales">Estudios Liberales</SelectItem>
+
+                            {/* Facultad de Humanidades */}
+                            <SelectItem value="Comunicación Social y Empresarial">Comunicación Social y Empresarial</SelectItem>
+                            <SelectItem value="Educación">Educación</SelectItem>
+                            <SelectItem value="Idiomas Modernos">Idiomas Modernos</SelectItem>
+                            <SelectItem value="Turismo Sostenible">Turismo Sostenible</SelectItem>
+
+                            {/* Opción para escribir otra carrera */}
+                            <SelectItem value="Otra">Otra</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {isOtherCarrera && (
+                          <div className="mt-2">
                             <Input
-                              id="cedula"
-                              placeholder="12345678"
-                              value={formData.cedulaNumero}
-                              onChange={(e) => handleCedulaChange(formData.cedulaTipo, e.target.value)}
-                              className="flex-1"
-                              required
+                              id="carreraOtra"
+                              name="carrera"
+                              type="text"
+                              value={formData.carrera}
+                              onChange={handleChange}
+                              placeholder="Escribe tu carrera"
                             />
                           </div>
-                        </div>
+                        )}
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="carrera">Carrera <span className="text-muted-foreground">(opcional)</span></Label>
-                          <Select onValueChange={(value) => handleSelectChange("carrera", value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona tu carrera (opcional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Ingeniería de Sistemas">Ingeniería de Sistemas</SelectItem>
-                              <SelectItem value="Ingeniería Industrial">Ingeniería Industrial</SelectItem>
-                              <SelectItem value="Administración de Empresas">Administración de Empresas</SelectItem>
-                              <SelectItem value="Contabilidad">Contabilidad</SelectItem>
-                              <SelectItem value="Derecho">Derecho</SelectItem>
-                              <SelectItem value="Psicología">Psicología</SelectItem>
-                              <SelectItem value="Educación">Educación</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="trimestre">Trimestre <span className="text-muted-foreground">(opcional)</span></Label>
-                          <Select onValueChange={(value) => handleSelectChange("trimestre", value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona tu trimestre (opcional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 12 }, (_, i) => i + 1).map((t) => (
-                                <SelectItem key={t} value={t.toString()}>{t}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                      {/* <div className="space-y-2">
+                        <Label htmlFor="trimestre">Trimestre <span className="text-muted-foreground">(opcional)</span></Label>
+                        <Select onValueChange={(value) => handleSelectChange("trimestre", value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona tu trimestre (opcional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map((t) => (
+                              <SelectItem key={t} value={t.toString()}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div> */}
                     </>
                   )}
 
@@ -548,27 +626,55 @@ const Register = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="password">Contraseña</Label>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        placeholder="••••••••"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          value={formData.password}
+                          onChange={handleChange}
+                          placeholder="••••••••"
+                          required
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        placeholder="••••••••"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="••••••••"
+                          required
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
 

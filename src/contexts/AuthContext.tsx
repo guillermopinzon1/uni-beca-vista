@@ -12,8 +12,14 @@ interface AuthUser {
   firstLogin?: boolean;
   cedula?: string;
   telefono?: string;
+  carnet?: string;
   carrera?: string;
   trimestre?: number;
+  iaa?: number;
+  asignaturasAprobadas?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: any; // Allow additional fields
 }
 
 interface AuthTokens {

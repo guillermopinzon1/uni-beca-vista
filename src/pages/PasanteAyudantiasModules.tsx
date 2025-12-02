@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE } from "@/lib/api";
 import { getPlazasCompatibles, postularAPlaza, getMisPostulaciones } from "@/lib/api/postulacionesPlazas";
+import { verificarPostulacionesPorEmail, PostulacionPublicData } from "@/lib/api/postulacionesBecas";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 
 const PasanteAyudantiasModules = () => {
   const navigate = useNavigate();
@@ -71,6 +73,7 @@ const PasanteAyudantiasModules = () => {
   const [semanasHabilitadas, setSemanasHabilitadas] = useState<number[]>([]);
   const [semanaActual, setSemanaActual] = useState<number>(1);
   const [loadingSemanas, setLoadingSemanas] = useState(false);
+  const [periodoActual, setPeriodoActual] = useState<string>('2025-1'); // Estado para el período académico actual
 
   // Reiniciar inputs al cambiar de semana en las pestañas
   useEffect(() => {
@@ -88,6 +91,8 @@ const PasanteAyudantiasModules = () => {
 
   // Estado para información académica del perfil
   const [academicInfo, setAcademicInfo] = useState({
+    carrera: '',
+    trimestre: '',
     iaa: '',
     asignaturasAprobadas: '',
     creditosInscritos: ''
@@ -96,6 +101,10 @@ const PasanteAyudantiasModules = () => {
   // Estado para información del becario desde /becarios/me
   const [becarioStatus, setBecarioStatus] = useState<any>(null);
   const [loadingBecarioStatus, setLoadingBecarioStatus] = useState(true);
+
+  // Estado para verificación de postulaciones de becas
+  const [postulacionesBecas, setPostulacionesBecas] = useState<PostulacionPublicData[]>([]);
+  const [loadingPostulacionesBecas, setLoadingPostulacionesBecas] = useState(true);
 
   // Función para verificar el estado de la beca del usuario
   const loadBecarioStatus = async () => {
@@ -142,10 +151,139 @@ const PasanteAyudantiasModules = () => {
     }
   };
 
+  // Función para verificar postulaciones de becas
+  const loadPostulacionesBecas = async () => {
+    if (!user?.email) {
+      setLoadingPostulacionesBecas(false);
+      return;
+    }
+
+    try {
+      console.log('📋 [POSTULACIONES] Verificando postulaciones de becas...');
+      const response = await verificarPostulacionesPorEmail(user.email);
+
+      console.log('✅ [POSTULACIONES] Postulaciones encontradas:', response.data);
+      setPostulacionesBecas(response.data || []);
+    } catch (error) {
+      console.log('ℹ️ [POSTULACIONES] No se encontraron postulaciones:', error);
+      setPostulacionesBecas([]);
+    } finally {
+      setLoadingPostulacionesBecas(false);
+    }
+  };
+
+  // Función para cargar información académica del usuario
+  const loadInfoAcademica = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken || !user?.id) return;
+
+    try {
+      console.log('📚 [ACADÉMICO] Cargando información académica...');
+
+      const response = await fetch(`${API_BASE}/v1/users/${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const userData = data.data;
+
+        // Cargar los datos en el estado
+        setAcademicInfo({
+          carrera: userData.carrera || '',
+          trimestre: userData.trimestre?.toString() || '',
+          iaa: userData.iaa?.toString() || '',
+          asignaturasAprobadas: userData.asignaturasAprobadas?.toString() || '',
+          creditosInscritos: academicInfo.creditosInscritos, // Mantener el valor local
+        });
+
+        console.log('✅ [ACADÉMICO] Información cargada:', {
+          carrera: userData.carrera,
+          trimestre: userData.trimestre,
+          iaa: userData.iaa,
+          asignaturasAprobadas: userData.asignaturasAprobadas,
+        });
+      }
+    } catch (error) {
+      console.error('❌ [ACADÉMICO] Error al cargar información:', error);
+    }
+  };
+
+  // Función para guardar información académica
+  const handleGuardarInfoAcademica = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken || !user?.id) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo identificar al usuario',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validar campos
+    if (!academicInfo.carrera || !academicInfo.trimestre || !academicInfo.iaa || !academicInfo.asignaturasAprobadas || !academicInfo.creditosInscritos) {
+      toast({
+        title: 'Error',
+        description: 'Por favor completa todos los campos',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      console.log('📚 [ACADÉMICO] Guardando información académica...');
+
+      const body = {
+        carrera: academicInfo.carrera,
+        trimestre: parseInt(academicInfo.trimestre),
+        iaa: parseFloat(academicInfo.iaa),
+        asignaturasAprobadas: parseInt(academicInfo.asignaturasAprobadas),
+        // Note: creditosInscritos no está en el modelo User del backend,
+        // solo enviamos carrera, trimestre, iaa y asignaturasAprobadas
+      };
+
+      const response = await fetch(`${API_BASE}/v1/users/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al guardar la información académica');
+      }
+
+      console.log('✅ [ACADÉMICO] Información guardada exitosamente');
+
+      toast({
+        title: 'Información guardada',
+        description: 'Tus datos académicos se han actualizado correctamente',
+      });
+    } catch (error: any) {
+      console.error('❌ [ACADÉMICO] Error al guardar:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo guardar la información académica',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Función para cargar semanas habilitadas del período activo
   const loadSemanasHabilitadas = async () => {
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
-    if (!accessToken) return;
+    if (!accessToken) return '2025-1';
 
     setLoadingSemanas(true);
     try {
@@ -165,27 +303,37 @@ const PasanteAyudantiasModules = () => {
         if (data.data) {
           setSemanasHabilitadas(data.data.semanasHabilitadas || []);
           setSemanaActual(data.data.semanaActual || 1);
+          const periodo = data.data.periodoAcademico || '2025-1';
+          setPeriodoActual(periodo); // Guardar el período académico actual
           // Establecer la semana actual como activa
           setActiveWeek(`semana-${data.data.semanaActual || 1}`);
           console.log('📅 [SEMANAS] Semanas habilitadas:', data.data.semanasHabilitadas);
           console.log('📅 [SEMANAS] Semana actual:', data.data.semanaActual);
+          console.log('📅 [SEMANAS] Período académico:', periodo);
+          return periodo;
         } else {
           console.log('📅 [SEMANAS] No hay período activo configurado');
           setSemanasHabilitadas([]);
           setSemanaActual(1);
+          setPeriodoActual('2025-1'); // Valor por defecto
           setActiveWeek('semana-1');
+          return '2025-1';
         }
       } else {
         console.log('📅 [SEMANAS] Error al cargar período activo:', response.status);
         setSemanasHabilitadas([]);
         setSemanaActual(1);
+        setPeriodoActual('2025-1'); // Valor por defecto
         setActiveWeek('semana-1');
+        return '2025-1';
       }
     } catch (error) {
       console.error('📅 [SEMANAS] Error general:', error);
       setSemanasHabilitadas([]);
       setSemanaActual(1);
+      setPeriodoActual('2025-1');
       setActiveWeek('semana-1');
+      return '2025-1';
     } finally {
       setLoadingSemanas(false);
     }
@@ -308,9 +456,10 @@ const PasanteAyudantiasModules = () => {
     setLoadingPlazas(true);
     try {
       console.log('🏢 [PLAZAS] Cargando plazas compatibles con mi horario');
+      console.log('🏢 [PLAZAS] Período académico:', periodoActual);
 
       const data = await getPlazasCompatibles(accessToken, {
-        periodoAcademico: '2025-1'
+        periodoAcademico: periodoActual // Usar el período dinámico
       });
 
       const plazas = data?.data?.plazas || data?.data || [];
@@ -388,7 +537,7 @@ const PasanteAyudantiasModules = () => {
     }
   };
 
-  const loadReportes = async () => {
+  const loadReportes = async (periodoOverride?: string) => {
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
     if (!accessToken || !user?.id) return;
 
@@ -398,26 +547,25 @@ const PasanteAyudantiasModules = () => {
       return;
     }
 
-    // Obtener el ID de la ayudantía si no lo tenemos
-    if (!ayudantiaId) {
-      const id = await loadAyudantiaId();
-      if (!id) return;
-    }
-
     setLoadingReportes(true);
     try {
-      const idToUse = ayudantiaId || user.id;
+      // Obtener el ID de la ayudantía, ya sea del estado o cargándolo
+      let idToUse = ayudantiaId;
+      if (!idToUse) {
+        const id = await loadAyudantiaId();
+        idToUse = id || user.id;
+      }
       console.log('📝 [REPORTE] Cargando reportes para ayudantía:', idToUse);
-      
-      // Obtener el período académico actual del estado
-      const periodoActual = '2025-1'; // Por ahora hardcodeado, pero se puede obtener del estado
-      console.log('📝 [REPORTE] Usando período académico:', periodoActual);
+
+      // Usar el período académico pasado como parámetro o el del estado
+      const periodoToUse = periodoOverride || periodoActual;
+      console.log('📝 [REPORTE] Usando período académico:', periodoToUse);
       
       // Usar el endpoint correcto con parámetros de consulta
       const url = new URL(`${API_BASE}/v1/ayudantias/${idToUse}/reportes`);
       url.searchParams.append('limit', '20');
       url.searchParams.append('offset', '0');
-      url.searchParams.append('periodoAcademico', periodoActual);
+      url.searchParams.append('periodoAcademico', periodoToUse);
       
       const resp = await fetch(url.toString(), {
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' }
@@ -512,16 +660,21 @@ const PasanteAyudantiasModules = () => {
     const initializeData = async () => {
       if (user?.role === 'estudiante') {
         try {
-          // Cargar todo en paralelo para mayor velocidad
+          // Cargar datos básicos en paralelo
           await Promise.all([
             loadBecarioStatus(),
-            loadSemanasHabilitadas(),
-            loadAyudantiaId(),
+            loadPostulacionesBecas(),
           ]);
 
-          // Luego cargar el resto que depende del estado anterior
+          // Cargar semanas habilitadas y obtener el período académico
+          const periodoAcademico = await loadSemanasHabilitadas();
+
+          // Cargar ayudantiaId primero y esperar el resultado
+          const ayudantiaIdResult = await loadAyudantiaId();
+
+          // Luego cargar el resto que depende del ayudantiaId y período académico
           await Promise.all([
-            loadReportes(),
+            loadReportes(periodoAcademico),
             loadPlazaActual(),
             loadPlazasDisponibles(),
             loadMisPostulaciones(),
@@ -602,7 +755,7 @@ const PasanteAyudantiasModules = () => {
 
       const body = {
         semana: weekNumber,
-        periodoAcademico: '2025-1',
+        periodoAcademico: periodoActual, // Usar el período dinámico
         fecha: formData.fecha,
         horasTrabajadas: parseFloat(formData.horas),
         objetivosPeriodo: formData.objetivos,
@@ -635,17 +788,31 @@ const PasanteAyudantiasModules = () => {
       if (!resp.ok) {
         const err = await resp.json().catch(() => null);
         console.error('📝 [REPORTE] Error del servidor:', err);
-        
+
         // Manejar error específico de estudiante becario no encontrado
         if (err?.message === 'Registro de estudiante becario no encontrado') {
-          toast({ 
-            title: 'Registro no encontrado', 
-            description: 'No se encontró tu registro como estudiante becario. Contacta al administrador para verificar tu estado.', 
-            variant: 'destructive' 
+          toast({
+            title: 'Registro no encontrado',
+            description: 'No se encontró tu registro como estudiante becario. Contacta al administrador para verificar tu estado.',
+            variant: 'destructive'
           });
           return;
         }
-        
+
+        // Manejar errores de validación con detalles específicos
+        if (err?.errors && Array.isArray(err.errors) && err.errors.length > 0) {
+          const errorMessages = err.errors.map((error: any) =>
+            `• ${error.field}: ${error.message}`
+          ).join('\n');
+
+          toast({
+            title: err?.message || 'Error de Validación',
+            description: errorMessages,
+            variant: 'destructive'
+          });
+          return;
+        }
+
         throw new Error(err?.message || `Error ${resp.status}`);
       }
 
@@ -689,7 +856,10 @@ const PasanteAyudantiasModules = () => {
     }, 0);
     
     const totalHorasAprobadas = reportesArray
-      .filter(r => r.estado === 'aprobado' || r.estado === 'Aprobado')
+      .filter(r => {
+        const estado = String(r.estado || '').toLowerCase();
+        return estado === 'aprobado' || estado === 'aprobada';
+      })
       .reduce((sum, r) => {
         const horas = typeof r.horasTrabajadas === 'number' ? r.horasTrabajadas : parseFloat(String(r.horasTrabajadas)) || 0;
         return sum + horas;
@@ -750,16 +920,6 @@ const PasanteAyudantiasModules = () => {
                 Completa el reporte detallado de tus actividades como ayudante
               </CardDescription>
                 </div>
-                <Button 
-                  onClick={loadSemanasHabilitadas} 
-                  variant="outline" 
-                  size="sm"
-                  disabled={loadingSemanas}
-                  className="flex items-center space-x-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${loadingSemanas ? 'animate-spin' : ''}`} />
-                  <span>Actualizar Semanas</span>
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -868,7 +1028,7 @@ const PasanteAyudantiasModules = () => {
                               type="number"
                               step="0.5"
                               min="0.5"
-                              max="8"
+                              max="120"
                               placeholder="Ej: 4.5"
                               value={formData.horas}
                               onChange={(e) => setFormData({...formData, horas: e.target.value})}
@@ -1028,6 +1188,103 @@ const PasanteAyudantiasModules = () => {
                         </div>
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Postulaciones de Becas Section */}
+            {!loadingPostulacionesBecas && postulacionesBecas.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold text-foreground">Estado de tus Postulaciones a Becas</h2>
+                {postulacionesBecas.map((postulacion) => {
+                  const getEstadoColor = (estado: string) => {
+                    switch (estado.toLowerCase()) {
+                      case 'pendiente':
+                        return 'border-yellow-200 bg-yellow-50';
+                      case 'aprobada':
+                      case 'aprobado':
+                        return 'border-green-200 bg-green-50';
+                      case 'rechazada':
+                      case 'rechazado':
+                        return 'border-red-200 bg-red-50';
+                      default:
+                        return 'border-gray-200 bg-gray-50';
+                    }
+                  };
+
+                  const getEstadoIcon = (estado: string) => {
+                    switch (estado.toLowerCase()) {
+                      case 'pendiente':
+                        return <Clock className="h-5 w-5 text-yellow-600" />;
+                      case 'aprobada':
+                      case 'aprobado':
+                        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+                      case 'rechazada':
+                      case 'rechazado':
+                        return <AlertCircle className="h-5 w-5 text-red-600" />;
+                      default:
+                        return <FileText className="h-5 w-5 text-gray-600" />;
+                    }
+                  };
+
+                  return (
+                    <Card
+                      key={postulacion.id}
+                      className={`border-2 ${getEstadoColor(postulacion.estado)}`}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          {getEstadoIcon(postulacion.estado)}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-semibold">
+                                {postulacion.tipoBeca}
+                              </h3>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEstadoColor(postulacion.estado)}`}>
+                                {postulacion.estado}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-700">
+                              <p><strong>Carrera:</strong> {postulacion.carrera}</p>
+                              <p><strong>Fecha de postulación:</strong> {new Date(postulacion.fechaPostulacion).toLocaleDateString('es-ES')}</p>
+                            </div>
+                            {postulacion.estado.toLowerCase() === 'pendiente' && (
+                              <p className="mt-3 text-sm italic text-yellow-700">
+                                Tu postulación está siendo evaluada. Recibirás una notificación cuando haya una respuesta.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* No Postulaciones Message */}
+            {!loadingPostulacionesBecas && postulacionesBecas.length === 0 && user?.email && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                        ¿Deseas postularte a una beca?
+                      </h3>
+                      <p className="text-blue-800 mb-4">
+                        Puedes postularte a diferentes programas de becas desde el módulo de postulaciones.
+                      </p>
+                      <Button
+                        onClick={() => navigate('/postulaciones-becas')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Ir a Postular
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1265,8 +1522,11 @@ const PasanteAyudantiasModules = () => {
                 ) : plazasDisponibles.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-2">No hay plazas compatibles en este momento</p>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Período académico actual: <span className="font-semibold text-primary">{periodoActual}</span>
+                    </p>
                     <p className="text-sm text-gray-500 mb-4">
-                      Asegúrate de tener tu horario de disponibilidad registrado
+                      Asegúrate de tener tu horario de disponibilidad registrado y que haya plazas activas para el período actual
                     </p>
                     <Button
                       onClick={loadPlazasDisponibles}
@@ -1321,7 +1581,9 @@ const PasanteAyudantiasModules = () => {
                               </div>
                               <div className="p-2 bg-gray-50 rounded-lg">
                                 <p className="text-xs text-gray-500">Cupos disponibles</p>
-                                <p className="text-sm font-semibold text-gray-900">{plaza.cuposDisponibles || (plaza.cuposTotales - plaza.cuposOcupados) || 'N/A'}</p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {plaza.plazasDisponibles ?? plaza.cuposDisponibles ?? (plaza.capacidad && plaza.ocupadas !== undefined ? plaza.capacidad - plaza.ocupadas : 'N/A')}
+                                </p>
                               </div>
                             </div>
                             {plaza.horario && Array.isArray(plaza.horario) && plaza.horario.length > 0 && (
@@ -1480,7 +1742,7 @@ const PasanteAyudantiasModules = () => {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Período Académico</Label>
-                        <p className="text-base font-medium text-primary">2025-1</p>
+                        <p className="text-base font-medium text-primary">{periodoActual}</p>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Estado</Label>
@@ -1523,15 +1785,38 @@ const PasanteAyudantiasModules = () => {
               </CardHeader>
               <CardContent>
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    toast({
-                      title: 'Información guardada',
-                      description: 'Los datos académicos se han guardado localmente. La sincronización con el servidor estará disponible próximamente.',
-                    });
-                  }}
+                  onSubmit={handleGuardarInfoAcademica}
                   className="space-y-4"
                 >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="carrera">Carrera</Label>
+                      <Input
+                        id="carrera"
+                        type="text"
+                        placeholder="Ej: Ingeniería de Sistemas"
+                        value={academicInfo.carrera}
+                        onChange={(e) =>
+                          setAcademicInfo({ ...academicInfo, carrera: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="trimestre">Trimestre</Label>
+                      <Input
+                        id="trimestre"
+                        type="number"
+                        min="1"
+                        max="20"
+                        placeholder="6"
+                        value={academicInfo.trimestre}
+                        onChange={(e) =>
+                          setAcademicInfo({ ...academicInfo, trimestre: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="iaa">Índice Académico Acumulado (IAA)</Label>
@@ -1541,7 +1826,7 @@ const PasanteAyudantiasModules = () => {
                         step="0.01"
                         min="0"
                         max="20"
-                        placeholder="18.2"
+                        placeholder="15"
                         value={academicInfo.iaa}
                         onChange={(e) =>
                           setAcademicInfo({ ...academicInfo, iaa: e.target.value })
@@ -1554,7 +1839,7 @@ const PasanteAyudantiasModules = () => {
                         id="asignaturasAprobadas"
                         type="number"
                         min="0"
-                        placeholder="42"
+                        placeholder="20"
                         value={academicInfo.asignaturasAprobadas}
                         onChange={(e) =>
                           setAcademicInfo({
@@ -1584,8 +1869,7 @@ const PasanteAyudantiasModules = () => {
 
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-800">
-                      <strong>Nota:</strong> Los datos académicos se guardan localmente. La
-                      funcionalidad de sincronización con el servidor estará disponible próximamente.
+                      <strong>Nota:</strong> Los datos de Carrera, Trimestre, IAA y Asignaturas Aprobadas se guardan en el servidor. Los Créditos Inscritos se mantienen localmente.
                     </p>
                   </div>
 
@@ -1665,7 +1949,18 @@ const PasanteAyudantiasModules = () => {
   }
 
   // Verificar si la postulación del estudiante ha sido aprobada
-  if (user?.role === 'estudiante' && !loadingBecarioStatus && (!becarioStatus || becarioStatus?.estado !== 'Activa')) {
+  // Solo mostrar el mensaje si hay una postulación pendiente de ayudantía
+  const tienePostulacionPendienteAyudantia = postulacionesBecas.some(
+    (post) => post.tipoBeca === 'Ayudantía' && post.estado === 'Pendiente'
+  );
+
+  if (
+    user?.role === 'estudiante' && 
+    !loadingBecarioStatus && 
+    !loadingPostulacionesBecas &&
+    (!becarioStatus || becarioStatus?.estado !== 'Activa') &&
+    tienePostulacionPendienteAyudantia
+  ) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-lg">
@@ -1793,6 +2088,11 @@ const PasanteAyudantiasModules = () => {
               <h1 className="text-2xl font-bold text-primary">Gestión de Ayudantía</h1>
               <p className="text-sm text-muted-foreground">
                 Inicio &gt; Mi Ayudantía &gt; Gestión
+                {periodoActual && (
+                  <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-800 rounded-md text-xs font-semibold">
+                    Período: {periodoActual}
+                  </span>
+                )}
               </p>
             </div>
           </div>

@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Upload, Eye, Trash2, Loader2, X, Calendar, Lock, Unlock, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { FileText, Upload, Eye, Trash2, Loader2, X, Calendar, Lock, Unlock, RefreshCw, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE } from "@/lib/api";
+import CerrarPeriodoModal from "./CerrarPeriodoModal";
 
 interface DocumentoReglamento {
   id: string;
@@ -82,13 +83,41 @@ const ConfiguracionSistema = () => {
     activo: false
   });
 
+  // Estados para cerrar período
+  const [showCerrarPeriodoModal, setShowCerrarPeriodoModal] = useState<boolean>(false);
+  const [becariosActivos, setBecariosActivos] = useState<number>(0);
+
   useEffect(() => {
     // Cargar documentos reales del backend
     loadDocuments();
     // Cargar configuración de semanas
     loadConfiguracionPeriodoActivo();
     loadPeriodosAcademicos();
+    loadBecariosActivos();
   }, []);
+
+  const loadBecariosActivos = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || '{}')?.accessToken;
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/v1/becarios`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const becarios = data?.data?.becarios || [];
+        const activos = becarios.filter((b: any) => b.estado?.toLowerCase() === 'activa').length;
+        setBecariosActivos(activos);
+      }
+    } catch (error) {
+      console.error('Error loading becarios activos:', error);
+    }
+  };
 
   const loadDocuments = async () => {
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || '{}')?.accessToken;
@@ -685,6 +714,13 @@ const ConfiguracionSistema = () => {
     }
   };
 
+  const handleCerrarPeriodoSuccess = () => {
+    setShowCerrarPeriodoModal(false);
+    loadConfiguracionPeriodoActivo();
+    loadPeriodosAcademicos();
+    loadBecariosActivos();
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -749,7 +785,7 @@ const ConfiguracionSistema = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 16 }, (_, i) => i + 1).map((semana) => (
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((semana) => (
                         <SelectItem key={semana} value={semana.toString()}>
                           Semana {semana}
                         </SelectItem>
@@ -805,27 +841,76 @@ const ConfiguracionSistema = () => {
               </div>
             </div>
 
-            {/* Información del Período Activo */}
+            {/* Información del Período Activo y Cierre */}
             {configuracionPeriodoActivo && (
-              <div className="border border-orange/20 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-primary mb-4">Período Académico Activo</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="border-2 border-orange/30 rounded-xl p-6 bg-gradient-to-br from-orange-50/50 via-white to-red-50/30">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-primary mb-2 flex items-center gap-2">
+                      <Calendar className="h-6 w-6" />
+                      Período Académico Activo
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Gestión del trimestre actual y cierre de período
+                    </p>
+                  </div>
+                </div>
+
+                {/* Información del período */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                     <div className="text-sm text-blue-600 font-medium">Período</div>
                     <div className="text-lg font-semibold text-blue-800">{configuracionPeriodoActivo.periodoAcademico}</div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                     <div className="text-sm text-green-600 font-medium">Semana Actual</div>
                     <div className="text-lg font-semibold text-green-800">{configuracionPeriodoActivo.semanaActual}</div>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
                     <div className="text-sm text-purple-600 font-medium">Semanas Habilitadas</div>
                     <div className="text-lg font-semibold text-purple-800">{configuracionPeriodoActivo.totalSemanasHabilitadas}</div>
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  <p><strong>Fecha de Inicio:</strong> {new Date(configuracionPeriodoActivo.fechaInicio).toLocaleDateString()}</p>
-                  <p><strong>Fecha de Fin:</strong> {new Date(configuracionPeriodoActivo.fechaFin).toLocaleDateString()}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="text-muted-foreground">Fecha de Inicio:</span>
+                    <p className="font-semibold text-gray-800 mt-1">
+                      {new Date(configuracionPeriodoActivo.fechaInicio).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="text-muted-foreground">Fecha de Fin:</span>
+                    <p className="font-semibold text-gray-800 mt-1">
+                      {new Date(configuracionPeriodoActivo.fechaFin).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-gray-200">
+                    <span className="text-muted-foreground">Becarios Activos:</span>
+                    <p className="font-semibold text-gray-800 mt-1">{becariosActivos}</p>
+                  </div>
+                </div>
+
+                {/* Sección de Cierre de Período */}
+                <div className="border-t border-gray-200 pt-6 mt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700">
+                        Finalizar Trimestre
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Cierre del período académico actual
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowCerrarPeriodoModal(true)}
+                      variant="outline"
+                      className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Cerrar Período Académico
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1234,6 +1319,21 @@ const ConfiguracionSistema = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Cerrar Período */}
+      <CerrarPeriodoModal
+        open={showCerrarPeriodoModal}
+        onClose={() => setShowCerrarPeriodoModal(false)}
+        periodoActual={
+          configuracionPeriodoActivo
+            ? {
+                periodoAcademico: configuracionPeriodoActivo.periodoAcademico,
+                becariosActivos: becariosActivos,
+              }
+            : null
+        }
+        onSuccess={handleCerrarPeriodoSuccess}
+      />
     </div>
   );
 };

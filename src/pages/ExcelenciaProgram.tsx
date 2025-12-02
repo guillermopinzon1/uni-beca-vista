@@ -94,7 +94,16 @@ const ExcelenciaProgram = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/scholarship-programs')}
+              onClick={() => {
+                if (selectedScholarshipType) {
+                  // Si hay un tipo de beca seleccionado, volver a la selección de tipos
+                  setSelectedScholarshipType(null);
+                  setActiveModule(null);
+                } else {
+                  // Si no hay tipo seleccionado, volver a scholarship-programs
+                  navigate('/scholarship-programs');
+                }
+              }}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -107,7 +116,16 @@ const ExcelenciaProgram = () => {
               </p>
             </div>
           </div>
-          
+
+          {/* Logo en el centro */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <img
+              src="/450.jpg"
+              alt="UNIMET Logo"
+              className="h-12 object-contain"
+            />
+          </div>
+
           <div className="flex items-center space-x-3">
             <div className="flex flex-col items-end space-y-2">
               <div className="flex items-center space-x-3">
@@ -180,10 +198,13 @@ const ExcelenciaProgram = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {tiposBecas.map((tipo) => (
-                    <Card 
+                    <Card
                       key={tipo.id}
                       className={`cursor-pointer hover:shadow-lg transition-all border-2 hover:border-${tipo.color}-500/50`}
-                      onClick={() => setSelectedScholarshipType(tipo.id)}
+                      onClick={() => {
+                        setSelectedScholarshipType(tipo.id);
+                        setActiveModule("actividades"); // Establecer el primer módulo por defecto
+                      }}
                     >
                       <CardHeader className="text-center">
                         <tipo.icon className={`h-12 w-12 mx-auto text-${tipo.color}-600 mb-3`} />

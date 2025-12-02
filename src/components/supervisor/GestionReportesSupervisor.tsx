@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, CheckCircle, XCircle, RefreshCw, Clock, Calendar, FileText, AlertTriangle } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, RefreshCw, Clock, Calendar, FileText, AlertTriangle, User, BookOpen, Target, ListChecks, Briefcase, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -272,25 +272,14 @@ const GestionReportesSupervisor = ({ supervisorId }: GestionReportesSupervisorPr
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                Reportes Semanales
-                <Badge variant="outline" className="ml-2">{reportes.length}</Badge>
-              </CardTitle>
-              <CardDescription>
-                Revisa y aprueba los reportes de horas trabajadas por tus ayudantes
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadData}
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Actualizar
-            </Button>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              Reportes Semanales
+              <Badge variant="outline" className="ml-2">{reportes.length}</Badge>
+            </CardTitle>
+            <CardDescription className="mt-2">
+              Revisa y aprueba los reportes de horas trabajadas por tus ayudantes
+            </CardDescription>
           </div>
 
           {/* Estadísticas rápidas */}
@@ -380,172 +369,257 @@ const GestionReportesSupervisor = ({ supervisorId }: GestionReportesSupervisorPr
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Estudiante</TableHead>
-                  <TableHead>Semana</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>Horas</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReportes.map((reporte) => (
-                  <TableRow key={reporte.id} className="hover:bg-muted/50">
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {reporte.estudiante.nombre} {reporte.estudiante.apellido}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{reporte.estudiante.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Semana {reporte.semana}</Badge>
-                    </TableCell>
-                    <TableCell>{reporte.periodoAcademico}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{reporte.horasTrabajadas}h</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(reporte.createdAt).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getEstadoBadge(reporte.estado)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleVerDetalle(reporte)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[600px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-white z-10">
+                    <TableRow>
+                      <TableHead>Estudiante</TableHead>
+                      <TableHead>Semana</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Horas</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReportes.map((reporte) => (
+                      <TableRow key={reporte.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {reporte.estudiante.nombre} {reporte.estudiante.apellido}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{reporte.estudiante.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">Semana {reporte.semana}</Badge>
+                        </TableCell>
+                        <TableCell>{reporte.periodoAcademico}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{reporte.horasTrabajadas}h</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(reporte.createdAt).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getEstadoBadge(reporte.estado)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleVerDetalle(reporte)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Modal de Detalle */}
+      {/* Modal de Detalle - Rediseñado */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalle del Reporte - Semana {selectedReporte?.semana}</DialogTitle>
-            <DialogDescription>
-              {selectedReporte?.estudiante.nombre} {selectedReporte?.estudiante.apellido}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
           {selectedReporte && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Período Académico</Label>
-                  <p className="font-medium">{selectedReporte.periodoAcademico}</p>
+            <>
+              {/* Header blanco limpio */}
+              <div className="bg-white border-b border-gray-200 px-6 py-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <FileText className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Reporte Semana {selectedReporte.semana}</h2>
+                        <p className="text-gray-500 text-sm">{selectedReporte.periodoAcademico}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {getEstadoBadge(selectedReporte.estado)}
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Horas Trabajadas</Label>
-                  <p className="font-medium">{selectedReporte.horasTrabajadas} horas</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Estado</Label>
-                  <div className="mt-1">{getEstadoBadge(selectedReporte.estado)}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Tipo de Beca</Label>
-                  <p className="font-medium">{selectedReporte.tipoBeca}</p>
+
+                {/* Info del estudiante */}
+                <div className="mt-4 flex items-center gap-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{selectedReporte.estudiante.nombre} {selectedReporte.estudiante.apellido}</p>
+                    <p className="text-sm text-gray-600">{selectedReporte.estudiante.email}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Objetivos del Período</Label>
-                <p className="text-sm p-3 rounded-lg bg-orange-50 border border-orange-100">
-                  {selectedReporte.objetivosPeriodo || 'No especificado'}
-                </p>
+              {/* Contenido scrollable */}
+              <div className="overflow-y-auto max-h-[calc(90vh-340px)] px-6 py-6 space-y-6">
+                {/* Métricas principales */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-500 rounded-lg">
+                        <Clock className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Horas Trabajadas</p>
+                        <p className="text-2xl font-bold text-gray-900">{selectedReporte.horasTrabajadas}h</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-500 rounded-lg">
+                        <Briefcase className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Tipo de Beca</p>
+                        <p className="text-lg font-bold text-gray-900">{selectedReporte.tipoBeca}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Secciones de contenido */}
+                <div className="space-y-4">
+                  {/* Objetivos */}
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100/30 rounded-xl p-5 border border-orange-200/60 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-orange-500 rounded-lg">
+                        <Target className="h-4 w-4 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-orange-900">Objetivos del Período</h3>
+                    </div>
+                    <p className="text-sm text-orange-800 leading-relaxed whitespace-pre-wrap">
+                      {selectedReporte.objetivosPeriodo || 'No especificado'}
+                    </p>
+                  </div>
+
+                  {/* Metas */}
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-5 border border-gray-200/60 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-gray-500 rounded-lg">
+                        <ListChecks className="h-4 w-4 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Metas Específicas</h3>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {selectedReporte.metasEspecificas || 'No especificado'}
+                    </p>
+                  </div>
+
+                  {/* Actividades Programadas */}
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-5 border border-gray-200/60 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-gray-500 rounded-lg">
+                        <BookOpen className="h-4 w-4 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Actividades Programadas</h3>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {selectedReporte.actividadesProgramadas || 'No especificado'}
+                    </p>
+                  </div>
+
+                  {/* Actividades Realizadas */}
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-5 border border-gray-200/60 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-gray-500 rounded-lg">
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Actividades Realizadas</h3>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {selectedReporte.actividadesRealizadas || 'No especificado'}
+                    </p>
+                  </div>
+
+                  {/* Descripción Detallada */}
+                  {selectedReporte.descripcionActividades && (
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-5 border border-gray-200/60 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1.5 bg-gray-500 rounded-lg">
+                          <FileText className="h-4 w-4 text-white" />
+                        </div>
+                        <h3 className="font-semibold text-gray-900">Descripción Detallada</h3>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {selectedReporte.descripcionActividades}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Observaciones del Estudiante */}
+                  {selectedReporte.observaciones && (
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100/30 rounded-xl p-5 border border-orange-200/60 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1.5 bg-orange-500 rounded-lg">
+                          <MessageSquare className="h-4 w-4 text-white" />
+                        </div>
+                        <h3 className="font-semibold text-orange-900">Observaciones del Estudiante</h3>
+                      </div>
+                      <p className="text-sm text-orange-800 leading-relaxed whitespace-pre-wrap">
+                        {selectedReporte.observaciones}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Feedback del Supervisor */}
+                  {selectedReporte.estado === 'Aprobada' && selectedReporte.observacionesSupervisor && (
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-5 border-2 border-gray-300 shadow-md">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CheckCircle className="h-5 w-5 text-gray-600" />
+                        <h3 className="font-semibold text-gray-900">Observaciones del Supervisor</h3>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {selectedReporte.observacionesSupervisor}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedReporte.estado === 'Rechazada' && selectedReporte.motivoRechazo && (
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100/30 rounded-xl p-5 border-2 border-gray-300 shadow-md">
+                      <div className="flex items-center gap-2 mb-3">
+                        <XCircle className="h-5 w-5 text-gray-600" />
+                        <h3 className="font-semibold text-gray-900">Motivo de Rechazo</h3>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {selectedReporte.motivoRechazo}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Metas Específicas</Label>
-                <p className="text-sm p-3 rounded-lg whitespace-pre-wrap bg-orange-50 border border-orange-100">
-                  {selectedReporte.metasEspecificas || 'No especificado'}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Actividades Programadas</Label>
-                <p className="text-sm p-3 rounded-lg whitespace-pre-wrap bg-orange-50 border border-orange-100">
-                  {selectedReporte.actividadesProgramadas || 'No especificado'}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Actividades Realizadas</Label>
-                <p className="text-sm p-3 rounded-lg whitespace-pre-wrap bg-orange-50 border border-orange-100">
-                  {selectedReporte.actividadesRealizadas || 'No especificado'}
-                </p>
-              </div>
-
-              {selectedReporte.descripcionActividades && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Descripción Detallada</Label>
-                  <p className="text-sm p-3 rounded-lg whitespace-pre-wrap bg-orange-50 border border-orange-100">
-                    {selectedReporte.descripcionActividades}
-                  </p>
-                </div>
-              )}
-
-              {selectedReporte.observaciones && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Observaciones del Estudiante</Label>
-                  <p className="text-sm p-3 rounded-lg whitespace-pre-wrap bg-orange-50 border border-orange-100">
-                    {selectedReporte.observaciones}
-                  </p>
-                </div>
-              )}
-
-              {selectedReporte.estado === 'Aprobada' && selectedReporte.observacionesSupervisor && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Observaciones del Supervisor</Label>
-                  <p className="text-sm p-3 bg-green-50 border border-green-200 rounded-lg whitespace-pre-wrap">
-                    {selectedReporte.observacionesSupervisor}
-                  </p>
-                </div>
-              )}
-
-              {selectedReporte.estado === 'Rechazada' && selectedReporte.motivoRechazo && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Motivo de Rechazo</Label>
-                  <p className="text-sm p-3 bg-red-50 border border-red-200 rounded-lg whitespace-pre-wrap">
-                    {selectedReporte.motivoRechazo}
-                  </p>
-                </div>
-              )}
-
-              {/* Acciones dentro del detalle */}
-              <div className="pt-2">
+              {/* Footer con acciones */}
+              <div className="border-t bg-gray-50 px-6 py-5">
                 {selectedReporte?.estado === 'Pendiente' ? (
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <Button
                       onClick={() => {
                         setIsDetailModalOpen(false);
                         handleAprobar(selectedReporte);
                       }}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-md"
+                      size="lg"
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Aprobar
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      Aprobar Reporte
                     </Button>
                     <Button
                       onClick={() => {
@@ -553,23 +627,26 @@ const GestionReportesSupervisor = ({ supervisorId }: GestionReportesSupervisorPr
                         handleRechazar(selectedReporte);
                       }}
                       variant="destructive"
-                      className="flex-1"
+                      className="flex-1 shadow-md"
+                      size="lg"
                     >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Rechazar
+                      <XCircle className="h-5 w-5 mr-2" />
+                      Rechazar Reporte
                     </Button>
                   </div>
                 ) : selectedReporte?.estado === 'Aprobada' ? (
-                  <div className="p-3 rounded-lg border border-green-200 bg-green-50 text-green-800 text-sm font-medium">
-                    ✓ Reporte Aprobado
+                  <div className="flex items-center justify-center gap-2 p-4 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-300 text-gray-800 font-semibold">
+                    <CheckCircle className="h-5 w-5" />
+                    <span>Reporte Aprobado Exitosamente</span>
                   </div>
                 ) : selectedReporte?.estado === 'Rechazada' ? (
-                  <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm font-medium">
-                    ✗ Reporte Rechazado
+                  <div className="flex items-center justify-center gap-2 p-4 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-300 text-gray-800 font-semibold">
+                    <XCircle className="h-5 w-5" />
+                    <span>Reporte Rechazado</span>
                   </div>
                 ) : null}
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

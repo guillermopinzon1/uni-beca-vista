@@ -7,6 +7,7 @@ import { CheckCircle, AlertTriangle, Clock, User, FileText, Users, ArrowLeft, Al
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { obtenerSupervisorCompleto, listarReportesDeAyudante } from "@/lib/api/supervisor";
+import { API_BASE } from "@/lib/api";
 import ListaAyudantesSupervisor from "@/components/supervisor/ListaAyudantesSupervisor";
 import GestionReportesSupervisor from "@/components/supervisor/GestionReportesSupervisor";
 // import AyudantesSinPlaza from "@/components/supervisor/AyudantesSinPlaza";
@@ -35,10 +36,12 @@ const SupervisorLaboralDashboard = () => {
     cargo: string | null;
   } | null>(null);
   const [plazasAsignadas, setPlazasAsignadas] = useState<any[]>([]);
+  const [periodoActual, setPeriodoActual] = useState<string>(''); // Período académico actual
 
   // Cargar estadísticas del supervisor usando el nuevo endpoint
   useEffect(() => {
     loadStats();
+    loadPeriodoActual();
   }, [user?.id]);
 
   const loadStats = async () => {
@@ -98,6 +101,30 @@ const SupervisorLaboralDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPeriodoActual = async () => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) return;
+
+      const response = await fetch(`${API_BASE}/v1/configuracion/periodo-actual`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && data.data.periodoAcademico) {
+          setPeriodoActual(data.data.periodoAcademico);
+          console.log('📅 [SUPERVISOR] Período académico actual:', data.data.periodoAcademico);
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando período actual:', error);
     }
   };
 
@@ -297,25 +324,7 @@ const SupervisorLaboralDashboard = () => {
                       ) : plazasAsignadas.length > 0 ? (
                         <div className="space-y-4">
                           {/* Info principal en grid compacto */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Materia */}
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-green-100 rounded-lg shrink-0">
-                                <BookOpen className="h-4 w-4 text-green-700" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs text-muted-foreground mb-0.5">Materia</p>
-                                <p className="text-base font-bold text-gray-900 truncate">
-                                  {plazasAsignadas[0].materia || 'Materia'}
-                                </p>
-                                {plazasAsignadas[0].codigo && (
-                                  <Badge variant="outline" className="text-xs border-green-300 text-green-700 mt-1">
-                                    {plazasAsignadas[0].codigo}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Ubicación */}
                             <div className="flex items-start gap-3">
                               <div className="p-2 bg-blue-100 rounded-lg shrink-0">
@@ -375,26 +384,14 @@ const SupervisorLaboralDashboard = () => {
                             </div>
                           </div>
 
-                          {/* Periodo y vigencia en línea */}
-                          <div className="flex flex-wrap gap-3 text-sm">
-                            <div className="flex items-center gap-2 bg-orange-50/50 px-3 py-2 rounded-lg border border-orange-100">
-                              <Calendar className="h-3.5 w-3.5 text-orange-700 shrink-0" />
-                              <div>
-                                <span className="text-xs text-muted-foreground">Periodo:</span>
-                                <span className="ml-1 font-semibold text-orange-900">
-                                  {plazasAsignadas[0].periodoAcademico || 'N/D'}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 bg-teal-50/50 px-3 py-2 rounded-lg border border-teal-100 flex-1">
-                              <CalendarDays className="h-3.5 w-3.5 text-teal-700 shrink-0" />
-                              <div className="truncate">
-                                <span className="text-xs text-muted-foreground">Vigencia:</span>
-                                <span className="ml-1 text-xs font-semibold text-teal-900">
-                                  {plazasAsignadas[0].fechaInicio || 'N/D'} <span className="text-teal-600">→</span> {plazasAsignadas[0].fechaFin || 'N/D'}
-                                </span>
-                              </div>
+                          {/* Periodo */}
+                          <div className="flex items-center gap-2 bg-orange-50/50 px-3 py-2 rounded-lg border border-orange-100 w-fit">
+                            <Calendar className="h-3.5 w-3.5 text-orange-700 shrink-0" />
+                            <div>
+                              <span className="text-xs text-muted-foreground">Periodo:</span>
+                              <span className="ml-1 font-semibold text-orange-900">
+                                {periodoActual || 'N/D'}
+                              </span>
                             </div>
                           </div>
 

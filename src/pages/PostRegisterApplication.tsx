@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,18 +11,23 @@ import {
   BookOpen,
   Home,
   LogOut,
-  ArrowLeft
+  CheckCircle2
 } from "lucide-react";
 import ProgramaExcelenciaTabs from "@/components/excelencia/ProgramaExcelenciaTabs";
 import { API_BASE } from "@/lib/api";
 
-const PostulacionesBecas = () => {
+const PostRegisterApplication = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const location = useLocation();
+  const { logout, user, tokens } = useAuth();
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [configs, setConfigs] = useState<Array<any>>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingPostulacion, setHasExistingPostulacion] = useState(false);
+
+  // Check if user was redirected here with hasPostulacion flag
+  const hasPostulacion = location.state?.hasPostulacion === true;
 
   const handleLogout = async () => {
     await logout(() => navigate('/'));
@@ -96,6 +101,68 @@ const PostulacionesBecas = () => {
 
   const selectedConfigs = useMemo(() => getConfigsByProgram(selectedProgram), [configs, selectedProgram]);
 
+  // If user has existing postulacion, show success message
+  if (hasPostulacion) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full border-green-200 shadow-lg">
+          <CardHeader className="text-center pb-6">
+            <div className="mx-auto mb-4 p-4 rounded-full bg-green-100 w-fit">
+              <CheckCircle2 className="h-16 w-16 text-green-600" />
+            </div>
+            <CardTitle className="text-3xl text-green-700 mb-2">
+              ¡Cuenta Asociada Exitosamente!
+            </CardTitle>
+            <CardDescription className="text-lg">
+              Tu cuenta se ha vinculado con tu postulación existente
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="font-semibold text-blue-900 mb-3 text-lg">Estado de tu Postulación</h3>
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 rounded-full bg-green-500 mt-2"></div>
+                  <p className="text-blue-800">Tu postulación está siendo revisada por nuestro equipo</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 rounded-full bg-blue-500 mt-2"></div>
+                  <p className="text-blue-800">Recibirás un correo electrónico con la respuesta</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="h-2 w-2 rounded-full bg-blue-500 mt-2"></div>
+                  <p className="text-blue-800">El tiempo de respuesta es de 5 a 10 días hábiles</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Importante:</strong> Mantente atento a tu correo electrónico para recibir actualizaciones sobre tu postulación.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={() => navigate('/login')}
+                className="flex-1 bg-gradient-primary hover:opacity-90"
+              >
+                Ir a Iniciar Sesión
+              </Button>
+              <Button
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="flex-1"
+              >
+                Volver al Inicio
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (selectedProgram) {
     const program = programs.find(p => p.id === selectedProgram);
     return (
@@ -105,23 +172,23 @@ const PostulacionesBecas = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-4">
-                <img 
-                  src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
-                  alt="Universidad Metropolitana" 
+                <img
+                  src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png"
+                  alt="Universidad Metropolitana"
                   className="h-10"
                 />
                 <div>
                   <h1 className="font-semibold text-primary">Universidad Metropolitana</h1>
-                  <p className="text-sm text-muted-foreground">Sistema de Postulaciones a Becas</p>
+                  <p className="text-sm text-muted-foreground">Completa tu Postulación</p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
+              <Button
+                variant="outline"
+                onClick={() => navigate('/login')}
                 className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Volver al Inicio
+                Ir a Iniciar Sesión
               </Button>
             </div>
           </div>
@@ -140,7 +207,7 @@ const PostulacionesBecas = () => {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink onClick={handleBackToPrograms} className="cursor-pointer">
-                  Postulaciones a Becas
+                  Postulación
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -150,6 +217,14 @@ const PostulacionesBecas = () => {
             </BreadcrumbList>
           </Breadcrumb>
 
+          {/* Info Banner */}
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <p className="text-sm text-blue-800">
+                <strong>¡Bienvenido!</strong> Algunos de tus datos ya están pre-llenados desde tu registro. Solo completa la información adicional requerida.
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Mostrar requisitos arriba del formulario para Ayudantía y Formación */}
           {selectedProgram !== "excelencia" && selectedConfigs.length > 0 && (
@@ -161,7 +236,7 @@ const PostulacionesBecas = () => {
                       <h3 className="font-semibold mb-2">Requisitos Especiales</h3>
                       <p className="text-sm text-muted-foreground">{config.requisitosEspeciales || 'No tiene ningún requisito'}</p>
                     </div>
-                    
+
                     <div className="bg-white border border-gray-200 p-4 rounded-lg">
                       <h3 className="font-semibold mb-3">Documentos Requeridos</h3>
                       {Array.isArray(config.documentosRequeridos) && config.documentosRequeridos.length > 0 ? (
@@ -177,7 +252,7 @@ const PostulacionesBecas = () => {
                         <p className="text-sm text-muted-foreground">No tiene ningún requisito</p>
                       )}
                     </div>
-                    
+
                     {(config.promedioMinimo !== undefined || config.semestreMinimo && config.semestreMaximo || config.edadMaxima) && (
                       <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
                         <h3 className="font-semibold mb-2">Requisitos Académicos</h3>
@@ -191,7 +266,7 @@ const PostulacionesBecas = () => {
                           {config.semestreMinimo && config.semestreMaximo && (
                             <div className="flex items-center gap-2">
                               <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                              <span>Trimestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
+                              <span>Semestre: {config.semestreMinimo} - {config.semestreMaximo}</span>
                             </div>
                           )}
                           {config.edadMaxima && (
@@ -200,7 +275,6 @@ const PostulacionesBecas = () => {
                               <span>Edad máxima: {config.edadMaxima} años</span>
                             </div>
                           )}
-                          {/* Cupos no se muestra en requisitos */}
                         </div>
                       </div>
                     )}
@@ -212,11 +286,14 @@ const PostulacionesBecas = () => {
 
           {/* Application Form */}
           {selectedProgram === "excelencia" ? (
-            <ProgramaExcelenciaTabs configuraciones={configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia')} />
+            <ProgramaExcelenciaTabs
+              configuraciones={configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia')}
+            />
           ) : (
-            <UnifiedApplicationForm 
+            <UnifiedApplicationForm
               programTitle={program?.title || ""}
               requiredDocuments={Array.from(new Set((selectedConfigs || []).flatMap((c: any) => Array.isArray(c.documentosRequeridos) ? c.documentosRequeridos : [])))}
+              preFillUserData={true}
             />
           )}
         </main>
@@ -231,23 +308,23 @@ const PostulacionesBecas = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <img 
-                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
-                alt="Universidad Metropolitana" 
+              <img
+                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png"
+                alt="Universidad Metropolitana"
                 className="h-10"
               />
               <div>
                 <h1 className="font-semibold text-primary">Universidad Metropolitana</h1>
-                <p className="text-sm text-muted-foreground">Sistema de Postulaciones a Becas</p>
+                <p className="text-sm text-muted-foreground">Completa tu Postulación</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={handleLogout}
+            <Button
+              variant="outline"
+              onClick={() => navigate('/login')}
               className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Volver al Inicio
+              Ir a Iniciar Sesión
             </Button>
           </div>
         </div>
@@ -265,18 +342,24 @@ const PostulacionesBecas = () => {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Postulaciones a Becas</BreadcrumbPage>
+              <BreadcrumbPage>Completa tu Postulación</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
 
         {/* Page Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
+          <div className="mx-auto mb-4 p-3 rounded-full bg-green-100 w-fit">
+            <CheckCircle2 className="h-12 w-12 text-green-600" />
+          </div>
           <h1 className="text-4xl font-bold text-primary mb-4">
-            Postulaciones a Becas
+            ¡Registro Exitoso!
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Explora y postúlate a los diferentes programas de becas disponibles en la Universidad Metropolitana
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-2">
+            Ahora completa tu postulación a un programa de becas
+          </p>
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+            Tus datos personales ya están guardados, solo necesitas completar la información adicional
           </p>
         </div>
 
@@ -309,9 +392,19 @@ const PostulacionesBecas = () => {
           ))}
         </div>
 
+        {/* Skip Option */}
+        <div className="text-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/login')}
+            className="text-muted-foreground"
+          >
+            Saltar por ahora e ir a iniciar sesión
+          </Button>
+        </div>
       </main>
     </div>
   );
 };
 
-export default PostulacionesBecas;
+export default PostRegisterApplication;

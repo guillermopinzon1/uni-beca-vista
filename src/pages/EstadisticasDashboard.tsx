@@ -20,7 +20,8 @@ import {
   Award,
   Activity,
   PieChart,
-  TrendingUp
+  TrendingUp,
+  Search
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,9 @@ const EstadisticasDashboard = () => {
   const [distribucionBecasData, setDistribucionBecasData] = useState<any>(null);
   const [distribucionPostulantesData, setDistribucionPostulantesData] = useState<any>(null);
   const [dashboardData, setDashboardData] = useState<any>(null);
+
+  // Filtro de búsqueda para tabla de becarios
+  const [searchBecarios, setSearchBecarios] = useState("");
 
   // Filtros
   const [filtros, setFiltros] = useState({
@@ -233,79 +237,7 @@ const EstadisticasDashboard = () => {
             Exportación de reportes en múltiples formatos
           </p>
         </div>
-        <Button variant="outline" onClick={() => cargarReporte(activeTab)} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualizar
-        </Button>
       </div>
-
-      {/* Filtros Globales */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label>Estado</Label>
-              <Select value={filtros.estado} onValueChange={(value) => setFiltros({ ...filtros, estado: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Activa">Activa</SelectItem>
-                  <SelectItem value="Suspendida">Suspendida</SelectItem>
-                  <SelectItem value="Culminada">Culminada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Tipo de Beca</Label>
-              <Select value={filtros.tipoBeca} onValueChange={(value) => setFiltros({ ...filtros, tipoBeca: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Ayudantía">Ayudantía</SelectItem>
-                  <SelectItem value="Impacto">Impacto</SelectItem>
-                  <SelectItem value="Excelencia">Excelencia</SelectItem>
-                  <SelectItem value="Exoneración de Pago">Exoneración de Pago</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Tipo de Ayudantía</Label>
-              <Select value={filtros.tipoAyudantia} onValueChange={(value) => setFiltros({ ...filtros, tipoAyudantia: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="academica">Académica</SelectItem>
-                  <SelectItem value="investigacion">Investigación</SelectItem>
-                  <SelectItem value="administrativa">Administrativa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Departamento</Label>
-              <Input
-                value={filtros.departamento}
-                onChange={(e) => setFiltros({ ...filtros, departamento: e.target.value })}
-                placeholder="Sistemas"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <Button onClick={() => cargarReporte(activeTab)}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Aplicar Filtros
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Tabs para diferentes reportes */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -351,10 +283,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('dashboard', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('dashboard', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel
@@ -370,7 +298,7 @@ const EstadisticasDashboard = () => {
           {dashboardData && dashboardData.becarios ? (
             <div className="space-y-6">
               {/* KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground">Total Becarios</CardTitle>
@@ -378,42 +306,6 @@ const EstadisticasDashboard = () => {
                   <CardContent>
                     <div className="text-3xl font-bold text-primary">{dashboardData.becarios?.length || 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">Registrados en el sistema</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Becarios Activos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-600">
-                      {dashboardData.becarios?.filter((b: any) => b.estado === 'Activa').length || 0}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Estado: Activa</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">En Riesgo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-red-600">
-                      {dashboardData.becarios?.filter((b: any) => b.enRiesgo === true).length || 0}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Requieren atención</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Horas Totales</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-primary">
-                      {dashboardData.becarios?.reduce((sum: number, b: any) => sum + parseFloat(b.horasCompletadas || 0), 0).toFixed(0) || 0}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Horas completadas</p>
                   </CardContent>
                 </Card>
               </div>
@@ -450,72 +342,108 @@ const EstadisticasDashboard = () => {
               {/* Tabla de Becarios */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Lista de Becarios ({dashboardData.becarios?.length || 0})</CardTitle>
+                  <CardTitle>Lista de Becarios ({dashboardData.becarios?.filter((b: any) => {
+                    const nombreCompleto = `${b.usuario?.nombre || ''} ${b.usuario?.apellido || ''}`.toLowerCase();
+                    return nombreCompleto.includes(searchBecarios.toLowerCase());
+                  }).length || 0})</CardTitle>
                   <CardDescription>Información detallada de todos los becarios</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Carrera</TableHead>
-                        <TableHead>Tipo de Beca</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Descuento</TableHead>
-                        <TableHead>IAA</TableHead>
-                        <TableHead>Progreso</TableHead>
-                        <TableHead>Estado</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dashboardData.becarios?.slice(0, 20).map((becario: any, index: number) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {becario.usuario?.nombre} {becario.usuario?.apellido}
-                          </TableCell>
-                          <TableCell className="text-sm">{becario.usuario?.carrera || '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{becario.tipoBeca}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={becario.estado === 'Activa' ? 'bg-green-100 text-green-800' : ''}>
-                              {becario.estado}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                              {becario.descuentoAplicado}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {becario.iaaActual ? (
-                              <Badge variant="outline">{becario.iaaActual}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="text-sm">
-                                {becario.horasCompletadas}/{becario.horasRequeridas || 0}h
-                              </div>
-                              <Progress value={becario.porcentajeCompletado || 0} className="h-2 w-20" />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={becario.enRiesgo ? "destructive" : "outline"}
-                            >
-                              {becario.estadoProgreso || 'Normal'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {dashboardData.becarios && dashboardData.becarios.length > 20 && (
-                    <p className="text-sm text-muted-foreground mt-4 text-center">
-                      Mostrando 20 de {dashboardData.becarios.length} resultados. Descarga el reporte completo para ver todos.
+                <CardContent className="space-y-4">
+                  {/* Filtro de búsqueda */}
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por nombre..."
+                        value={searchBecarios}
+                        onChange={(e) => setSearchBecarios(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tabla con scroll */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-[600px] overflow-y-auto">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-white z-10">
+                          <TableRow>
+                            <TableHead>Nombre</TableHead>
+                            <TableHead>Carrera</TableHead>
+                            <TableHead>Tipo de Beca</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Descuento</TableHead>
+                            <TableHead>IAA</TableHead>
+                            <TableHead>Progreso</TableHead>
+                            <TableHead>Estado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dashboardData.becarios
+                            ?.filter((b: any) => {
+                              const nombreCompleto = `${b.usuario?.nombre || ''} ${b.usuario?.apellido || ''}`.toLowerCase();
+                              return nombreCompleto.includes(searchBecarios.toLowerCase());
+                            })
+                            .map((becario: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">
+                                  {becario.usuario?.nombre} {becario.usuario?.apellido}
+                                </TableCell>
+                                <TableCell className="text-sm">{becario.usuario?.carrera || '-'}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{becario.tipoBeca}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={becario.estado === 'Activa' ? 'bg-green-100 text-green-800' : ''}>
+                                    {becario.estado}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                                    {becario.descuentoAplicado}%
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {becario.iaaActual ? (
+                                    <Badge variant="outline">{becario.iaaActual}</Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <div className="text-sm">
+                                      {becario.horasCompletadas}/{becario.horasRequeridas || 0}h
+                                    </div>
+                                    <Progress value={becario.porcentajeCompletado || 0} className="h-2 w-20" />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={becario.enRiesgo ? "destructive" : "outline"}
+                                  >
+                                    {becario.estadoProgreso || 'Normal'}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  {dashboardData.becarios && dashboardData.becarios.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No hay becarios para mostrar
+                    </p>
+                  )}
+
+                  {searchBecarios && dashboardData.becarios?.filter((b: any) => {
+                    const nombreCompleto = `${b.usuario?.nombre || ''} ${b.usuario?.apellido || ''}`.toLowerCase();
+                    return nombreCompleto.includes(searchBecarios.toLowerCase());
+                  }).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No se encontraron becarios con ese nombre
                     </p>
                   )}
                 </CardContent>
@@ -541,10 +469,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('supervisores', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('supervisores', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel
@@ -613,14 +537,6 @@ const EstadisticasDashboard = () => {
                                     <span className="text-muted-foreground">Reportes Aprobados:</span>
                                     <Badge className="bg-green-100 text-green-800">{supervisor.estadisticas.reportesAprobados || 0}</Badge>
                                   </div>
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Tasa de Aprobación:</span>
-                                    <Badge variant="outline">{supervisor.estadisticas.tasaAprobacion || 0}%</Badge>
-                                  </div>
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Capacidad Disponible:</span>
-                                    <Badge className="bg-blue-100 text-blue-800">{supervisor.estadisticas.capacidadDisponible || 0}</Badge>
-                                  </div>
                                 </div>
                               </div>
                             </>
@@ -643,6 +559,52 @@ const EstadisticasDashboard = () => {
 
         {/* TAB: BECARIOS */}
         <TabsContent value="becarios" className="space-y-6 mt-6">
+          {/* Filtros específicos de Becarios */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Estado</Label>
+                  <Select value={filtros.estado} onValueChange={(value) => setFiltros({ ...filtros, estado: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Activa">Activa</SelectItem>
+                      <SelectItem value="Suspendida">Suspendida</SelectItem>
+                      <SelectItem value="Culminada">Culminada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tipo de Beca</Label>
+                  <Select value={filtros.tipoBeca} onValueChange={(value) => setFiltros({ ...filtros, tipoBeca: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Ayudantía">Ayudantía</SelectItem>
+                      <SelectItem value="Impacto">Impacto</SelectItem>
+                      <SelectItem value="Excelencia">Excelencia</SelectItem>
+                      <SelectItem value="Exoneración de Pago">Exoneración de Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={() => cargarReporte('becarios')} className="w-full">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Aplicar Filtros
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -652,10 +614,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('becarios', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('becarios', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel
@@ -733,6 +691,51 @@ const EstadisticasDashboard = () => {
 
         {/* TAB: PLAZAS */}
         <TabsContent value="plazas" className="space-y-6 mt-6">
+          {/* Filtros específicos de Plazas */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Estado</Label>
+                  <Select value={filtros.estado} onValueChange={(value) => setFiltros({ ...filtros, estado: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Activa">Activa</SelectItem>
+                      <SelectItem value="Suspendida">Suspendida</SelectItem>
+                      <SelectItem value="Culminada">Culminada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tipo de Ayudantía</Label>
+                  <Select value={filtros.tipoAyudantia} onValueChange={(value) => setFiltros({ ...filtros, tipoAyudantia: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="academica">Académica</SelectItem>
+                      <SelectItem value="investigacion">Investigación</SelectItem>
+                      <SelectItem value="administrativa">Administrativa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={() => cargarReporte('plazas')} className="w-full">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Aplicar Filtros
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -742,10 +745,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('plazas', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('plazas', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel
@@ -828,10 +827,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('actividades', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('actividades', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel
@@ -845,57 +840,201 @@ const EstadisticasDashboard = () => {
           </div>
 
           {actividadesData ? (
-            <div className="space-y-4">
-              {/* Resumen */}
+            <div className="space-y-6">
+              {/* Resumen General */}
               {actividadesData.resumen && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Total Reportes</CardTitle>
+                      <CardTitle className="text-sm text-muted-foreground">Total Reportes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">{actividadesData.resumen.totalReportes || 0}</div>
+                      <div className="text-3xl font-bold text-primary">{actividadesData.resumen.totalReportes || 0}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Aprobados</CardTitle>
+                      <CardTitle className="text-sm text-muted-foreground">Aprobados</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">{actividadesData.resumen.aprobados || 0}</div>
+                      <div className="text-3xl font-bold text-green-600">{actividadesData.resumen.reportesAprobados || 0}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Pendientes</CardTitle>
+                      <CardTitle className="text-sm text-muted-foreground">Pendientes</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-yellow-600">{actividadesData.resumen.pendientes || 0}</div>
+                      <div className="text-3xl font-bold text-yellow-600">{actividadesData.resumen.reportesPendientes || 0}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Rechazados</CardTitle>
+                      <CardTitle className="text-sm text-muted-foreground">Rechazados</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-red-600">{actividadesData.resumen.rechazados || 0}</div>
+                      <div className="text-3xl font-bold text-red-600">{actividadesData.resumen.reportesRechazados || 0}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-muted-foreground">Horas Totales</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-orange-600">{actividadesData.resumen.horasTotalesAprobadas || 0}h</div>
                     </CardContent>
                   </Card>
                 </div>
               )}
 
-              {/* Detalles */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Estadísticas de Actividades</CardTitle>
-                  <CardDescription>Período: {actividadesData.periodo || filtros.periodo}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <pre className="text-xs bg-muted p-4 rounded overflow-auto max-h-96">
-                    {JSON.stringify(actividadesData, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
+              {/* Distribución por Semana */}
+              {actividadesData.distribucionPorSemana && actividadesData.distribucionPorSemana.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Distribución de Reportes por Semana</CardTitle>
+                    <CardDescription>Período: {actividadesData.periodo || 'Todos'}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {actividadesData.distribucionPorSemana.map((semana: any, index: number) => {
+                        const maxHoras = Math.max(...actividadesData.distribucionPorSemana.map((s: any) => parseFloat(s.horas)));
+                        const porcentaje = (parseFloat(semana.horas) / maxHoras) * 100;
+                        return (
+                          <div key={index} className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="font-medium text-gray-700">Semana {semana.semana}</span>
+                              <div className="flex items-center gap-4 text-gray-600">
+                                <span>{semana.reportes} reporte{semana.reportes !== 1 ? 's' : ''}</span>
+                                <span className="font-semibold">{parseFloat(semana.horas).toFixed(1)}h</span>
+                                <span className="text-xs text-muted-foreground">
+                                  (Promedio: {parseFloat(semana.promedio).toFixed(1)}h)
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                              <div
+                                className="h-full bg-orange-500 transition-all duration-500"
+                                style={{ width: `${porcentaje}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Top Estudiantes */}
+              {actividadesData.topEstudiantes && actividadesData.topEstudiantes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Top Estudiantes</CardTitle>
+                    <CardDescription>Estudiantes con mejor desempeño en reportes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Carnet</TableHead>
+                          <TableHead>Reportes Aprobados</TableHead>
+                          <TableHead>Horas Totales</TableHead>
+                          <TableHead>Promedio</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {actividadesData.topEstudiantes.map((estudiante: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{estudiante.nombre}</TableCell>
+                            <TableCell className="text-sm">{estudiante.email}</TableCell>
+                            <TableCell>
+                              {estudiante.carnet ? (
+                                <Badge variant="outline">{estudiante.carnet}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-green-100 text-green-800">
+                                {estudiante.reportesAprobados}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-orange-100 text-orange-800">
+                                {parseFloat(estudiante.horasTotales).toFixed(1)}h
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-blue-100 text-blue-800">
+                                {parseFloat(estudiante.promedio).toFixed(1)}h
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Estudiantes en Riesgo */}
+              {actividadesData.estudiantesEnRiesgo && actividadesData.estudiantesEnRiesgo.length > 0 && (
+                <Card className="border-red-200">
+                  <CardHeader className="bg-red-50">
+                    <CardTitle className="text-red-800 flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Estudiantes en Riesgo
+                    </CardTitle>
+                    <CardDescription>Estudiantes que requieren atención inmediata</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Carnet</TableHead>
+                          <TableHead>Reportes Aprobados</TableHead>
+                          <TableHead>Horas Totales</TableHead>
+                          <TableHead>Promedio</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {actividadesData.estudiantesEnRiesgo.map((estudiante: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{estudiante.nombre}</TableCell>
+                            <TableCell className="text-sm">{estudiante.email}</TableCell>
+                            <TableCell>
+                              {estudiante.carnet ? (
+                                <Badge variant="outline">{estudiante.carnet}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="destructive">
+                                {estudiante.reportesAprobados}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-red-100 text-red-800">
+                                {parseFloat(estudiante.horasTotales).toFixed(1)}h
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-yellow-100 text-yellow-800">
+                                {parseFloat(estudiante.promedio).toFixed(1)}h
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           ) : (
             <Card>
@@ -917,10 +1056,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('distribucion-becas', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('distribucion-becas', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel
@@ -981,6 +1116,36 @@ const EstadisticasDashboard = () => {
 
         {/* TAB: DISTRIBUCIÓN POSTULANTES */}
         <TabsContent value="distribucion-postulantes" className="space-y-6 mt-6">
+          {/* Filtros específicos de Distribución Postulantes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-4">
+                <div className="flex-1">
+                  <Label>Tipo de Beca</Label>
+                  <Select value={filtros.tipoBeca} onValueChange={(value) => setFiltros({ ...filtros, tipoBeca: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Ayudantía">Ayudantía</SelectItem>
+                      <SelectItem value="Impacto">Impacto</SelectItem>
+                      <SelectItem value="Excelencia">Excelencia</SelectItem>
+                      <SelectItem value="Exoneración de Pago">Exoneración de Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={() => cargarReporte('distribucion-postulantes')}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Aplicar Filtros
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -990,10 +1155,6 @@ const EstadisticasDashboard = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDescargar('distribucion-postulantes', 'json')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  JSON
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDescargar('distribucion-postulantes', 'excel')}>
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Excel

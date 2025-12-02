@@ -69,6 +69,15 @@ export interface HabilitarSemanaRequest {
   periodoId?: string;
 }
 
+// Estados de Becario
+export enum EstadoBecario {
+  ACTIVA = 'Activa',
+  SUSPENDIDA = 'Suspendida',
+  CULMINADA = 'Culminada',
+  INCOMPLETA = 'Incompleta',
+  CANCELADA = 'Cancelada'
+}
+
 // Configuración de Becas
 export interface ConfiguracionBeca {
   id: string;
@@ -118,6 +127,34 @@ export interface ConfiguracionesBecasResponse {
 
 export interface DocumentosRequeridosResponse {
   documentosRequeridos: string[];
+}
+
+// Cerrar Período
+export interface CerrarPeriodoRequest {
+  confirmar: boolean;
+}
+
+export interface CerrarPeriodoData {
+  periodoAcademico: string;
+  fechaCierre: string;
+  becariosActualizados: number;
+  reportesAprobados: number;
+}
+
+// Renovar Becario
+export interface RenovarBecarioData {
+  id: string;
+  usuarioId: string;
+  tipoBeca: string;
+  trimestresCursados: number;
+  horasCompletadas: number;
+  horasRequeridas: number;
+  estado: string;
+  periodoInicio: string;
+  periodoFin: string | null;
+  plazaAsignada: string | null;
+  fechaAsignacion: string;
+  fechaCulminacion: string | null;
 }
 
 // ==================== PERÍODOS ACADÉMICOS ====================
@@ -555,6 +592,76 @@ export async function fetchDocumentosRequeridos(
 
   if (!response.ok) {
     throw new Error(data.message || 'Error obteniendo documentos requeridos');
+  }
+
+  return data;
+}
+
+// ==================== SISTEMA DE CAMBIO DE TRIMESTRE ====================
+
+/**
+ * Cerrar el período académico activo
+ * - Evalúa automáticamente todos los becarios activos
+ * - Asigna estado 'Culminada' o 'Incompleta' según horas completadas
+ * - Auto-aprueba reportes pendientes
+ * - Deshabilita todas las semanas
+ */
+export async function cerrarPeriodo(
+  accessToken: string,
+  confirmar: boolean
+): Promise<ApiResponse<CerrarPeriodoData>> {
+  const response = await fetch(`${API_BASE}/v1/configuracion/cerrar-periodo`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ confirmar }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al cerrar el período académico');
+  }
+
+  return data;
+}
+
+/**
+ * Renovar un becario para el siguiente trimestre
+ * - Incrementa trimestresCursados
+ * - Resetea horasCompletadas a 0
+ * - Cambia estado a 'Activa'
+ * - Valida límites de trimestres según tipo de beca
+ */
+export async function renovarBecario(
+  accessToken: string,
+  becarioId: string
+): Promise<ApiResponse<RenovarBecarioData>> {
+  const response = await fetch(`${API_BASE}/v1/configuracion/renovar-becario/${becarioId}`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    // Errores específicos del backend
+    if (response.status === 403) {
+      // Límite alcanzado o usuario desactivado
+      throw new Error(data.message || 'No se puede renovar el becario');
+    } else if (response.status === 400) {
+      // Estado inválido
+      throw new Error(data.message || 'Estado del becario no válido para renovación');
+    } else if (response.status === 404) {
+      throw new Error('Becario no encontrado');
+    }
+    throw new Error(data.message || 'Error al renovar becario');
   }
 
   return data;

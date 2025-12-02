@@ -1,298 +1,337 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  CheckCircle, 
-  Clock, 
+import {
   AlertTriangle,
   Target,
-  Users,
   Trophy,
-  Calendar,
-  AlertCircle,
-  TrendingDown
+  Palette,
+  Heart,
+  Lightbulb,
+  GraduationCap,
+  Info,
+  BookOpen,
+  Shield,
+  XCircle
 } from "lucide-react";
 
 const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }) => {
-  
-  const getCommitmentsData = () => {
-    const commonCommitments = [
+
+  const getTipoBecaTexto = () => {
+    const textos: Record<string, string> = {
+      academica: 'Académica',
+      deportiva: 'Deportiva',
+      artistica: 'Artística',
+      civico: 'Cívico',
+      emprendimiento: 'Emprendimiento'
+    };
+    return textos[scholarshipType || 'academica'] || 'Académica';
+  };
+
+  const getTipoBecaIcon = () => {
+    const iconos: Record<string, any> = {
+      academica: GraduationCap,
+      deportiva: Trophy,
+      artistica: Palette,
+      civico: Heart,
+      emprendimiento: Lightbulb
+    };
+    const IconComponent = iconos[scholarshipType || 'academica'] || GraduationCap;
+    return <IconComponent className="h-6 w-6" />;
+  };
+
+  const getCondicionesGenerales = () => {
+    const iaaRequerido = scholarshipType === 'academica' ? '16.50' : '15.00';
+
+    return [
       {
-        compromiso: "Mantener IAA requerido",
-        estado: "cumplido",
-        descripcion: `Mantener IAA ≥${scholarshipType === 'academica' ? '16.50' : '15.00'} puntos`,
-        valorActual: scholarshipType === 'academica' ? "17.2" : "15.8",
-        requerido: scholarshipType === 'academica' ? "≥16.50" : "≥15.00"
+        titulo: "Mantener IAA mínimo requerido",
+        descripcion: `Mantener un Índice Académico Acumulado (IAA) ≥${iaaRequerido} puntos al término del año lectivo`,
+        articulo: "Art. 14-c",
+        prioridad: "Alta"
       },
       {
-        compromiso: "15 créditos mínimos por trimestre",
-        estado: "cumplido", 
-        descripcion: "Inscribir y aprobar mínimo 15 créditos por período",
-        valorActual: "18 créditos",
-        requerido: "≥15"
+        titulo: "Inscribir y aprobar 15 créditos mínimos",
+        descripcion: "Inscribir y aprobar un mínimo de 15 créditos en período regular o el remanente necesario para finalizar estudios",
+        articulo: "Art. 14-a",
+        prioridad: "Alta"
       },
       {
-        compromiso: "Acompañamiento integral",
-        estado: "cumplido",
-        descripcion: "Participar en seguimiento trimestral obligatorio",
-        valorActual: "Al día",
-        requerido: "Obligatorio"
+        titulo: "Culminar en máximo 12 trimestres regulares",
+        descripcion: "Finalizar el plan de estudios de pregrado en un tiempo máximo de 12 períodos regulares consecutivos",
+        articulo: "Art. 14-b",
+        prioridad: "Media"
       },
       {
-        compromiso: "Conducta ejemplar",
-        estado: "cumplido",
-        descripcion: "Cumplir código de ética y evitar sanciones disciplinarias",
-        valorActual: "Sin sanciones",
-        requerido: "Sin sanciones"
+        titulo: "Acompañamiento integral DDBE",
+        descripcion: "Cumplir con el esquema de acompañamiento trimestral obligatorio propuesto por la Dirección de Desarrollo y Bienestar Estudiantil",
+        articulo: "Art. 14-h, Art. 3-b",
+        prioridad: "Alta"
+      },
+      {
+        titulo: "Conducta ética y disciplinaria",
+        descripcion: "Cumplir a cabalidad con los reglamentos, normas y Código de Ética de la Universidad Metropolitana sin incurrir en sanciones disciplinarias",
+        articulo: "Art. 14-i, Art. 3",
+        prioridad: "Alta"
+      },
+      {
+        titulo: "Consultar retiros de asignaturas",
+        descripcion: "En caso de requerir el retiro de alguna asignatura, realizar consulta previa con la Dirección de Desarrollo y Bienestar Estudiantil para su evaluación",
+        articulo: "Art. 14-d",
+        prioridad: "Media"
+      },
+      {
+        titulo: "Notificar período intensivo",
+        descripcion: "Si deseas cursar el período intensivo, deberás notificarlo a DDBE para tramitar el permiso correspondiente. No se permitirá el retiro de asignaturas durante este período",
+        articulo: "Art. 14-e",
+        prioridad: "Media"
+      },
+      {
+        titulo: "Restricción de cambio de carrera",
+        descripcion: "Se permite un cambio de carrera siempre que no tengas más de 45 unidades de crédito aprobadas, con aval de DDBE y aprobación del cuerpo técnico",
+        articulo: "Art. 14-g",
+        prioridad: "Baja"
       }
     ];
+  };
 
-    const specificCommitments = {
+  const getCondicionesEspecificas = () => {
+    const condiciones: Record<string, any[]> = {
       academica: [
         {
-          compromiso: "Excelencia académica sostenida",
-          estado: "cumplido",
-          descripcion: "Mantener rendimiento académico superior",
-          valorActual: "Lista del Rector",
-          requerido: "Alto rendimiento"
+          titulo: "Mantener IAA ≥16.50 puntos",
+          descripcion: "Como becario de Excelencia Académica, debes mantener un IAA al término del año lectivo igual o superior a 16,50 puntos",
+          articulo: "Art. 10-a, Art. 14-c"
         },
         {
-          compromiso: "Participación en investigación",
-          estado: "pendiente",
-          descripcion: "Colaborar en al menos 1 proyecto de investigación",
-          valorActual: "0/1",
-          requerido: "1 proyecto"
+          titulo: "Haber cursado 15 asignaturas anuales",
+          descripcion: "Como requisito de postulación, debes haber cursado y aprobado quince (15) asignaturas anuales según el flujograma de tu carrera",
+          articulo: "Art. 10-a"
+        },
+        {
+          titulo: "Elegibilidad para Lista del Rector",
+          descripcion: "Puedes optar al Certificado Distinción Lista del Rector si tu promedio simple de los IAP de tres trimestres regulares consecutivos es ≥17,5 puntos",
+          articulo: "Art. 19-a"
         }
       ],
       deportiva: [
         {
-          compromiso: "Participación en Selección",
-          estado: "cumplido",
-          descripcion: "Mantener participación activa en selección deportiva",
-          valorActual: "Activo",
-          requerido: "Activo"
+          titulo: "Participación activa en Selección Deportiva",
+          descripcion: "Debes mantener participación activa en alguna selección deportiva de la Universidad con al menos dos trimestres de antigüedad",
+          articulo: "Art. 10-b"
         },
         {
-          compromiso: "Competencias mínimas",
-          estado: "cumplido", 
-          descripcion: "Participar en mínimo 3 competencias por período",
-          valorActual: "3/3",
-          requerido: "3"
+          titulo: "Calificación deportiva mínima",
+          descripcion: "Debes mantener una calificación ≥18/20 otorgada por tu entrenador deportivo",
+          articulo: "Art. 10-b"
         },
         {
-          compromiso: "Calificación deportiva",
-          estado: "cumplido",
-          descripcion: "Mantener calificación ≥18 en selección deportiva",
-          valorActual: "19/20",
-          requerido: "≥18"
+          titulo: "Currículum deportivo y certificaciones",
+          descripcion: "Debes presentar currículum deportivo, certificaciones, constancia de federación (si aplica) y aval del entrenador deportivo y director del área",
+          articulo: "Art. 10-b"
+        },
+        {
+          titulo: "Mantener IAA ≥15.00 puntos",
+          descripcion: "Como becario de Excelencia Deportiva, debes mantener un IAA al término del año lectivo igual o superior a 15,00 puntos",
+          articulo: "Art. 10-b, Art. 14-c"
         }
       ],
       artistica: [
         {
-          compromiso: "Participación en selección cultural",
-          estado: "cumplido",
-          descripcion: "Mantener participación activa en selección artística",
-          valorActual: "Activo",
-          requerido: "Activo"
+          titulo: "Participación activa en Selección Artística",
+          descripcion: "Debes mantener participación activa en alguna selección cultural/artística de la Universidad con al menos dos trimestres de antigüedad",
+          articulo: "Art. 10-c"
         },
         {
-          compromiso: "Presentaciones mínimas",
-          estado: "cumplido",
-          descripcion: "Participar en mínimo 2 eventos culturales por período",
-          valorActual: "3/2",
-          requerido: "2"
+          titulo: "Calificación artística mínima",
+          descripcion: "Debes mantener una calificación ≥18/20 otorgada por el Director del área artística",
+          articulo: "Art. 10-c"
         },
         {
-          compromiso: "Calificación artística",
-          estado: "cumplido",
-          descripcion: "Mantener calificación ≥18 en selección cultural",
-          valorActual: "18.5/20",
-          requerido: "≥18"
+          titulo: "Dossier artístico actualizado",
+          descripcion: "Debes mantener un dossier artístico completo y actualizado con aval del Director del área y del Coordinador de la tipología",
+          articulo: "Art. 10-c"
+        },
+        {
+          titulo: "Mantener IAA ≥15.00 puntos",
+          descripcion: "Como becario de Excelencia Artística, debes mantener un IAA al término del año lectivo igual o superior a 15,00 puntos",
+          articulo: "Art. 10-c, Art. 14-c"
         }
       ],
       civico: [
         {
-          compromiso: "Proyectos de impacto social",
-          estado: "cumplido",
-          descripcion: "Liderar o participar en proyectos comunitarios",
-          valorActual: "2 proyectos activos",
-          requerido: "≥1 proyecto"
+          titulo: "Participación en proyectos de impacto social",
+          descripcion: "Debes mantener participación destacada en programas de impacto social o de bienestar para la comunidad",
+          articulo: "Art. 10-d"
         },
         {
-          compromiso: "Horas de servicio comunitario",
-          estado: "pendiente",
-          descripcion: "Completar mínimo 40 horas de servicio por período",
-          valorActual: "25/40",
-          requerido: "40 horas"
+          titulo: "Evidencias de impacto documentadas",
+          descripcion: "Debes entregar recaudos que demuestren la participación en iniciativas de impacto social con aval del Director del área y del Coordinador de la tipología",
+          articulo: "Art. 10-d"
         },
         {
-          compromiso: "Evidencias de impacto",
-          estado: "cumplido",
-          descripcion: "Documentar el impacto de actividades comunitarias",
-          valorActual: "Documentado",
-          requerido: "Evidencias"
+          titulo: "Mantener IAA ≥15.00 puntos",
+          descripcion: "Como becario de Compromiso Cívico, debes mantener un IAA al término del año lectivo igual o superior a 15,00 puntos",
+          articulo: "Art. 10-d, Art. 14-c"
         }
       ],
       emprendimiento: [
         {
-          compromiso: "Proyecto en incubadora",
-          estado: "cumplido",
-          descripcion: "Mantener startup activo en incubadora UNIMET",
-          valorActual: "Proyecto activo",
-          requerido: "Activo"
+          titulo: "Proyecto activo en Incubadora UNIMET",
+          descripcion: "Tu startup debe mantener el aval e ingreso en la Incubadora de Emprendimientos de la Universidad",
+          articulo: "Art. 10-e"
         },
         {
-          compromiso: "Milestones trimestrales",
-          estado: "pendiente",
-          descripcion: "Cumplir objetivos trimestrales del proyecto",
-          valorActual: "2/3",
-          requerido: "3 milestones"
+          titulo: "Participación en competencias trimestrales",
+          descripcion: "Debes haber participado en la competencia trimestral de proyectos emprendedores establecida por la Universidad",
+          articulo: "Art. 10-e"
         },
         {
-          compromiso: "Competencias de emprendimiento",
-          estado: "cumplido",
-          descripcion: "Participar en competencias internas",
-          valorActual: "1er lugar último trimestre",
-          requerido: "Participación"
+          titulo: "Resumen ejecutivo del proyecto",
+          descripcion: "Debes mantener un resumen ejecutivo de tu proyecto avalado por el Departamento de Emprendimiento (máximo 2 páginas)",
+          articulo: "Art. 10-e"
+        },
+        {
+          titulo: "Mantener IAA ≥15.00 puntos",
+          descripcion: "Como becario de Emprendimiento, debes mantener un IAA al término del año lectivo igual o superior a 15,00 puntos",
+          articulo: "Art. 10-e, Art. 14-c"
         }
       ]
     };
 
-    return [...commonCommitments, ...(specificCommitments[scholarshipType as keyof typeof specificCommitments] || specificCommitments.deportiva)];
+    return condiciones[scholarshipType || 'academica'] || condiciones.academica;
   };
-
-  const compromisosEspecificos = getCommitmentsData();
-
-  const timelineActividades = [
-    {
-      fecha: "Sep 2025",
-      actividad: "Juegos Interclubes", 
-      estado: "completado",
-      tipo: "competencia"
-    },
-    {
-      fecha: "Oct 2025",
-      actividad: "Día del Deporte UNIMET",
-      estado: "completado", 
-      tipo: "evento"
-    },
-    {
-      fecha: "Nov 2025",
-      actividad: "Competencia Nacional",
-      estado: "completado",
-      tipo: "competencia"
-    },
-    {
-      fecha: "Dic 2025",
-      actividad: "Clínica comunitaria",
-      estado: "pendiente",
-      tipo: "comunitario"
-    }
-  ];
 
   const consecuenciasIncumplimiento = [
     {
-      escenario: "IAA baja de 15.0",
-      consecuencia: "Período de gracia de 1 semestre para recuperar",
-      gravedad: "media"
+      escenario: "IAA cae por debajo del mínimo requerido",
+      consecuencia: "Evaluación del caso por el cuerpo técnico. Posible rescisión del beneficio",
+      gravedad: "Alta",
+      articulo: "Art. 14-c"
     },
     {
-      escenario: "Deja la selección", 
-      consecuencia: "Pérdida inmediata de la beca deportiva",
-      gravedad: "alta"
+      escenario: "No culmina en 12 períodos regulares",
+      consecuencia: "Rescisión automática de la beca, salvo evaluación por causas no imputables al beneficiario",
+      gravedad: "Alta",
+      articulo: "Art. 14-b"
     },
     {
-      escenario: "No cumple compromisos comunitarios",
-      consecuencia: "Advertencia escrita y plan de recuperación",
-      gravedad: "baja"
+      escenario: "Asignaturas retiradas o reprobadas",
+      consecuencia: "El estudiante deberá pagar a la Universidad el costo de las asignaturas inscritas y no aprobadas o inscritas y retiradas",
+      gravedad: "Media",
+      articulo: "Art. 3-e, Art. 16-b"
     },
     {
-      escenario: "Recibe sanción disciplinaria",
-      consecuencia: "Revisión del caso y posible suspensión temporal",
-      gravedad: "alta"
+      escenario: "Incumplimiento del acompañamiento DDBE",
+      consecuencia: "Evaluación del caso. Posible suspensión o pérdida del beneficio",
+      gravedad: "Alta",
+      articulo: "Art. 14-h"
+    },
+    {
+      escenario: "Sanción disciplinaria o conducta inadecuada",
+      consecuencia: "Pérdida inmediata del beneficio. El becario debe evitar incurrir en conductas que den lugar a sanción disciplinaria",
+      gravedad: "Alta",
+      articulo: "Art. 14-i, Art. 3"
+    },
+    {
+      escenario: "Retiro o abandono voluntario",
+      descripcion: "Pago de asignaturas inscritas no aprobadas o retiradas",
+      gravedad: "Media",
+      articulo: "Art. 3-e, Art. 16-d"
+    },
+    {
+      escenario: "Incumplimiento de la Carta Compromiso",
+      consecuencia: "Pérdida del beneficio. El abandono voluntario o incumplimiento resultará en la pérdida del beneficio",
+      gravedad: "Alta",
+      articulo: "Art. 16-d"
     }
   ];
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case "cumplido": return "text-green-600 bg-green-50 border-green-200";
-      case "pendiente": return "text-yellow-600 bg-yellow-50 border-yellow-200";
-      case "completado": return "text-green-600 bg-green-50 border-green-200";
-      default: return "text-gray-600 bg-gray-50 border-gray-200";
-    }
-  };
-
-  const getEstadoIcon = (estado: string) => {
-    switch (estado) {
-      case "cumplido": return <CheckCircle className="h-4 w-4" />;
-      case "completado": return <CheckCircle className="h-4 w-4" />;
-      case "pendiente": return <Clock className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
+  const getPrioridadBadge = (prioridad: string) => {
+    switch (prioridad) {
+      case "Alta":
+        return <Badge variant="destructive" className="text-xs">Alta Prioridad</Badge>;
+      case "Media":
+        return <Badge variant="default" className="text-xs bg-yellow-500">Media Prioridad</Badge>;
+      case "Baja":
+        return <Badge variant="secondary" className="text-xs">Baja Prioridad</Badge>;
+      default:
+        return null;
     }
   };
 
   const getGravedadColor = (gravedad: string) => {
     switch (gravedad) {
-      case "alta": return "border-red-200 bg-red-50";
-      case "media": return "border-yellow-200 bg-yellow-50";
-      case "baja": return "border-blue-200 bg-blue-50";
+      case "Alta": return "border-red-200 bg-red-50";
+      case "Media": return "border-yellow-200 bg-yellow-50";
+      case "Baja": return "border-blue-200 bg-blue-50";
       default: return "border-gray-200 bg-gray-50";
     }
   };
 
   const getGravedadIcon = (gravedad: string) => {
     switch (gravedad) {
-      case "alta": return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      case "media": return <AlertCircle className="h-4 w-4 text-yellow-600" />;
-      case "baja": return <AlertCircle className="h-4 w-4 text-blue-600" />;
-      default: return <AlertCircle className="h-4 w-4 text-gray-600" />;
+      case "Alta": return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case "Media": return <Info className="h-4 w-4 text-yellow-600" />;
+      case "Baja": return <Info className="h-4 w-4 text-blue-600" />;
+      default: return <Info className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  const compromisosCompletados = compromisosEspecificos.filter(c => c.estado === "cumplido").length;
-  const progresoGeneral = (compromisosCompletados / compromisosEspecificos.length) * 100;
+  const condicionesGenerales = getCondicionesGenerales();
+  const condicionesEspecificas = getCondicionesEspecificas();
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Compromisos Especiales</h2>
+      <div className="space-y-2">
+        <h2 className="text-3xl font-bold text-foreground flex items-center gap-3">
+          {getTipoBecaIcon()}
+          Condiciones de Mantenimiento - Excelencia {getTipoBecaTexto()}
+        </h2>
         <p className="text-muted-foreground">
-          Seguimiento de tus compromisos específicos como becario de excelencia {scholarshipType === 'academica' ? 'académica' : scholarshipType === 'artistica' ? 'artística' : scholarshipType === 'civico' ? 'cívica' : scholarshipType === 'emprendimiento' ? 'de emprendimiento' : 'deportiva'}
+          Compromisos y requisitos que debes cumplir para mantener tu Beca de Excelencia {getTipoBecaTexto()} activa (Artículo 14)
         </p>
       </div>
 
+      {/* Alerta informativa */}
+      <Alert className="bg-blue-50 border-blue-200">
+        <Info className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-900 text-sm">
+          <strong>Importante:</strong> El cumplimiento de estas condiciones es <strong>obligatorio</strong> para
+          mantener tu beca activa. El seguimiento es trimestral con revisión anual. Cualquier incumplimiento puede
+          resultar en la suspensión o pérdida del beneficio (Art. 50).
+        </AlertDescription>
+      </Alert>
 
-      {/* Compromisos por Categoría */}
+      {/* Condiciones Generales */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl flex items-center space-x-2">
-            <Users className="h-5 w-5" />
-            <span>Compromisos de Excelencia {scholarshipType === 'academica' ? 'Académica' : scholarshipType === 'artistica' ? 'Artística' : scholarshipType === 'civico' ? 'Cívica' : scholarshipType === 'emprendimiento' ? 'Emprendimiento' : 'Deportiva'}</span>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Condiciones Generales de Mantenimiento
           </CardTitle>
           <CardDescription>
-            Compromisos específicos para tu categoría de Excelencia {scholarshipType === 'academica' ? 'Académica' : scholarshipType === 'artistica' ? 'Artística' : scholarshipType === 'civico' ? 'Cívica' : scholarshipType === 'emprendimiento' ? 'Emprendimiento' : 'Deportiva'}
+            Requisitos comunes para todos los becarios del Programa de Excelencia
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {compromisosEspecificos.map((compromiso, index) => (
-              <div 
+          <div className="space-y-3">
+            {condicionesGenerales.map((condicion, index) => (
+              <div
                 key={index}
-                className={`p-4 rounded-lg border ${getEstadoColor(compromiso.estado)}`}
+                className="p-4 rounded-lg border border-blue-200 bg-blue-50/50"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      {getEstadoIcon(compromiso.estado)}
-                      <h3 className="font-semibold">{compromiso.compromiso}</h3>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <h3 className="font-semibold text-sm text-blue-900">{condicion.titulo}</h3>
+                      {getPrioridadBadge(condicion.prioridad)}
                     </div>
-                    <p className="text-sm opacity-75 mt-1">{compromiso.descripcion}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm font-medium">Actual: {compromiso.valorActual}</span>
-                      <span className="text-sm text-muted-foreground">Requerido: {compromiso.requerido}</span>
-                    </div>
+                    <p className="text-xs text-blue-800 leading-relaxed">{condicion.descripcion}</p>
+                    <Badge variant="outline" className="text-xs bg-white/50 text-blue-700 border-blue-300">
+                      {condicion.articulo}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -301,6 +340,103 @@ const CompromisosEspeciales = ({ scholarshipType }: { scholarshipType?: string }
         </CardContent>
       </Card>
 
+      {/* Condiciones Específicas */}
+      <Card className="border-purple-200">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-purple-900">
+            <Target className="h-5 w-5" />
+            Requisitos Específicos - Excelencia {getTipoBecaTexto()}
+          </CardTitle>
+          <CardDescription>
+            Compromisos adicionales específicos de tu tipología de beca
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {condicionesEspecificas.map((condicion, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-lg border border-purple-200 bg-purple-50/50"
+              >
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-purple-900">{condicion.titulo}</h3>
+                  <p className="text-xs text-purple-800 leading-relaxed">{condicion.descripcion}</p>
+                  <Badge variant="outline" className="text-xs bg-white/50 text-purple-700 border-purple-300">
+                    {condicion.articulo}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Consecuencias de Incumplimiento */}
+      <Card className="border-orange-200">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-orange-900">
+            <AlertTriangle className="h-5 w-5" />
+            Consecuencias de Incumplimiento
+          </CardTitle>
+          <CardDescription>
+            Posibles consecuencias ante el incumplimiento de las condiciones de mantenimiento (Art. 50, Art. 3-e)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {consecuenciasIncumplimiento.map((item, index) => (
+              <div
+                key={index}
+                className={`p-4 rounded-lg border ${getGravedadColor(item.gravedad)}`}
+              >
+                <div className="flex items-start gap-3">
+                  {getGravedadIcon(item.gravedad)}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <h4 className="font-semibold text-sm">{item.escenario}</h4>
+                      <Badge variant="outline" className="text-xs">Gravedad: {item.gravedad}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{item.consecuencia}</p>
+                    <Badge variant="secondary" className="text-xs mt-1">{item.articulo}</Badge>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Alert className="mt-4 bg-red-50 border-red-200">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-900 text-sm">
+              <strong>Advertencia:</strong> El incumplimiento de las condiciones puede resultar en suspensión
+              o revocación del beneficio sin perjuicio de otras acciones que la Universidad considere pertinentes
+              (Art. 50). Los costos de asignaturas retiradas/reprobadas no están cubiertos por el beneficio (Art. 3-e, Art. 16).
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      {/* Información de Apoyo */}
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2 text-green-900">
+            <BookOpen className="h-5 w-5" />
+            Apoyo y Recursos Disponibles
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-green-900 mb-4">
+            Si tienes dudas sobre tus compromisos o necesitas apoyo para cumplirlos, contacta a la <strong>Dirección de
+            Desarrollo y Bienestar Estudiantil (DDBE)</strong>. El acompañamiento integral es parte de tu beneficio y está
+            diseñado para apoyar tu prosecución de estudios.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <Badge className="bg-green-600 text-xs">Seguimiento Trimestral</Badge>
+            <Badge className="bg-green-600 text-xs">Revisión Anual</Badge>
+            <Badge className="bg-green-600 text-xs">Orientación DDBE</Badge>
+            <Badge className="bg-green-600 text-xs">Tutoría y Mentoría</Badge>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

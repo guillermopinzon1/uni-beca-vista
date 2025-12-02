@@ -1,282 +1,273 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { 
-  Trophy, 
-  Plus, 
-  Calendar, 
-  Clock,
-  Download,
-  TrendingUp,
-  Users,
-  Award
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Trophy,
+  Award,
+  FileText,
+  Info,
+  BookOpen,
+  GraduationCap,
+  Palette,
+  Heart,
+  Lightbulb,
+  Target
 } from "lucide-react";
 
 const ActividadesReportes = ({ scholarshipType }: { scholarshipType?: string }) => {
-  
-  const getActivitiesData = () => {
+
+  const getTipoBecaInfo = () => {
     switch (scholarshipType) {
       case 'academica':
         return {
-          title: "Logros Académicos",
-          description: "Registro de tus logros académicos y participaciones en investigación",
-          activities: [
-            {
-              tipo: "logro",
-              titulo: "Lista del Rector - IAA 17.2",
-              fecha: "2025-10-15",
-              resultado: "🏆 Reconocimiento académico",
-              descripcion: "IAA sobresaliente período 2525-3"
-            },
-            {
-              tipo: "investigacion", 
-              titulo: "Proyecto de Investigación - Sostenibilidad",
-              fecha: "2025-09-20",
-              resultado: "📊 En desarrollo",
-              descripcion: "Investigación sobre energías renovables"
-            },
-            {
-              tipo: "competencia",
-              titulo: "Olimpiada de Matemáticas UNIMET",
-              fecha: "2025-08-01",
-              resultado: "🥈 Segundo lugar",
-              descripcion: "Competencia académica interuniversitaria"
-            }
+          title: "Desempeño y Reconocimientos Académicos",
+          subtitle: "Beca de Excelencia Académica (Art. 10-a)",
+          icon: GraduationCap,
+          color: "blue",
+          iaaRequired: "16.50",
+          description: "Como becario de Excelencia Académica, deberás mantener un destacado rendimiento académico y cumplir con los requisitos establecidos en el reglamento.",
+          requirements: [
+            "Mantener IAA ≥ 16.50 puntos al término del año lectivo",
+            "Haber cursado y aprobado 15 asignaturas anuales según flujograma",
+            "Aprobar mínimo 15 créditos por trimestre regular",
+            "Cumplir con el acompañamiento integral de DDBE"
           ],
-          buttons: ["Registrar logro académico", "Agregar proyecto de investigación"],
-          reports: ["Reporte Académico", "Certificado de Honor", "Carta de Rendimiento Académico"]
+          distintions: [
+            {
+              title: "Lista del Rector",
+              description: "Puedes optar al Certificado Distinción Lista del Rector si tu promedio simple de los IAP de tres trimestres regulares consecutivos es ≥17.5 puntos",
+              articulo: "Art. 19-a"
+            }
+          ]
         };
-      
+
+      case 'deportiva':
+        return {
+          title: "Actividades y Logros Deportivos",
+          subtitle: "Beca de Excelencia Deportiva (Art. 10-b)",
+          icon: Trophy,
+          color: "green",
+          iaaRequired: "15.00",
+          description: "Como becario de Excelencia Deportiva, debes mantener participación activa en selecciones deportivas UNIMET y cumplir con los requisitos académicos y deportivos.",
+          requirements: [
+            "Mantener IAA ≥ 15.00 puntos al término del año lectivo",
+            "Participación activa en selección deportiva con mínimo 2 trimestres de antigüedad",
+            "Mantener calificación deportiva ≥18/20 otorgada por el entrenador",
+            "Aprobar mínimo 15 créditos por trimestre regular",
+            "Cumplir con el acompañamiento integral de DDBE"
+          ],
+          distintions: [
+            {
+              title: "Requisitos de Postulación Deportiva",
+              description: "Debes presentar currículum deportivo, certificaciones, constancia de federación (si aplica) y aval del entrenador deportivo y director del área",
+              articulo: "Art. 10-b"
+            }
+          ]
+        };
+
       case 'artistica':
         return {
-          title: "Actividades Artísticas",
-          description: "Registro de tus presentaciones y logros culturales",
-          activities: [
-            {
-              tipo: "presentacion",
-              titulo: "Concierto Sinfónico UNIMET",
-              fecha: "2025-10-15",
-              resultado: "🎼 Presentación principal",
-              descripcion: "Violín principal en concierto de gala"
-            },
-            {
-              tipo: "competencia", 
-              titulo: "Festival de Música Universitaria",
-              fecha: "2025-09-20",
-              resultado: "🥇 Primer lugar",
-              descripcion: "Categoría música clásica"
-            },
-            {
-              tipo: "taller",
-              titulo: "Taller Comunitario de Música",
-              fecha: "2025-08-01",
-              resultado: "👥 25 beneficiarios",
-              descripcion: "Enseñanza musical a niños de la comunidad"
-            }
+          title: "Participación y Logros Artísticos",
+          subtitle: "Beca de Excelencia Artística (Art. 10-c)",
+          icon: Palette,
+          color: "purple",
+          iaaRequired: "15.00",
+          description: "Como becario de Excelencia Artística, debes mantener participación activa en selecciones culturales UNIMET y cumplir con los requisitos académicos y artísticos.",
+          requirements: [
+            "Mantener IAA ≥ 15.00 puntos al término del año lectivo",
+            "Participación activa en selección cultural con mínimo 2 trimestres de antigüedad",
+            "Mantener calificación artística ≥18/20 otorgada por el Director del área",
+            "Aprobar mínimo 15 créditos por trimestre regular",
+            "Cumplir con el acompañamiento integral de DDBE"
           ],
-          buttons: ["Registrar presentación", "Agregar actividad cultural"],
-          reports: ["Reporte Cultural", "Certificado Artístico", "Carta de Participación Cultural"]
+          distintions: [
+            {
+              title: "Dossier Artístico",
+              description: "Debes mantener un dossier artístico completo y actualizado con aval del Director del área y del Coordinador de la tipología",
+              articulo: "Art. 10-c"
+            }
+          ]
         };
-      
+
       case 'civico':
         return {
           title: "Proyectos de Impacto Social",
-          description: "Registro de tus actividades comunitarias y proyectos sociales",
-          activities: [
-            {
-              tipo: "proyecto",
-              titulo: "Programa de Alfabetización Digital",
-              fecha: "2025-10-15",
-              resultado: "📚 150 beneficiarios",
-              descripcion: "Enseñanza de tecnología a adultos mayores"
-            },
-            {
-              tipo: "voluntariado", 
-              titulo: "Jornada de Salud Comunitaria",
-              fecha: "2025-09-20",
-              resultado: "⚕️ 200 consultas",
-              descripcion: "Apoyo en jornada médica gratuita"
-            },
-            {
-              tipo: "liderazgo",
-              titulo: "Coordinador de Grupo Juvenil",
-              fecha: "2025-08-01",
-              resultado: "👥 Liderazgo activo",
-              descripcion: "Coordinación de 30 jóvenes voluntarios"
-            }
+          subtitle: "Beca de Compromiso Cívico (Art. 10-d)",
+          icon: Heart,
+          color: "orange",
+          iaaRequired: "15.00",
+          description: "Como becario de Compromiso Cívico, debes mantener participación destacada en programas de impacto social y cumplir con los requisitos académicos establecidos.",
+          requirements: [
+            "Mantener IAA ≥ 15.00 puntos al término del año lectivo",
+            "Participación destacada en programas de impacto social o bienestar comunitario",
+            "Aprobar mínimo 15 créditos por trimestre regular",
+            "Cumplir con el acompañamiento integral de DDBE"
           ],
-          buttons: ["Registrar proyecto social", "Agregar actividad comunitaria"],
-          reports: ["Reporte de Impacto", "Certificado de Servicio", "Carta de Compromiso Social"]
+          distintions: [
+            {
+              title: "Evidencias de Impacto",
+              description: "Debes entregar recaudos que demuestren la participación en iniciativas de impacto social con aval del Director del área y del Coordinador de la tipología",
+              articulo: "Art. 10-d"
+            }
+          ]
         };
-      
+
       case 'emprendimiento':
         return {
-          title: "Actividades de Emprendimiento",
-          description: "Registro de tu startup y actividades emprendedoras",
-          activities: [
-            {
-              tipo: "startup",
-              titulo: "EcoTech Solutions - App Sostenibilidad",
-              fecha: "2025-10-15",
-              resultado: "🚀 En incubadora",
-              descripcion: "Aplicación para reducción de huella de carbono"
-            },
-            {
-              tipo: "competencia", 
-              titulo: "Pitch Competition UNIMET",
-              fecha: "2025-09-20",
-              resultado: "🥇 Primer lugar",
-              descripcion: "Mejor propuesta de negocio sustentable"
-            },
-            {
-              tipo: "desarrollo",
-              titulo: "Prototipo MVP completado",
-              fecha: "2025-08-01",
-              resultado: "💡 Beta testing",
-              descripcion: "Primera versión funcional del producto"
-            }
+          title: "Desarrollo de Emprendimiento",
+          subtitle: "Beca de Emprendimiento (Art. 10-e)",
+          icon: Lightbulb,
+          color: "yellow",
+          iaaRequired: "15.00",
+          description: "Como becario de Emprendimiento, debes mantener tu startup activa en la Incubadora UNIMET y cumplir con los requisitos académicos y emprendedores.",
+          requirements: [
+            "Mantener IAA ≥ 15.00 puntos al término del año lectivo",
+            "Mantener aval e ingreso activo en la Incubadora de Emprendimientos UNIMET",
+            "Participar en competencias trimestrales de proyectos emprendedores",
+            "Aprobar mínimo 15 créditos por trimestre regular",
+            "Cumplir con el acompañamiento integral de DDBE"
           ],
-          buttons: ["Registrar hito del startup", "Agregar actividad emprendedora"],
-          reports: ["Reporte de Emprendimiento", "Certificado de Innovación", "Carta de Incubadora"]
+          distintions: [
+            {
+              title: "Resumen Ejecutivo",
+              description: "Debes mantener un resumen ejecutivo de tu proyecto avalado por el Departamento de Emprendimiento (máximo 2 páginas)",
+              articulo: "Art. 10-e"
+            }
+          ]
         };
-      
-      default: // deportiva
+
+      default:
         return {
-          title: "Competencias y Logros",
-          description: "Registro de tus participaciones y reconocimientos deportivos",
-          activities: [
-            {
-              tipo: "competencia",
-              titulo: "Oro en 100m libres - Interclubes",
-              fecha: "2025-10-15",
-              resultado: "🥇 Primer lugar",
-              tiempo: "52.34s"
-            },
-            {
-              tipo: "competencia", 
-              titulo: "Plata en relevos 4x100",
-              fecha: "2025-09-20",
-              resultado: "🥈 Segundo lugar",
-              tiempo: "3:24.12"
-            },
-            {
-              tipo: "logro",
-              titulo: "Capitán del equipo",
-              fecha: "2025-08-01",
-              resultado: "📋 Liderazgo",
-              descripcion: "Designado capitán por rendimiento y liderazgo"
-            }
-          ],
-          buttons: ["Registrar competencia", "Agregar logro"],
-          reports: ["Reporte Deportivo", "Carta de Buena Conducta", "Certificado Atlético"]
+          title: "Actividades y Reportes",
+          subtitle: "Programa de Excelencia",
+          icon: Target,
+          color: "blue",
+          iaaRequired: "15.00",
+          description: "Información sobre las actividades y requisitos del programa de excelencia.",
+          requirements: [],
+          distintions: []
         };
     }
   };
 
-  const activityData = getActivitiesData();
-
-  const getActivityIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'logro': return '🏆';
-      case 'investigacion': return '🔬';
-      case 'competencia': return scholarshipType === 'academica' ? '🧠' : scholarshipType === 'artistica' ? '🎭' : scholarshipType === 'emprendimiento' ? '💡' : '🏊‍♂️';
-      case 'presentacion': return '🎼';
-      case 'taller': return '🎨';
-      case 'proyecto': return '🌍';
-      case 'voluntariado': return '❤️';
-      case 'liderazgo': return '👥';
-      case 'startup': return '🚀';
-      case 'desarrollo': return '💻';
-      default: return '📋';
-    }
-  };
+  const becaInfo = getTipoBecaInfo();
+  const IconComponent = becaInfo.icon;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-foreground mb-2">Actividades y Reportes</h2>
-        <p className="text-muted-foreground">
-          {activityData.description}
-        </p>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <IconComponent className={`h-8 w-8 text-${becaInfo.color}-600`} />
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">{becaInfo.title}</h2>
+            <p className="text-sm text-muted-foreground">{becaInfo.subtitle}</p>
+          </div>
+        </div>
+        <p className="text-muted-foreground">{becaInfo.description}</p>
       </div>
 
-      {/* Competencias y Logros */}
-      <Card>
+      {/* Alert Informativo */}
+      <Alert className="bg-blue-50 border-blue-200">
+        <Info className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-900 text-sm">
+          <strong>Importante:</strong> Debes mantener un IAA mínimo de <strong>{becaInfo.iaaRequired} puntos</strong> al término del año lectivo para conservar tu beca.
+        </AlertDescription>
+      </Alert>
+
+      {/* Requisitos de Mantenimiento */}
+      <Card className="border-orange/20">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-xl flex items-center space-x-2">
-                <Trophy className="h-5 w-5" />
-                <span>{activityData.title}</span>
-              </CardTitle>
-              <CardDescription>
-                {activityData.description}
-              </CardDescription>
-            </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                {activityData.buttons[0]}
-              </Button>
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                {activityData.buttons[1]}
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Requisitos de Mantenimiento
+          </CardTitle>
+          <CardDescription>
+            Condiciones que debes cumplir para mantener tu beca activa
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {activityData.activities.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="text-2xl">
-                    {getActivityIcon(item.tipo)}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{item.titulo}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(item.fecha).toLocaleDateString('es-ES')}
-                    </p>
-                    {item.tiempo && (
-                      <p className="text-sm text-primary font-medium">Tiempo: {item.tiempo}</p>
-                    )}
-                    {item.descripcion && (
-                      <p className="text-sm text-muted-foreground">{item.descripcion}</p>
-                    )}
-                  </div>
+          <div className="space-y-3">
+            {becaInfo.requirements.map((req, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200"
+              >
+                <div className="mt-0.5">
+                  <div className="h-2 w-2 rounded-full bg-blue-600"></div>
                 </div>
-                <Badge variant="outline" className="text-primary">
-                  {item.resultado}
-                </Badge>
+                <p className="text-sm text-blue-900 flex-1">{req}</p>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
+      {/* Distinciones y Reconocimientos */}
+      {becaInfo.distintions && becaInfo.distintions.length > 0 && (
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2 text-purple-900">
+              <Award className="h-5 w-5" />
+              Distinciones y Reconocimientos
+            </CardTitle>
+            <CardDescription>
+              Oportunidades adicionales disponibles para becarios de excelencia
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {becaInfo.distintions.map((dist, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-white rounded-lg border border-purple-200"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h4 className="font-semibold text-purple-900">{dist.title}</h4>
+                    <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
+                      {dist.articulo}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-purple-800">{dist.description}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Generación de Reportes */}
-      <Card>
+      {/* Acompañamiento DDBE */}
+      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
         <CardHeader>
-          <CardTitle className="text-xl">Generación de Reportes</CardTitle>
-          <CardDescription>
-            Descarga certificados y reportes de tu actividad académica
-          </CardDescription>
+          <CardTitle className="text-lg flex items-center gap-2 text-green-900">
+            <BookOpen className="h-5 w-5" />
+            Acompañamiento Integral DDBE
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {activityData.reports.map((report, index) => (
-              <Button key={index} variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2">
-                <Download className="h-5 w-5" />
-                <span className="text-sm">{report}</span>
-              </Button>
-            ))}
+          <p className="text-sm text-green-900 mb-4">
+            Como becario del Programa de Excelencia, contarás con un <strong>acompañamiento integral obligatorio</strong> provisto
+            por la Dirección de Desarrollo y Bienestar Estudiantil (DDBE). Este acompañamiento es fundamental para tu éxito académico
+            y el mantenimiento de tu beneficio.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <Badge className="bg-green-600 text-xs">Seguimiento Trimestral</Badge>
+            <Badge className="bg-green-600 text-xs">Revisión Anual</Badge>
+            <Badge className="bg-green-600 text-xs">Orientación Académica</Badge>
+            <Badge className="bg-green-600 text-xs">Apoyo Personalizado</Badge>
           </div>
         </CardContent>
       </Card>
+
+      {/* Información Adicional */}
+      <Alert className="bg-orange-50 border-orange-200">
+        <Info className="h-4 w-4 text-orange-600" />
+        <AlertDescription className="text-orange-900 text-sm">
+          <strong>Recuerda:</strong> El seguimiento del cumplimiento de requisitos es <strong>trimestral con revisión anual</strong>.
+          Cualquier incumplimiento puede resultar en la suspensión o pérdida del beneficio según lo establecido en el Art. 50 del reglamento.
+          Para consultas sobre retiro de asignaturas, período intensivo o cambio de carrera, contacta a DDBE previamente.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 };

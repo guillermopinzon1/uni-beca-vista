@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, Calendar, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { Upload, FileText, Calendar, ChevronDown, ChevronUp, AlertCircle, Lock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/lib/api";
+import { getUserProfile } from "@/lib/api/auth";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UnifiedApplicationFormProps {
   programTitle: string;
@@ -37,9 +40,11 @@ interface FormData {
 const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: UnifiedApplicationFormProps) => {
   const [birthDate, setBirthDate] = useState<Date>();
   const { toast } = useToast();
+  const { tokens } = useAuth();
   const [uploading, setUploading] = useState<string | null>(null);
   const [documentos, setDocumentos] = useState<Array<{ tipo: string; nombre: string; file: File }>>([]);
   const [showOptionalAcademicData, setShowOptionalAcademicData] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [formData, setFormData] = useState<FormData>({
     nombre: "",
     cedula: "",
@@ -68,13 +73,143 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
       .replace(/\p{Diacritic}/gu, '')
       .toLowerCase()
       .trim();
-  const uploadCardsMeta: Array<{ key: string; label: string }> = [
-    { key: 'cedula', label: 'Cédula de Identidad' },
-    { key: 'historico_notas', label: 'Histórico de Notas' },
-    { key: 'flujograma_carrera', label: 'Flujograma de Carrera' },
-    { key: 'plan_carrera_avalado', label: 'Plan de Carrera Avalado' },
-    { key: 'curriculum', label: 'Currículum/Dossier' }
-  ];
+
+  // Mapeo de nombres de documentos a tipos válidos del backend
+  const mapDocumentNameToType = (label: string): string => {
+    const normalized = normalize(label);
+
+    // Mapeo explícito de nombres comunes a tipos del backend
+    const mapping: { [key: string]: string } = {
+      'cedula': 'cedula',
+      'cedula de identidad': 'cedula',
+      'copia de cedula': 'cedula',
+      'historico de notas': 'historico_notas',
+      'historico': 'historico_notas',
+      'certificado de notas': 'historico_notas',
+      'notas certificadas': 'historico_notas',
+      'record academico': 'historico_notas',
+      'flujograma': 'flujograma_carrera',
+      'flujograma de carrera': 'flujograma_carrera',
+      'plan de carrera': 'plan_carrera_avalado',
+      'plan carrera avalado': 'plan_carrera_avalado',
+      'curriculum': 'curriculum',
+      'curriculum vitae': 'curriculum',
+      'cv': 'curriculum',
+      'hoja de vida': 'curriculum',
+      'carta de motivacion': 'carta_motivacion',
+      'carta motivacion': 'carta_motivacion',
+      'ensayo': 'carta_motivacion',
+      'certificados': 'certificados_logros',
+      'certificados de logros': 'certificados_logros',
+      'logros': 'certificados_logros',
+      'constancia laboral': 'constancia_laboral',
+      'carta laboral': 'constancia_laboral',
+      'comprobante de ingresos': 'comprobante_ingresos',
+      'comprobante ingresos': 'comprobante_ingresos',
+      'declaracion de ingresos': 'comprobante_ingresos'
+    };
+
+    // Buscar coincidencia exacta
+    if (mapping[normalized]) {
+      return mapping[normalized];
+    }
+
+    // Buscar coincidencia parcial
+    for (const [key, value] of Object.entries(mapping)) {
+      if (normalized.includes(key) || key.includes(normalized)) {
+        return value;
+      }
+    }
+
+    // Si no hay coincidencia, generar clave desde el label (fallback)
+    return normalize(label).replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  };
+
+  // Generar uploadCardsMeta dinámicamente desde requiredDocuments
+  const uploadCardsMeta: Array<{ key: string; label: string }> = requiredDocuments.map(doc => ({
+    key: mapDocumentNameToType(doc),
+    label: doc
+  }));
+
+  const [shouldPreloadData, setShouldPreloadData] = useState(false);
+
+  // useEffect para cargar datos del perfil del usuario
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      // Solo precargar si hay token de acceso (usuario autenticado)
+      if (!tokens?.accessToken) {
+        setLoadingProfile(false);
+        setShouldPreloadData(false);
+        return;
+      }
+
+      try {
+        const profileResponse = await getUserProfile(tokens.accessToken);
+
+        if (profileResponse.success && profileResponse.data) {
+          const profile = profileResponse.data;
+
+          // Verificar si el usuario tiene postulación activa
+          // Si tiene postulación, no debería estar en este formulario
+          // Solo precargamos si el usuario está autenticado pero NO tiene postulación
+          const tienePostulacion = profile.postulacionId || profile.hasPostulacion;
+
+          if (tienePostulacion) {
+            // Usuario ya tiene postulación, no precargar datos
+            setLoadingProfile(false);
+            setShouldPreloadData(false);
+            return;
+          }
+
+          // Usuario autenticado sin postulación - precargar datos
+          setShouldPreloadData(true);
+
+          // Construir nombre completo
+          const nombreCompleto = `${profile.nombre} ${profile.apellido || ''}`.trim();
+
+          // Extraer tipo y número de cédula si existe
+          if (profile.cedula) {
+            const cedulaParts = profile.cedula.split('-');
+            if (cedulaParts.length === 2) {
+              setCedulaTipo(cedulaParts[0]);
+              setCedulaNumero(cedulaParts[1]);
+            }
+          }
+
+          // Actualizar formData con datos del perfil
+          setFormData(prev => ({
+            ...prev,
+            nombre: nombreCompleto,
+            cedula: profile.cedula || "",
+            email: profile.email,
+            telefono: profile.telefono || "",
+            carrera: profile.carrera || "",
+            trimestre: profile.trimestre?.toString() || "",
+            iaa: profile.iaa || null,
+            asignaturasAprobadas: profile.asignaturasAprobadas || null
+          }));
+
+          toast({
+            title: "Datos cargados",
+            description: "Se han precargado tus datos del perfil",
+          });
+        }
+      } catch (error) {
+        console.error('Error cargando perfil:', error);
+        // En caso de error, permitir llenar manualmente
+        setShouldPreloadData(false);
+        toast({
+          title: "Advertencia",
+          description: "No se pudieron cargar algunos datos del perfil. Complete manualmente los campos.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [tokens?.accessToken, toast]);
 
   // Función para manejar cambios en el formulario
   const handleInputChange = (field: keyof FormData, value: string | number | null) => {
@@ -209,12 +344,11 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
         return;
       }
 
-      // Validar documentos requeridos (por nombre)
-      const requiredSet = new Set((requiredDocuments || []).map(normalize));
+      // Validar documentos requeridos (todos son obligatorios)
       const uploadedTypes = new Set(documentos.map(d => d.tipo));
       const missingRequired: string[] = [];
       for (const meta of uploadCardsMeta) {
-        if (requiredSet.has(normalize(meta.label)) && !uploadedTypes.has(meta.key)) {
+        if (!uploadedTypes.has(meta.key)) {
           missingRequired.push(meta.label);
         }
       }
@@ -546,6 +680,27 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
 
   return (
     <div className="space-y-6">
+      {/* Mensaje de carga */}
+      {loadingProfile && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-900">
+            Cargando tus datos del perfil...
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Mensaje informativo sobre campos precargados - solo si hay datos precargados */}
+      {!loadingProfile && shouldPreloadData && (
+        <Alert className="bg-purple-50 border-purple-200">
+          <Lock className="h-4 w-4 text-purple-600" />
+          <AlertDescription className="text-purple-900 text-sm">
+            <strong>Información precargada:</strong> Los campos con el icono <Lock className="h-3 w-3 inline" /> han sido
+            completados automáticamente con los datos de tu perfil y no pueden ser modificados.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Mensaje de éxito visual */}
       {showSuccess && (
         <Card className="border-green-200 bg-green-50">
@@ -569,7 +724,7 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
           </CardContent>
         </Card>
       )}
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Nueva Postulación - {programTitle}</CardTitle>
@@ -583,19 +738,30 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
             <h3 className="text-lg font-semibold text-foreground">Datos Personales</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre Completo</Label>
-                <Input 
-                  id="nombre" 
-                  placeholder="Ingrese su nombre completo" 
-                  value={formData.nombre}
-                  onChange={(e) => handleInputChange("nombre", e.target.value)}
-                />
+                <Label htmlFor="nombre" className="flex items-center gap-2">
+                  Nombre Completo
+                  {shouldPreloadData && <Lock className="h-3 w-3 text-purple-600" />}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="nombre"
+                    placeholder="Ingrese su nombre completo"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange("nombre", e.target.value)}
+                    disabled={shouldPreloadData}
+                    className={shouldPreloadData ? "bg-purple-50/50 border-purple-200 text-foreground cursor-not-allowed" : ""}
+                  />
+                </div>
+                {shouldPreloadData && <p className="text-xs text-muted-foreground">Campo precargado desde tu perfil</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cedula">Cédula de Identidad</Label>
+                <Label htmlFor="cedula" className="flex items-center gap-2">
+                  Cédula de Identidad
+                  {shouldPreloadData && <Lock className="h-3 w-3 text-purple-600" />}
+                </Label>
                 <div className="flex gap-2">
-                  <Select value={cedulaTipo} onValueChange={(tipo) => handleCedulaChange(tipo, cedulaNumero)}>
-                    <SelectTrigger className={`w-20 ${fieldErrors.cedula ? 'border-red-500' : ''}`}>
+                  <Select value={cedulaTipo} onValueChange={(value) => handleCedulaChange(value, cedulaNumero)} disabled={shouldPreloadData}>
+                    <SelectTrigger className={`w-20 ${shouldPreloadData ? 'bg-purple-50/50 border-purple-200 cursor-not-allowed' : ''}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -603,44 +769,47 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
                       <SelectItem value="E">E</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input 
-                    id="cedula" 
-                    placeholder="12345678" 
+                  <Input
+                    id="cedula"
+                    placeholder="12345678"
                     value={cedulaNumero}
                     onChange={(e) => handleCedulaChange(cedulaTipo, e.target.value)}
-                    className={`flex-1 ${fieldErrors.cedula ? 'border-red-500' : ''}`}
+                    disabled={shouldPreloadData}
+                    className={`flex-1 ${shouldPreloadData ? 'bg-purple-50/50 border-purple-200 text-foreground cursor-not-allowed' : ''}`}
                   />
                 </div>
-                {fieldErrors.cedula && (
-                  <p className="text-sm text-red-500">{fieldErrors.cedula}</p>
-                )}
+                {shouldPreloadData && <p className="text-xs text-muted-foreground">Campo precargado desde tu perfil</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="correo@email.com" 
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  Correo Electrónico
+                  {shouldPreloadData && <Lock className="h-3 w-3 text-purple-600" />}
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="correo@email.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  className={fieldErrors.email ? 'border-red-500' : ''}
+                  disabled={shouldPreloadData}
+                  className={shouldPreloadData ? "bg-purple-50/50 border-purple-200 text-foreground cursor-not-allowed" : ""}
                 />
-                {fieldErrors.email && (
-                  <p className="text-sm text-red-500">{fieldErrors.email}</p>
-                )}
+                {shouldPreloadData && <p className="text-xs text-muted-foreground">Campo precargado desde tu perfil</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="telefono">Número de Teléfono</Label>
-                <Input 
-                  id="telefono" 
-                  placeholder="+58 412 1234567" 
+                <Label htmlFor="telefono" className="flex items-center gap-2">
+                  Número de Teléfono
+                  {shouldPreloadData && <Lock className="h-3 w-3 text-purple-600" />}
+                </Label>
+                <Input
+                  id="telefono"
+                  placeholder="+58 412 1234567"
                   value={formData.telefono}
                   onChange={(e) => handleInputChange("telefono", e.target.value)}
-                  className={fieldErrors.telefono ? 'border-red-500' : ''}
+                  disabled={shouldPreloadData}
+                  className={shouldPreloadData ? "bg-purple-50/50 border-purple-200 text-foreground cursor-not-allowed" : ""}
                 />
-                {fieldErrors.telefono && (
-                  <p className="text-sm text-red-500">{fieldErrors.telefono}</p>
-                )}
+                {shouldPreloadData && <p className="text-xs text-muted-foreground">Campo precargado desde tu perfil</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
@@ -752,16 +921,26 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
             <h3 className="text-lg font-semibold text-foreground">Datos Académicos</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="carrera">Carrera/Programa de estudios *</Label>
+                <div className="flex items-center gap-2 min-h-[20px]">
+                  <Label htmlFor="carrera">
+                    Carrera/Programa de estudios *
+                  </Label>
+                  {shouldPreloadData && <Lock className="h-3 w-3 text-purple-600" />}
+                </div>
                 <Input
                   id="carrera"
                   placeholder="Escriba su carrera o programa"
                   value={formData.carrera}
                   onChange={(e) => handleInputChange("carrera", e.target.value)}
+                  disabled={shouldPreloadData}
+                  className={shouldPreloadData ? "bg-purple-50/50 border-purple-200 text-foreground cursor-not-allowed" : ""}
                 />
+                {shouldPreloadData && <p className="text-xs text-muted-foreground">Campo precargado desde tu perfil</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="promedioBachillerato">Promedio de notas de bachillerato *</Label>
+                <div className="min-h-[20px]">
+                  <Label htmlFor="promedioBachillerato">Promedio de notas de bachillerato (opcional)</Label>
+                </div>
                 <Input
                   id="promedioBachillerato"
                   type="number"
@@ -772,7 +951,6 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
                   value={formData.promedioBachillerato || ""}
                   onChange={(e) => handleInputChange("promedioBachillerato", e.target.value ? parseFloat(e.target.value) : null)}
                 />
-                <p className="text-xs text-muted-foreground">Para estudiantes de nuevo ingreso</p>
               </div>
             </div>
 
@@ -800,16 +978,6 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
             {showOptionalAcademicData && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 border rounded-lg bg-muted/30">
                 <div className="space-y-2">
-                  <Label htmlFor="trimestre">Trimestre actual (opcional)</Label>
-                  <Input
-                    id="trimestre"
-                    placeholder="2025-1"
-                    value={formData.trimestre}
-                    onChange={(e) => handleInputChange("trimestre", e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">Formato: AÑO-TRIMESTRE (ej: 2025-1)</p>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="iaa">Índice Académico Acumulado (IAA)</Label>
                   <Input
                     id="iaa"
@@ -832,6 +1000,7 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
                     value={formData.asignaturasAprobadas || ""}
                     onChange={(e) => handleInputChange("asignaturasAprobadas", e.target.value ? parseInt(e.target.value) : null)}
                   />
+                  <p className="text-xs text-muted-foreground">Número de asignaturas que has aprobado</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="creditosInscritos">Número de créditos inscritos este trimestre</Label>
@@ -855,40 +1024,37 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {uploadCardsMeta
-                .filter(meta => meta.key !== 'curriculum' || programTitle.includes('Excelencia') || programTitle.includes('Ayudantía'))
-                .map((meta) => {
-                  const isRequired = (requiredDocuments || []).some((name) => normalize(name) === normalize(meta.label));
-                  const hasFile = !!documentos.find(d => d.tipo === meta.key);
-                  return (
-                    <Card key={meta.key} className={`border-dashed border-2 transition-colors ${isRequired ? 'border-red-300 hover:border-red-500' : 'border-muted-foreground/25 hover:border-primary/50'}`}>
-                      <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                        <Upload className={`h-8 w-8 mb-2 ${isRequired ? 'text-red-500' : 'text-muted-foreground'}`} />
-                        <p className="text-sm mb-2 font-medium flex items-center gap-2">
-                          <span className={isRequired ? 'text-red-700' : 'text-muted-foreground'}>{meta.label}</span>
-                          {isRequired && <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">Obligatorio</span>}
-                        </p>
-                        <Input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], meta.key)}
-                          disabled={!!uploading}
-                          className="text-xs cursor-pointer"
-                        />
-                        {hasFile && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-2 text-xs text-red-600 hover:text-red-700"
-                            onClick={() => handleRemoveDocument(meta.key)}
-                          >
-                            Remover
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              {uploadCardsMeta.map((meta) => {
+                const hasFile = !!documentos.find(d => d.tipo === meta.key);
+                return (
+                  <Card key={meta.key} className="border-dashed border-2 transition-colors border-red-300 hover:border-red-500">
+                    <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                      <Upload className="h-8 w-8 mb-2 text-red-500" />
+                      <p className="text-sm mb-2 font-medium flex items-center gap-2">
+                        <span className="text-red-700">{meta.label}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">Obligatorio</span>
+                      </p>
+                      <Input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], meta.key)}
+                        disabled={!!uploading}
+                        className="text-xs cursor-pointer"
+                      />
+                      {hasFile && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 text-xs text-red-600 hover:text-red-700"
+                          onClick={() => handleRemoveDocument(meta.key)}
+                        >
+                          Remover
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             {/* Lista de documentos seleccionados */}
@@ -922,9 +1088,6 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
 
           {/* Botones de Acción */}
           <div className="flex justify-end space-x-4 pt-6">
-            <Button variant="outline" disabled={isSubmitting}>
-              Guardar Borrador
-            </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? "Enviando..." : "Enviar Postulación"}
             </Button>

@@ -882,7 +882,7 @@ const GestionPlazas = () => {
             </DialogHeader>
             <div className="space-y-4">
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="nombre">Nombre de la Plaza *</Label>
                 <Input
                   id="nombre"
@@ -895,7 +895,7 @@ const GestionPlazas = () => {
                 </p>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="ubicacion">Ubicación *</Label>
                 <Input
                   id="ubicacion"
@@ -906,7 +906,7 @@ const GestionPlazas = () => {
               </div>
               
               <div className="grid grid-cols-3 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="capacidad">Capacidad *</Label>
                   <Input 
                     id="capacidad" 
@@ -916,7 +916,7 @@ const GestionPlazas = () => {
                     min="1"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="horasSemana">Horas/Semana *</Label>
                   <Input 
                     id="horasSemana" 
@@ -926,7 +926,7 @@ const GestionPlazas = () => {
                     min="1"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="tipoAyudantia">Tipo de Ayudantía *</Label>
                   <Select value={formData.tipoAyudantia} onValueChange={(value) => setFormData({...formData, tipoAyudantia: value})}>
                     <SelectTrigger>
@@ -941,7 +941,7 @@ const GestionPlazas = () => {
                 </div>
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="supervisorResponsable">Supervisor Responsable *</Label>
                   {supervisores.length === 0 && !loadingSupervisores && (
@@ -984,7 +984,7 @@ const GestionPlazas = () => {
                 )}
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="descripcionActividades">Descripción de Actividades *</Label>
                 <Textarea 
                   id="descripcionActividades" 
@@ -994,7 +994,7 @@ const GestionPlazas = () => {
                 />
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label>Requisitos Especiales</Label>
                 {formData.requisitosEspeciales.map((req, index) => (
                   <div key={index} className="flex gap-2 mb-2">
@@ -1030,7 +1030,7 @@ const GestionPlazas = () => {
                 </Button>
               </div>
               
-              <div>
+              <div className="space-y-2">
                 <Label>Horarios de Trabajo</Label>
                 {formData.horario.map((horario, index) => (
                   <div key={index} className="grid grid-cols-4 gap-2 mb-2">

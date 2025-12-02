@@ -57,11 +57,11 @@ const ExoneracionProgram = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={() => navigate(-1)}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Inicio
+              Volver
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-primary">
@@ -72,13 +72,22 @@ const ExoneracionProgram = () => {
               </p>
             </div>
           </div>
-          
+
+          {/* Logo en el centro */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <img
+              src="/450.jpg"
+              alt="UNIMET Logo"
+              className="h-12 object-contain"
+            />
+          </div>
+
           <div className="flex items-center space-x-3">
             <div className="flex flex-col items-end space-y-2">
               <div className="flex items-center space-x-3">
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
-                  {userType === "hijo" 
-                    ? "Beneficiario Exoneración - Hijo de Personal UNIMET" 
+                  {userType === "hijo"
+                    ? "Beneficiario Exoneración - Hijo de Personal UNIMET"
                     : "Beneficiario Exoneración - Empleado UNIMET"
                   }
                 </Badge>

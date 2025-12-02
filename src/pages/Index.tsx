@@ -3,9 +3,50 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Users, Award, FileText, LogIn, UserPlus, BookOpen } from "lucide-react";
 import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
+import { useEffect, useRef, useState } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isCtaVisible, setIsCtaVisible] = useState(false);
+  const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
+  const ctaRef = useRef<HTMLElement>(null);
+  const featuresRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.2,
+      rootMargin: "0px"
+    };
+
+    const ctaObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsCtaVisible(true);
+        }
+      });
+    }, observerOptions);
+
+    const featuresObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsFeaturesVisible(true);
+        }
+      });
+    }, observerOptions);
+
+    if (ctaRef.current) {
+      ctaObserver.observe(ctaRef.current);
+    }
+
+    if (featuresRef.current) {
+      featuresObserver.observe(featuresRef.current);
+    }
+
+    return () => {
+      ctaObserver.disconnect();
+      featuresObserver.disconnect();
+    };
+  }, []);
 
   const features = [
     {
@@ -107,9 +148,9 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4">
+      <section ref={featuresRef} className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className={`text-center mb-16 ${isFeaturesVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <h2 className="text-4xl font-bold text-primary mb-4">
               Funcionalidades del Sistema
             </h2>
@@ -120,7 +161,17 @@ const Index = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="border-orange/20 bg-gradient-card hover:shadow-lg transition-shadow">
+              <Card
+                key={index}
+                className={`border-orange/20 bg-gradient-card hover:shadow-lg hover:scale-105 ${
+                  isFeaturesVisible ? 'animate-fade-in-up' : 'opacity-0'
+                }`}
+                style={{
+                  animationDelay: isFeaturesVisible ? `${index * 0.1}s` : '0s',
+                  animationFillMode: 'both',
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                }}
+              >
                 <CardHeader className="text-center">
                   <feature.icon className="h-12 w-12 text-primary mx-auto mb-4" />
                   <CardTitle className="text-primary">{feature.title}</CardTitle>
@@ -137,19 +188,48 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-primary py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-4xl font-bold mb-6">
+      <section ref={ctaRef} className="relative bg-gradient-primary py-20 px-4 overflow-hidden">
+        {/* Diseño de fondo decorativo */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ctaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{ stopColor: '#ffffff', stopOpacity: 0 }} />
+                <stop offset="50%" style={{ stopColor: '#ffffff', stopOpacity: 0.1 }} />
+                <stop offset="100%" style={{ stopColor: '#ffffff', stopOpacity: 0 }} />
+              </linearGradient>
+            </defs>
+            {/* Círculos decorativos */}
+            <circle cx="10%" cy="20%" r="120" fill="rgba(255, 255, 255, 0.05)" />
+            <circle cx="90%" cy="80%" r="150" fill="rgba(255, 255, 255, 0.05)" />
+            <circle cx="85%" cy="15%" r="80" fill="rgba(255, 255, 255, 0.07)" />
+            <circle cx="15%" cy="85%" r="100" fill="rgba(255, 255, 255, 0.06)" />
+
+            {/* Líneas diagonales sutiles */}
+            <line x1="0" y1="0" x2="100%" y2="100%" stroke="url(#ctaGradient)" strokeWidth="2" opacity="0.3"/>
+            <line x1="0" y1="30%" x2="100%" y2="70%" stroke="url(#ctaGradient)" strokeWidth="1.5" opacity="0.25"/>
+            <line x1="0" y1="70%" x2="100%" y2="30%" stroke="url(#ctaGradient)" strokeWidth="1.5" opacity="0.2"/>
+
+            {/* Puntos decorativos */}
+            <circle cx="25%" cy="35%" r="3" fill="rgba(255, 255, 255, 0.3)" />
+            <circle cx="75%" cy="45%" r="4" fill="rgba(255, 255, 255, 0.25)" />
+            <circle cx="40%" cy="65%" r="2.5" fill="rgba(255, 255, 255, 0.35)" />
+            <circle cx="60%" cy="25%" r="3.5" fill="rgba(255, 255, 255, 0.3)" />
+          </svg>
+        </div>
+
+        <div className="max-w-4xl mx-auto text-center text-white relative z-10">
+          <h2 className={`text-4xl font-bold mb-6 ${isCtaVisible ? 'animate-fade-in' : 'opacity-0'}`} style={{ animationFillMode: 'both' }}>
             ¿Listo para comenzar?
           </h2>
-          <p className="text-xl mb-8 opacity-90">
+          <p className={`text-xl mb-8 opacity-90 ${isCtaVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: isCtaVisible ? '0.2s' : '0s', animationFillMode: 'both' }}>
             Accede a nuestro sistema multiplataforma para gestionar becas y ayudantías
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className={`flex flex-col sm:flex-row gap-4 justify-center ${isCtaVisible ? 'animate-scale-in' : 'opacity-0'}`} style={{ animationDelay: isCtaVisible ? '0.4s' : '0s', animationFillMode: 'both' }}>
             <Button
               size="lg"
               onClick={() => navigate("/postulaciones-becas")}
-              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3"
+              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-3 transition-transform hover:scale-105 shadow-xl"
             >
               <BookOpen className="h-5 w-5 mr-2" />
               Postularme a Beca
@@ -166,7 +246,7 @@ const Index = () => {
             <span className="text-xl font-bold text-primary">Universidad Metropolitana</span>
           </div>
           <p className="text-muted-foreground">
-            © 2025 Universidad Metropolitana. Sistema de Gestión de Becas.
+            © 2025 Universidad Metropolitana. Sistema Multiplataforma.
           </p>
         </div>
       </footer>

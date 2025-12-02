@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,37 +14,81 @@ import ConfiguracionSistema from "@/components/admin/ConfiguracionSistema";
 import GestionUsuariosPendientes from "@/components/admin/GestionUsuariosPendientes";
 import EstadisticasDashboard from "@/pages/EstadisticasDashboard";
 import DashboardKPIs from "@/components/admin/DashboardKPIs";
-import { fetchUsers } from "@/lib/api";
+import { fetchUsers, API_BASE } from "@/lib/api";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { logout, tokens } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("dashboard");
   const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
+  const [pendingPostulacionesCount, setPendingPostulacionesCount] = useState<number>(0);
 
   // Cargar contador de usuarios pendientes
-  useEffect(() => {
-    const loadPendingCount = async () => {
-      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
-      if (!accessToken) return;
+  const loadPendingCount = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) return;
 
-      try {
-        const res = await fetchUsers(accessToken, {
-          emailVerified: false,
-          limit: 1
-        });
-        setPendingUsersCount(res.data.total);
-      } catch (e) {
-        console.error('Error loading pending users count:', e);
+    try {
+      const res = await fetchUsers(accessToken, {
+        emailVerified: false,
+        limit: 1
+      });
+      setPendingUsersCount(res.data.total);
+    } catch (e) {
+      console.error('Error loading pending users count:', e);
+    }
+  };
+
+  // Cargar contador de postulaciones pendientes
+  const loadPendingPostulacionesCount = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/v1/postulaciones?includeAll=true`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}`);
       }
-    };
 
+      const data = await response.json();
+      const postulacionesRaw = data.data?.postulaciones || data.postulaciones || [];
+      
+      // Contar solo las postulaciones con estado "Pendiente"
+      const pendientes = postulacionesRaw.filter((post: any) => post.estado === 'Pendiente');
+      setPendingPostulacionesCount(pendientes.length);
+    } catch (e) {
+      console.error('Error loading pending postulaciones count:', e);
+    }
+  };
+
+  useEffect(() => {
     loadPendingCount();
+    loadPendingPostulacionesCount();
     // Recargar cada 30 segundos
-    const interval = setInterval(loadPendingCount, 30000);
+    const interval = setInterval(() => {
+      loadPendingCount();
+      loadPendingPostulacionesCount();
+    }, 30000);
     return () => clearInterval(interval);
   }, [tokens?.accessToken]);
+
+  // Leer el parámetro de módulo de la URL
+  useEffect(() => {
+    const moduleParam = searchParams.get('module');
+    if (moduleParam) {
+      setActiveModule(moduleParam);
+    }
+  }, [searchParams]);
 
   const sidebarItems = [
     {
@@ -76,7 +120,8 @@ const AdminDashboard = () => {
     {
       title: "Postulaciones",
       icon: FileText,
-      onClick: () => setActiveModule("postulaciones")
+      onClick: () => setActiveModule("postulaciones"),
+      badge: pendingPostulacionesCount > 0 ? pendingPostulacionesCount : undefined
     },
     {
       title: "Gestión de Plazas",
@@ -219,7 +264,7 @@ const AdminDashboard = () => {
             ) : activeModule === "estudiantes-becarios" ? (
               <EstudiantesBecarios />
             ) : activeModule === "usuarios-pendientes" ? (
-              <GestionUsuariosPendientes />
+              <GestionUsuariosPendientes onUserApproved={loadPendingCount} />
             ) : activeModule === "supervisores" ? (
               <GestionSupervisores />
             ) : activeModule === "postulaciones" ? (

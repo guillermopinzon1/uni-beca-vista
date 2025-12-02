@@ -15,7 +15,7 @@ const Requisitos = () => {
       icon: UserCheck,
       requirements: [
         "Índice académico mínimo de 15 puntos",
-        "Estar cursando entre 12 y 18 créditos por semestre",
+        "Estar cursando entre 12 y 18 créditos por trimestre",
         "No haber reprobado más de 2 materias en el último año académico",
         "Disponibilidad de al menos 8 horas semanales",
         "Carta de recomendación de un profesor",
@@ -59,7 +59,7 @@ const Requisitos = () => {
       icon: BookOpen,
       requirements: [
         "Índice académico mínimo de 17 puntos",
-        "Estar en los últimos 4 semestres de la carrera",
+        "Estar en los últimos 4 trimestres de la carrera",
         "Demostrar vocación docente mediante experiencias previas",
         "Completar curso de pedagogía universitaria",
         "Carta de recomendación de director de escuela",

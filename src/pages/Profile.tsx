@@ -14,47 +14,180 @@ import {
   Calendar,
   UserCheck,
   Clock,
-  Award
+  Award,
+  Edit,
+  Save,
+  X
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { API_BASE } from "@/lib/api";
+import { updateUser } from "@/lib/api/users";
+import { getUserProfile } from "@/lib/api/auth";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { logout, tokens, user } = useAuth();
+  const { logout, tokens, user, loginSuccess } = useAuth();
+  const { toast } = useToast();
   const [becarioData, setBecarioData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditingAcademicData, setIsEditingAcademicData] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Academic data form state
+  const [academicData, setAcademicData] = useState({
+    carrera: user?.carrera || '',
+    trimestre: user?.trimestre || 0,
+    iaa: 0,
+    asignaturasAprobadas: 0,
+  });
 
   const handleLogout = async () => {
     await logout(() => navigate('/'));
   };
 
-  // Load becario data if user is a student
+  const handleSaveAcademicData = async () => {
+    try {
+      setIsSaving(true);
+      const accessToken = tokens?.accessToken;
+
+      if (!accessToken || !user?.id) {
+        toast({
+          title: "Error",
+          description: "No se pudo obtener la información de autenticación",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await updateUser(accessToken, user.id, {
+        carrera: academicData.carrera,
+        trimestre: academicData.trimestre,
+        iaa: academicData.iaa,
+        asignaturasAprobadas: academicData.asignaturasAprobadas,
+      });
+
+      if (response.success) {
+        // Update user in context with new academic data
+        const updatedUser = {
+          ...user,
+          carrera: academicData.carrera,
+          trimestre: academicData.trimestre,
+        };
+
+        // Update localStorage and context
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+        loginSuccess(updatedUser, tokens);
+
+        toast({
+          title: "Éxito",
+          description: "Datos académicos actualizados correctamente",
+        });
+        setIsEditingAcademicData(false);
+      }
+    } catch (error) {
+      console.error('Error updating academic data:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudieron actualizar los datos académicos",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form to original values
+    setAcademicData({
+      carrera: user?.carrera || '',
+      trimestre: user?.trimestre || 0,
+      iaa: 0,
+      asignaturasAprobadas: 0,
+    });
+    setIsEditingAcademicData(false);
+  };
+
+  // Load user profile and becario data
   useEffect(() => {
-    const loadBecarioData = async () => {
+    const loadUserData = async () => {
       try {
         const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
-        if (!accessToken) return;
+        if (!accessToken) {
+          console.log('🔒 No access token found');
+          return;
+        }
 
-        const response = await fetch(`${API_BASE}/v1/becarios/me`, {
+        console.log('📡 Loading user profile from API...');
+
+        // Load complete user profile with academic data
+        const profileResponse = await getUserProfile(accessToken);
+        console.log('📥 Profile response:', profileResponse);
+
+        if (profileResponse.success) {
+          const profileData = profileResponse.data;
+          console.log('✅ Profile data received:', profileData);
+          console.log('📚 Academic data from backend:', {
+            carrera: profileData.carrera,
+            trimestre: profileData.trimestre,
+            iaa: profileData.iaa,
+            asignaturasAprobadas: profileData.asignaturasAprobadas
+          });
+
+          // Update academic data state with backend data
+          const newAcademicData = {
+            carrera: profileData.carrera || '',
+            trimestre: profileData.trimestre || 0,
+            iaa: profileData.iaa || 0,
+            asignaturasAprobadas: profileData.asignaturasAprobadas || 0,
+          };
+
+          console.log('📝 Setting academic data state to:', newAcademicData);
+          setAcademicData(newAcademicData);
+
+          // Update user in context if needed
+          const updatedUser = {
+            ...user,
+            ...profileData,
+          };
+
+          // Only update context if data changed
+          const currentUserStr = JSON.stringify(user);
+          const updatedUserStr = JSON.stringify(updatedUser);
+          if (currentUserStr !== updatedUserStr) {
+            console.log('💾 Updating user in context and localStorage');
+            localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+            if (tokens) {
+              loginSuccess(updatedUser, tokens);
+            }
+          } else {
+            console.log('ℹ️ User data unchanged, skipping update');
+          }
+        }
+
+        // Load becario data if user is a student
+        const becarioResponse = await fetch(`${API_BASE}/v1/becarios/me`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json',
           },
         });
 
-        if (response.ok) {
-          const data = await response.json();
+        if (becarioResponse.ok) {
+          const data = await becarioResponse.json();
           setBecarioData(data.data);
+          console.log('🎓 Becario data loaded:', data.data);
         }
       } catch (error) {
-        console.error('Error loading becario data:', error);
+        console.error('❌ Error loading user data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadBecarioData();
+    loadUserData();
   }, [tokens]);
 
   // Mock user data based on the provided structure
@@ -199,6 +332,140 @@ const Profile = () => {
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Academic Information - Editable */}
+            <div className="lg:col-span-3">
+              <Card className="bg-gradient-card border-orange/20">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <GraduationCap className="h-5 w-5 text-primary" />
+                      Información Académica
+                    </CardTitle>
+                    {!isEditingAcademicData ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingAcademicData(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Editar
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          disabled={isSaving}
+                          className="flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveAcademicData}
+                          disabled={isSaving}
+                          className="flex items-center gap-2 bg-gradient-primary"
+                        >
+                          <Save className="h-4 w-4" />
+                          {isSaving ? 'Guardando...' : 'Guardar'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <CardDescription className="text-muted-foreground">
+                    Completa tu información académica
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!isEditingAcademicData ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Carrera</label>
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-foreground">{academicData.carrera || 'No especificado'}</span>
+                          {/* Debug: {JSON.stringify(academicData.carrera)} */}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Trimestre</label>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-foreground">{academicData.trimestre > 0 ? academicData.trimestre : 'No especificado'}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Índice Académico Acumulado (IAA)</label>
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-foreground">{academicData.iaa > 0 ? academicData.iaa : 'No especificado'}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">Asignaturas Aprobadas</label>
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-foreground">{academicData.asignaturasAprobadas > 0 ? academicData.asignaturasAprobadas : 'No especificado'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="carrera">Carrera</Label>
+                        <Input
+                          id="carrera"
+                          type="text"
+                          placeholder="Ej: Ingeniería de Sistemas"
+                          value={academicData.carrera}
+                          onChange={(e) => setAcademicData({ ...academicData, carrera: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="trimestre">Trimestre</Label>
+                        <Input
+                          id="trimestre"
+                          type="number"
+                          min="1"
+                          max="20"
+                          placeholder="Ej: 6"
+                          value={academicData.trimestre || ''}
+                          onChange={(e) => setAcademicData({ ...academicData, trimestre: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="iaa">Índice Académico Acumulado (IAA)</Label>
+                        <Input
+                          id="iaa"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="20"
+                          placeholder="Ej: 15.75"
+                          value={academicData.iaa || ''}
+                          onChange={(e) => setAcademicData({ ...academicData, iaa: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="asignaturasAprobadas">Asignaturas Aprobadas</Label>
+                        <Input
+                          id="asignaturasAprobadas"
+                          type="number"
+                          min="0"
+                          placeholder="Ej: 45"
+                          value={academicData.asignaturasAprobadas || ''}
+                          onChange={(e) => setAcademicData({ ...academicData, asignaturasAprobadas: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

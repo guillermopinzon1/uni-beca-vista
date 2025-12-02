@@ -338,7 +338,7 @@ const ConfiguracionBecas = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sem-min" className="text-sm font-medium text-gray-700">
-                  Semestre Mínimo
+                  Trimestre Mínimo
                 </Label>
                 <Input
                   id="sem-min"
@@ -353,7 +353,7 @@ const ConfiguracionBecas = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sem-max" className="text-sm font-medium text-gray-700">
-                  Semestre Máximo
+                  Trimestre Máximo
                 </Label>
                 <Input
                   id="sem-max"

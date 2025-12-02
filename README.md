@@ -1,73 +1,127 @@
-# Welcome to your Lovable project
+# Sistema de Gestión de Becas - UNIMET
 
-## Project info
+Sistema web para la gestión integral de programas de becas universitarias, incluyendo ayudantías, excelencia académica, impacto social y exoneración de matrícula.
 
-**URL**: https://lovable.dev/projects/03307154-4210-4901-be9d-70c90dc5ee4a
+## 🚀 Inicio Rápido
 
-## How can I edit this code?
+### Requisitos Previos
 
-There are several ways of editing your application.
+- Node.js (v18 o superior) - [Instalar con nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- npm o yarn
+- Backend API corriendo (ver sección de configuración)
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/03307154-4210-4901-be9d-70c90dc5ee4a) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Instalación
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# 1. Clonar el repositorio
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Navegar al directorio del proyecto
+cd uni-beca-vista
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 3. Instalar dependencias
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Configurar variables de entorno (ver sección de configuración)
+# Crear archivo .env.local con VITE_API_BASE
+
+# 5. Iniciar el servidor de desarrollo
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+El servidor de desarrollo estará disponible en `http://localhost:3000`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## ⚙️ Configuración del Backend
 
-**Use GitHub Codespaces**
+### 📍 Dónde se configura la URL del backend
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+La URL del backend se configura en **un solo lugar**:
 
-## What technologies are used for this project?
+**Archivo:** `src/lib/api/config.ts`
 
-This project is built with:
+```typescript
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://srodriguez.intelcondev.org/api';
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 🔧 Configuración mediante Variables de Entorno
 
-## How can I deploy this project?
+Para cambiar la URL del backend, crea un archivo `.env.local` en la raíz del proyecto:
 
-Simply open [Lovable](https://lovable.dev/projects/03307154-4210-4901-be9d-70c90dc5ee4a) and click on Share -> Publish.
+```bash
+# Para desarrollo local (backend en localhost:3001)
+VITE_API_BASE=http://localhost:3001/api
 
-## Can I connect a custom domain to my Lovable project?
+# Para producción
+# VITE_API_BASE=https://srodriguez.intelcondev.org/api
+```
 
-Yes, you can!
+**Nota:** El archivo `.env.local` está en `.gitignore` y no se sube al repositorio.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 📝 Valores por Defecto
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- **Sin variable de entorno:** Usa `https://srodriguez.intelcondev.org/api` (producción)
+- **Con `VITE_API_BASE` definida:** Usa el valor de la variable de entorno
+
+### 🔄 Reiniciar después de cambios
+
+Después de crear o modificar `.env.local`, **reinicia el servidor de desarrollo**:
+
+```sh
+# Detener el servidor (Ctrl+C) y volver a iniciar
+npm run dev
+```
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Vite** - Build tool y dev server
+- **TypeScript** - Tipado estático
+- **React** - Framework UI
+- **shadcn-ui** - Componentes UI
+- **Tailwind CSS** - Estilos
+- **React Router** - Navegación
+- **React Hook Form + Zod** - Validación de formularios
+
+## 📁 Estructura del Proyecto
+
+```
+src/
+├── components/          # Componentes reutilizables
+│   ├── admin/          # Componentes del panel de administración
+│   ├── supervisor/     # Componentes del supervisor
+│   ├── shared/         # Componentes compartidos
+│   └── ui/             # Componentes UI base (shadcn)
+├── contexts/           # Contextos de React (Auth, etc.)
+├── lib/
+│   └── api/           # Clientes API y configuración
+│       └── config.ts  # ⚠️ CONFIGURACIÓN DEL BACKEND AQUÍ
+├── pages/             # Páginas principales
+└── hooks/             # Custom hooks
+```
+
+## 🔐 Autenticación
+
+El sistema maneja diferentes roles:
+- **Estudiante/Becario** - Acceso a módulos de becas
+- **Supervisor Laboral** - Gestión de ayudantes
+- **Administrador** - Panel completo de administración
+- **Aspirante** - Postulación a becas
+
+## 📚 Documentación Adicional
+
+- Ver `CLAUDE.md` para detalles técnicos de la arquitectura
+- Ver `DOCUMENTACION_ESTADISTICAS_API.md` para documentación de APIs de estadísticas
+
+## 🚢 Despliegue
+
+Para producción, asegúrate de:
+
+1. Configurar `VITE_API_BASE` en el archivo de entorno de producción
+2. Ejecutar `npm run build` para generar los archivos estáticos
+3. Servir los archivos desde `dist/` con un servidor web (nginx, Apache, etc.)
+
+## 📝 Notas Importantes
+
+- **Variable única de configuración:** Toda la aplicación usa `API_BASE` desde `src/lib/api/config.ts`
+- **Puerto del frontend:** 3000 (configurado en `vite.config.ts`)
+- **Puerto del backend local:** 3001 (configurar en `.env.local`)
+- Los cambios en `.env.local` requieren reiniciar el servidor de desarrollo

@@ -218,21 +218,24 @@ const AvailabilitySchedule = () => {
 
       if (response.ok) {
         // Limpiar el estado local
-    setSchedule(prev => prev.map(slot => ({
-      ...slot,
-      lunes: false,
-      martes: false,
-      miercoles: false,
-      jueves: false,
-      viernes: false,
-      sabado: false,
-      domingo: false,
-    })));
+        setSchedule(prev => prev.map(slot => ({
+          ...slot,
+          lunes: false,
+          martes: false,
+          miercoles: false,
+          jueves: false,
+          viernes: false,
+          sabado: false,
+          domingo: false,
+        })));
 
         toast({
           title: "Éxito",
           description: "Disponibilidad eliminada correctamente",
         });
+
+        // Actualizar estadísticas después de limpiar
+        setStats(null);
       } else {
         const errorData = await response.json().catch(() => null);
         const errorMessage = errorData?.message || `Error al eliminar la disponibilidad (${response.status})`;
@@ -297,8 +300,12 @@ const AvailabilitySchedule = () => {
       if (response.ok) {
         toast({
           title: "Éxito",
-          description: "Disponibilidad guardada correctamente",
+          description: "Disponibilidad guardada correctamente. La página se recargará...",
         });
+        // Recargar la página completa después de un breve delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
         const errorData = await response.json().catch(() => null);
         const errorMessage = errorData?.message || `Error al guardar la disponibilidad (${response.status})`;
@@ -330,9 +337,10 @@ const AvailabilitySchedule = () => {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={handleClear}
               className="text-destructive hover:text-destructive"
               disabled={loading || saving || deleting}
@@ -349,8 +357,9 @@ const AvailabilitySchedule = () => {
                 </>
               )}
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              type="button"
+              size="sm"
               onClick={handleSave}
               className="bg-gradient-primary hover:opacity-90"
               disabled={loading || saving || deleting}

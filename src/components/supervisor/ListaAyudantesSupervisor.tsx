@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Eye, RefreshCw, Clock, CheckCircle } from "lucide-react";
+import { Search, Eye, RefreshCw, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { obtenerAyudantesDeSupervisor, type EstudianteBecarioDetallado } from "@/lib/api/supervisor";
+import { obtenerAyudantesDeSupervisor, listarReportesDeAyudante, type EstudianteBecarioDetallado } from "@/lib/api/supervisor";
+import { API_BASE } from "@/lib/api";
+import { formatTrimestresProgress, getTrimestresBadgeColor } from "@/lib/helpers/trimestreLimits";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 interface ListaAyudantesSupervisorProps {
   supervisorId?: string; // Si no se pasa, se usa el usuario logueado
   onSelectAyudante?: (ayudante: EstudianteBecarioDetallado) => void;
@@ -19,9 +22,37 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
   const [ayudantes, setAyudantes] = useState<EstudianteBecarioDetallado[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [periodoActual, setPeriodoActual] = useState<string>('');
+  const [horasPorPeriodo, setHorasPorPeriodo] = useState<Record<string, number>>({});
+  const [plazasInfo, setPlazasInfo] = useState<any[]>([]);
+  const [totalOcupadas, setTotalOcupadas] = useState<number>(0);
 
   // Determinar el ID del supervisor a usar
   const effectiveSupervisorId = supervisorId || user?.id;
+
+  const loadPeriodoActual = async () => {
+    try {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      if (!accessToken) return;
+
+      const response = await fetch(`${API_BASE}/v1/configuracion/periodo-actual`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && data.data.periodoAcademico) {
+          setPeriodoActual(data.data.periodoAcademico);
+          console.log('📅 [SUPERVISOR] Período académico actual:', data.data.periodoAcademico);
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando período actual:', error);
+    }
+  };
 
   const loadAyudantes = async () => {
     if (!effectiveSupervisorId) {
@@ -41,7 +72,76 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
       }
 
       const response = await obtenerAyudantesDeSupervisor(accessToken, effectiveSupervisorId);
-      setAyudantes(response.data.ayudantes);
+      const ayudantesData = response.data.ayudantes;
+
+      // 🔍 DIAGNÓSTICO: Log completo de la respuesta
+      console.log('📊 [DIAGNÓSTICO] Respuesta completa del endpoint:', response.data);
+      console.log('📊 [DIAGNÓSTICO] Total de ayudantes recibidos:', response.data.total);
+      console.log('📊 [DIAGNÓSTICO] Plazas del supervisor:', response.data.plazas);
+
+      // Verificar si hay discrepancia entre plazas ocupadas y ayudantes
+      if (response.data.plazas && response.data.plazas.length > 0) {
+        const totalOcupadasCalc = response.data.plazas.reduce((sum: number, plaza: any) => sum + (plaza.ocupadas || 0), 0);
+        const totalAyudantes = response.data.total || 0;
+
+        setPlazasInfo(response.data.plazas);
+        setTotalOcupadas(totalOcupadasCalc);
+
+        if (totalOcupadasCalc > totalAyudantes) {
+          console.warn(`⚠️ [DISCREPANCIA] Plazas indican ${totalOcupadasCalc} becarios ocupados, pero solo se recibieron ${totalAyudantes} ayudantes`);
+          console.warn('⚠️ [DISCREPANCIA] Faltan:', totalOcupadasCalc - totalAyudantes, 'becarios');
+          console.warn('⚠️ [DIAGNÓSTICO] Esto puede deberse a:');
+          console.warn('   1. Becarios sin supervisorId asignado');
+          console.warn('   2. Becarios con estado diferente a "Activa"');
+          console.warn('   3. Becarios asignados a otro supervisor');
+
+          toast({
+            title: "Advertencia de Discrepancia",
+            description: `Se esperaban ${totalOcupadasCalc} becarios pero solo se encontraron ${totalAyudantes}. Revisa la consola para más detalles.`,
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Log de cada ayudante recibido
+      ayudantesData.forEach((ayudante: any, index: number) => {
+        console.log(`📊 [AYUDANTE ${index + 1}]`, {
+          nombre: `${ayudante.usuario.nombre} ${ayudante.usuario.apellido}`,
+          estado: ayudante.estado,
+          periodo: ayudante.periodoInicio,
+          plaza: ayudante.plazaAsignada,
+          supervisorId: ayudante.supervisorId || 'NO ASIGNADO'
+        });
+      });
+
+      setAyudantes(ayudantesData);
+
+      // Cargar horas del periodo actual para cada ayudante
+      if (periodoActual) {
+        const horasMap: Record<string, number> = {};
+
+        for (const ayudante of ayudantesData) {
+          try {
+            const reportesResponse = await listarReportesDeAyudante(accessToken, ayudante.id, {
+              periodoAcademico: periodoActual,
+              limit: 100,
+            });
+
+            // Sumar solo las horas de reportes aprobados del periodo actual
+            const horasPeriodo = reportesResponse.data.reportes
+              .filter(r => r.estado === 'Aprobada' && r.periodoAcademico === periodoActual)
+              .reduce((sum, r) => sum + (typeof r.horasTrabajadas === 'string' ? parseFloat(r.horasTrabajadas) : r.horasTrabajadas), 0);
+
+            horasMap[ayudante.id] = horasPeriodo;
+            console.log(`📊 [SUPERVISOR] Ayudante ${ayudante.usuario.nombre}: ${horasPeriodo}h en periodo ${periodoActual}`);
+          } catch (error) {
+            console.warn(`No se pudieron cargar reportes del ayudante ${ayudante.id}`, error);
+            horasMap[ayudante.id] = 0;
+          }
+        }
+
+        setHorasPorPeriodo(horasMap);
+      }
     } catch (error: any) {
       console.error('Error loading ayudantes:', error);
       toast({
@@ -55,8 +155,14 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
   };
 
   useEffect(() => {
-    loadAyudantes();
-  }, [effectiveSupervisorId]);
+    loadPeriodoActual();
+  }, []);
+
+  useEffect(() => {
+    if (periodoActual) {
+      loadAyudantes();
+    }
+  }, [effectiveSupervisorId, periodoActual]);
 
   const filteredAyudantes = ayudantes.filter(ayudante => {
     const searchLower = searchTerm.toLowerCase();
@@ -116,25 +222,19 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              Mis Ayudantes Asignados
-              <Badge variant="outline" className="ml-2">{ayudantes.length}</Badge>
-            </CardTitle>
-            <CardDescription>
-              Lista de estudiantes becarios bajo tu supervisión
-            </CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadAyudantes}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            Mis Ayudantes Asignados
+            <Badge variant="outline" className="ml-2">{ayudantes.length}</Badge>
+          </CardTitle>
+          <CardDescription className="mt-2">
+            Lista de estudiantes becarios bajo tu supervisión
+            {periodoActual && (
+              <span className="block mt-1 text-sm font-medium text-primary">
+                Mostrando horas del periodo: {periodoActual}
+              </span>
+            )}
+          </CardDescription>
         </div>
 
         {/* Buscador */}
@@ -152,6 +252,23 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
       </CardHeader>
 
       <CardContent>
+        {/* Advertencia de Discrepancia */}
+        {totalOcupadas > ayudantes.length && (
+          <Alert className="mb-4 border-yellow-200 bg-yellow-50">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <AlertDescription className="text-yellow-900">
+              <strong className="block mb-1">⚠️ Discrepancia Detectada</strong>
+              <p className="text-sm mb-2">
+                Las plazas indican <strong>{totalOcupadas} becarios</strong> ocupados, pero solo se muestran <strong>{ayudantes.length} ayudantes</strong>.
+              </p>
+              <p className="text-xs">
+                <strong>Faltan {totalOcupadas - ayudantes.length} becarios.</strong> Esto puede deberse a que no tienen supervisor asignado o tienen un estado diferente a "Activa".
+                Revisa la consola del navegador (F12) para ver detalles específicos.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {filteredAyudantes.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             {searchTerm ? (
@@ -166,6 +283,7 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
               <TableRow>
                 <TableHead>Estudiante</TableHead>
                 <TableHead>Tipo de Beca</TableHead>
+                <TableHead>Trimestres</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -173,9 +291,16 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
             </TableHeader>
             <TableBody>
               {filteredAyudantes.map((ayudante) => {
-                const horasCompletadas = Number(ayudante.horasCompletadas) || 0;
+                // Usar las horas del periodo actual, no las horas totales acumuladas
+                const horasCompletadasPeriodo = horasPorPeriodo[ayudante.id] || 0;
                 const horasRequeridas = Number(ayudante.horasRequeridas) || 1;
-                const progreso = calcularProgreso(horasCompletadas, horasRequeridas);
+                const progreso = calcularProgreso(horasCompletadasPeriodo, horasRequeridas);
+
+                // Calcular trimestres
+                const trimestresCursados = ayudante.trimestresCursados || 1;
+                const progresoTrimestres = formatTrimestresProgress(trimestresCursados, ayudante.tipoBeca);
+                const badgeColorTrimestres = getTrimestresBadgeColor(trimestresCursados, ayudante.tipoBeca);
+
                 return (
                   <TableRow key={ayudante.id} className="hover:bg-muted/50">
                     <TableCell>
@@ -191,6 +316,11 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
                     </TableCell>
                     <TableCell>{getTipoBecaBadge(ayudante.tipoBeca)}</TableCell>
                     <TableCell>
+                      <Badge variant="outline" className={badgeColorTrimestres}>
+                        {progresoTrimestres}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <div className="space-y-2 min-w-[120px]">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Progreso:</span>
@@ -205,7 +335,7 @@ const ListaAyudantesSupervisor = ({ supervisorId, onSelectAyudante }: ListaAyuda
                           />
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{horasCompletadas.toFixed(1)}h</span>
+                          <span>{horasCompletadasPeriodo.toFixed(1)}h</span>
                           <span>/ {horasRequeridas}h</span>
                         </div>
                       </div>

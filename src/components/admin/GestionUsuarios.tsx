@@ -22,6 +22,15 @@ const GestionUsuarios = () => {
   const { tokens } = useAuth();
   const { toast } = useToast();
 
+  // Función para capitalizar la primera letra de cada palabra
+  const capitalizeWords = (text: string | undefined | null): string => {
+    if (!text) return '';
+    return text
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -260,14 +269,39 @@ const GestionUsuarios = () => {
       const newUserId = result.data?.user?.id;
 
       if (newUserId && accessToken) {
-        try {
-          await approveUser(newUserId, accessToken);
+        // Solo aprobar usuarios que NO sean estudiantes (estudiantes se auto-verifican)
+        if (createTab !== 'estudiante') {
+          try {
+            await approveUser(newUserId, accessToken);
+            toast({
+              title: "Usuario creado y aprobado",
+              description: `El ${createTab} ha sido registrado y aprobado exitosamente.`,
+            });
+          } catch (approveError: any) {
+            toast({
+              title: "Usuario creado",
+              description: `El ${createTab} ha sido registrado, pero debe ser aprobado manualmente.`,
+            });
+          }
+        } else {
           toast({
-            title: "Usuario creado y aprobado",
-            description: `El ${createTab} ha sido registrado y aprobado exitosamente.`,
+            title: "Usuario creado",
+            description: "El estudiante ha sido registrado exitosamente.",
           });
-          // Registro directo de becario (sin postulación)
-          if (createTab === 'estudiante' && createFormData.necesitaPostulacion === 'no') {
+        }
+
+        // Registro directo de becario (sin postulación)
+        if (createTab === 'estudiante' && createFormData.necesitaPostulacion === 'no') {
+            // Validar que tipoBeca esté presente
+            if (!createFormData.tipoBeca) {
+              toast({
+                title: 'Error',
+                description: 'Debe seleccionar un tipo de beca para el registro directo',
+                variant: 'destructive'
+              });
+              return;
+            }
+
             try {
               const directBody: any = {
                 nombre: `${createFormData.nombre} ${createFormData.apellido}`.trim(),
@@ -312,12 +346,6 @@ const GestionUsuarios = () => {
               });
             }
           }
-        } catch (approveError: any) {
-          toast({
-            title: "Usuario creado",
-            description: `El ${createTab} ha sido registrado, pero debe ser aprobado manualmente.`,
-          });
-        }
       } else {
         toast({
           title: "Usuario creado",
@@ -363,10 +391,6 @@ const GestionUsuarios = () => {
           <p className="text-muted-foreground mt-1">Administra y visualiza todos los usuarios del sistema</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={loadUsers} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Recargar
-          </Button>
           <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Usuario
@@ -446,7 +470,7 @@ const GestionUsuarios = () => {
                           {u.nombre?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{u.nombre} {u.apellido}</p>
+                          <p className="font-medium text-foreground">{capitalizeWords(u.nombre)} {capitalizeWords(u.apellido)}</p>
                           <p className="text-sm text-muted-foreground">{u.email}</p>
                         </div>
                       </div>
@@ -550,7 +574,7 @@ const GestionUsuarios = () => {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-foreground">
-                      {selectedUser.nombre} {selectedUser.apellido}
+                      {capitalizeWords(selectedUser.nombre)} {capitalizeWords(selectedUser.apellido)}
                     </h3>
                     <p className="text-muted-foreground">{selectedUser.email}</p>
                     <div className="flex items-center gap-2 mt-2">
@@ -958,13 +982,13 @@ const GestionUsuarios = () => {
 
                   {createFormData.necesitaPostulacion === 'no' && (
                     <div className="space-y-2">
-                      <Label>Tipo de Beca (requerido)</Label>
+                      <Label className="text-red-600">Tipo de Beca * (requerido para registro directo)</Label>
                       <Select
                         value={createFormData.tipoBeca}
                         onValueChange={(v) => setCreateFormData({ ...createFormData, tipoBeca: v })}
                         required
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={!createFormData.tipoBeca ? "border-red-500" : ""}>
                           <SelectValue placeholder="Seleccione el tipo de beca" />
                         </SelectTrigger>
                         <SelectContent>
@@ -975,6 +999,9 @@ const GestionUsuarios = () => {
                           <SelectItem value="Formación Docente">Formación Docente</SelectItem>
                         </SelectContent>
                       </Select>
+                      {!createFormData.tipoBeca && (
+                        <p className="text-xs text-red-600">Este campo es obligatorio para el registro directo</p>
+                      )}
                     </div>
                   )}
                 </div>

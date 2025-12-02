@@ -74,7 +74,8 @@ const EstudianteDetail = () => {
     trimestreActual: "6",
     iaa: "18.2",
     asignaturasAprobadas: "42",
-    creditosInscritos: "18"
+    creditosInscritos: "18",
+    descuentoAplicado: "0"
   });
 
   const handleEditarEstudiante = () => {
@@ -92,7 +93,8 @@ const EstudianteDetail = () => {
       trimestreActual: user?.semestre ? String(user.semestre) : '',
       iaa: user?.iaa ? String(user.iaa) : '',
       asignaturasAprobadas: user?.asignaturasAprobadas ? String(user.asignaturasAprobadas) : '',
-      creditosInscritos: editData.creditosInscritos
+      creditosInscritos: editData.creditosInscritos,
+      descuentoAplicado: becario?.descuentoAplicado || '0'
     });
     setIsEditing(true);
   };
@@ -175,16 +177,80 @@ const EstudianteDetail = () => {
       const result = await response.json();
       console.log('🔧 [GUARDAR] Datos actualizados:', result);
 
+      // Actualizar descuento del becario si existe
+      if (becario?.id && editData.descuentoAplicado) {
+        try {
+          console.log('🔧 [GUARDAR] Actualizando descuento del becario...');
+          const becarioResponse = await fetch(`${API_BASE}/v1/becarios/${becario.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              descuentoAplicado: parseFloat(editData.descuentoAplicado)
+            }),
+          });
+
+          if (becarioResponse.ok) {
+            const becarioResult = await becarioResponse.json();
+            console.log('🔧 [GUARDAR] Descuento actualizado:', becarioResult);
+          } else {
+            console.warn('🔧 [GUARDAR] No se pudo actualizar el descuento del becario');
+          }
+        } catch (becarioError) {
+          console.error('🔧 [GUARDAR] Error al actualizar descuento:', becarioError);
+        }
+      }
+
+      // Recargar el usuario completo para obtener todos los datos incluyendo documentos
+      console.log('🔧 [GUARDAR] Recargando usuario completo...');
+      const reloadResponse = await fetchUserById(accessToken, id!);
+      if (reloadResponse?.data) {
+        setUser(reloadResponse.data);
+        console.log('🔧 [GUARDAR] Usuario recargado con todos los datos');
+      }
+
+      // Recargar datos del becario también
+      if (becario?.id) {
+        try {
+          const becarioReloadResponse = await fetch(`${API_BASE}/v1/becarios/${id}`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+
+          if (becarioReloadResponse.ok) {
+            const becarioPayload = await becarioReloadResponse.json();
+            if (becarioPayload?.data) {
+              const b = becarioPayload.data;
+              setBecario({
+                id: b.id,
+                tipoBeca: b.tipoBeca,
+                descuentoAplicado: b.descuentoAplicado,
+                estado: b.estado,
+                periodoInicio: b.periodoInicio,
+                periodoFin: b.periodoFin,
+                horasRequeridas: b.horasRequeridas,
+                horasCompletadas: b.horasCompletadas,
+                plaza: b.plaza ? { id: b.plaza.id, nombre: b.plaza.nombre, ubicacion: b.plaza.ubicacion } : null,
+                observaciones: b.observaciones
+              });
+              console.log('🔧 [GUARDAR] Becario recargado');
+            }
+          }
+        } catch (error) {
+          console.warn('🔧 [GUARDAR] No se pudo recargar datos del becario:', error);
+        }
+      }
+
       toast({
         title: 'Cambios guardados',
         description: 'La información del estudiante ha sido actualizada exitosamente.',
       });
-
-      // Actualizar el estado del usuario con los nuevos datos
-      if (result.data) {
-        setUser(result.data);
-        console.log('🔧 [GUARDAR] Usuario actualizado en el estado');
-      }
 
       setIsEditing(false);
       console.log('🔧 [GUARDAR] Guardado completado exitosamente');
@@ -528,9 +594,9 @@ const EstudianteDetail = () => {
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'Aprobada':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Aprobada</Badge>;
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Aprobada</Badge>;
       case 'En Revisión':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">En Revisión</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">En Revisión</Badge>;
       case 'Rechazada':
         return <Badge variant="destructive">Rechazada</Badge>;
       default:
@@ -541,13 +607,13 @@ const EstudianteDetail = () => {
   const getDocumentoBadge = (estado: string) => {
     switch (estado) {
       case 'Aprobado':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Aprobado</Badge>;
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Aprobado</Badge>;
       case 'Rechazado':
         return <Badge variant="destructive">Rechazado</Badge>;
       case 'No aplica':
         return <Badge variant="secondary">No aplica</Badge>;
       default:
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendiente</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Pendiente</Badge>;
     }
   };
 
@@ -560,7 +626,7 @@ const EstudianteDetail = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/admin-dashboard')}
+              onClick={() => navigate('/admin-dashboard?module=estudiantes-becarios')}
               className="text-primary hover:text-primary/90"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -595,7 +661,7 @@ const EstudianteDetail = () => {
                   variant={user?.activo ? "outline" : "default"}
                   onClick={handleToggleStatus}
                   disabled={isTogglingStatus}
-                  className={user?.activo ? "border-orange/40 hover:bg-orange/10 hover:border-orange/60" : "bg-green-600 hover:bg-green-700"}
+                  className={user?.activo ? "border-orange/40 hover:bg-orange/10 hover:border-orange/60" : "bg-orange-600 hover:bg-orange-700"}
                 >
                   {isTogglingStatus ? (
                     <>Procesando...</>
@@ -665,66 +731,55 @@ const EstudianteDetail = () => {
             </div>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50">
-                  <div className="p-2 bg-blue-500 rounded-lg">
+                <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/50">
+                  <div className="p-2 bg-orange-500 rounded-lg">
                     <GraduationCap className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Tipo de Beca</p>
-                    <p className="font-bold text-blue-900 mt-1">{estudianteData.tipoBeca}</p>
+                    <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">Tipo de Beca</p>
+                    <p className="font-bold text-orange-900 mt-1">{estudianteData.tipoBeca}</p>
                   </div>
                 </div>
-                {becario && becario.descuentoAplicado && (
-                  <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200/50">
-                    <div className="p-2 bg-green-500 rounded-lg">
-                      <Award className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">Descuento Aplicado</p>
-                      <p className="font-bold text-green-900 mt-1 text-xl">{parseFloat(becario.descuentoAplicado).toFixed(0)}%</p>
-                    </div>
-                  </div>
-                )}
                 {becario && (
-                  <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50">
-                    <div className="p-2 bg-purple-500 rounded-lg">
+                  <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200/50">
+                    <div className="p-2 bg-gray-500 rounded-lg">
                       <CheckCircle className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">Estado</p>
+                      <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Estado</p>
                       <div className="mt-1">
-                        <Badge className="bg-purple-600 hover:bg-purple-700">{becario.estado}</Badge>
+                        <Badge className="bg-gray-600 hover:bg-gray-700">{becario.estado}</Badge>
                       </div>
                     </div>
                   </div>
                 )}
                 {becario && becario.tipoBeca === 'Ayudantía' && (
                   <>
-                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200/50">
-                      <div className="p-2 bg-amber-500 rounded-lg">
+                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/50">
+                      <div className="p-2 bg-orange-500 rounded-lg">
                         <Clock className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs text-amber-600 font-semibold uppercase tracking-wide">Horas Requeridas</p>
-                        <p className="font-bold text-amber-900 mt-1">{becario.horasRequeridas ?? '-'}</p>
+                        <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">Horas Requeridas</p>
+                        <p className="font-bold text-orange-900 mt-1">{becario.horasRequeridas ?? '-'}</p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-teal-50 to-teal-100/50 border border-teal-200/50">
-                      <div className="p-2 bg-teal-500 rounded-lg">
+                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100/50 border border-gray-200/50">
+                      <div className="p-2 bg-gray-500 rounded-lg">
                         <CheckCircle className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs text-teal-600 font-semibold uppercase tracking-wide">Horas Completadas</p>
-                        <p className="font-bold text-teal-900 mt-1">{typeof becario.horasCompletadas === 'string' ? becario.horasCompletadas : (becario.horasCompletadas ?? '-')}</p>
+                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Horas Completadas</p>
+                        <p className="font-bold text-gray-900 mt-1">{typeof becario.horasCompletadas === 'string' ? becario.horasCompletadas : (becario.horasCompletadas ?? '-')}</p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200/50">
-                      <div className="p-2 bg-indigo-500 rounded-lg">
+                    <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/50">
+                      <div className="p-2 bg-orange-500 rounded-lg">
                         <BookOpen className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wide">Plaza</p>
-                        <p className="font-bold text-indigo-900 mt-1 text-sm">{becario.plaza?.nombre || '-'}</p>
+                        <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">Plaza</p>
+                        <p className="font-bold text-orange-900 mt-1 text-sm">{becario.plaza?.nombre || '-'}</p>
                       </div>
                     </div>
                   </>
@@ -759,61 +814,61 @@ const EstudianteDetail = () => {
                       <p className="font-bold text-gray-900 mt-1">{estudianteData.nombreCompleto}</p>
                     )}
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-white border border-blue-200">
-                    <Label className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Cédula de Identidad</Label>
-                    <p className="font-bold text-blue-900 mt-1">{estudianteData.cedula}</p>
-                    <p className="text-xs text-blue-600/70 italic mt-1 flex items-center gap-1">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
+                    <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Cédula de Identidad</Label>
+                    <p className="font-bold text-gray-900 mt-1">{estudianteData.cedula}</p>
+                    <p className="text-xs text-gray-600/70 italic mt-1 flex items-center gap-1">
                       <Info className="h-3 w-3" />
                       Este campo no se puede editar
                     </p>
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-white border border-purple-200">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
-                      <Mail className="h-4 w-4 text-purple-600" />
-                      <Label className="text-xs text-purple-600 font-semibold uppercase tracking-wide">Correo Electrónico</Label>
+                      <Mail className="h-4 w-4 text-gray-600" />
+                      <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Correo Electrónico</Label>
                     </div>
-                    <p className="font-bold text-purple-900">{estudianteData.correoElectronico}</p>
-                    <p className="text-xs text-purple-600/70 italic mt-1 flex items-center gap-1">
+                    <p className="font-bold text-gray-900">{estudianteData.correoElectronico}</p>
+                    <p className="text-xs text-gray-600/70 italic mt-1 flex items-center gap-1">
                       <Info className="h-3 w-3" />
                       Este campo no se puede editar
                     </p>
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-white border border-green-200">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
-                      <Phone className="h-4 w-4 text-green-600" />
-                      <Label className="text-xs text-green-600 font-semibold uppercase tracking-wide">Teléfono</Label>
+                      <Phone className="h-4 w-4 text-gray-600" />
+                      <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Teléfono</Label>
                     </div>
                     {isEditing ? (
                       <Input
                         value={editData.telefono}
                         onChange={(e) => handleInputChange("telefono", e.target.value)}
-                        className="mt-2 border-green-200 focus:border-green-400"
+                        className="mt-2 border-gray-200 focus:border-gray-400"
                       />
                     ) : (
-                      <p className="font-bold text-green-900">{estudianteData.telefono}</p>
+                      <p className="font-bold text-gray-900">{estudianteData.telefono}</p>
                     )}
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-amber-50 to-white border border-amber-200">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="h-4 w-4 text-amber-600" />
-                      <Label className="text-xs text-amber-600 font-semibold uppercase tracking-wide">Fecha de Nacimiento</Label>
+                      <Calendar className="h-4 w-4 text-gray-600" />
+                      <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Fecha de Nacimiento</Label>
                     </div>
                     {isEditing ? (
                       <Input
                         value={editData.fechaNacimiento}
                         onChange={(e) => handleInputChange("fechaNacimiento", e.target.value)}
-                        className="mt-2 border-amber-200 focus:border-amber-400"
+                        className="mt-2 border-gray-200 focus:border-gray-400"
                         type="date"
                       />
                     ) : (
-                      <p className="font-bold text-amber-900">{new Date(estudianteData.fechaNacimiento).toLocaleDateString('es-ES')}</p>
+                      <p className="font-bold text-gray-900">{new Date(estudianteData.fechaNacimiento).toLocaleDateString('es-ES')}</p>
                     )}
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-pink-50 to-white border border-pink-200">
-                    <Label className="text-xs text-pink-600 font-semibold uppercase tracking-wide">Estado Civil</Label>
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
+                    <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Estado Civil</Label>
                     {isEditing ? (
                       <Select value={editData.estadoCivil} onValueChange={(value) => handleInputChange("estadoCivil", value)}>
-                        <SelectTrigger className="mt-2 border-pink-200 focus:border-pink-400">
+                        <SelectTrigger className="mt-2 border-gray-200 focus:border-gray-400">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -825,7 +880,7 @@ const EstudianteDetail = () => {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <p className="font-bold text-pink-900 mt-1">{estudianteData.estadoCivil}</p>
+                      <p className="font-bold text-gray-900 mt-1">{estudianteData.estadoCivil}</p>
                     )}
                   </div>
                 </div>
@@ -834,21 +889,21 @@ const EstudianteDetail = () => {
 
             {/* Datos Académicos */}
             <Card className="border-orange/20 shadow-md hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-blue-200/50">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200/50">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <div className="p-2 bg-blue-500 rounded-lg">
+                  <div className="p-2 bg-orange-500 rounded-lg">
                     <GraduationCap className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-blue-900">Datos Académicos</span>
+                  <span className="text-orange-900">Datos Académicos</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-indigo-50 to-white border border-indigo-200">
-                    <Label className="text-xs text-indigo-600 font-semibold uppercase tracking-wide">Tipo de Postulante</Label>
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
+                    <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Tipo de Postulante</Label>
                     {isEditing ? (
                       <Select value={editData.tipoPostulante} onValueChange={(value) => handleInputChange("tipoPostulante", value)}>
-                        <SelectTrigger className="mt-2 border-indigo-200 focus:border-indigo-400">
+                        <SelectTrigger className="mt-2 border-gray-200 focus:border-gray-400">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -858,24 +913,46 @@ const EstudianteDetail = () => {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <p className="font-bold text-indigo-900 mt-1">{estudianteData.tipoPostulante}</p>
+                      <p className="font-bold text-gray-900 mt-1">{estudianteData.tipoPostulante}</p>
                     )}
                   </div>
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-50 to-white border border-cyan-200">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
-                      <GraduationCap className="h-4 w-4 text-cyan-600" />
-                      <Label className="text-xs text-cyan-600 font-semibold uppercase tracking-wide">Carrera/Programa de Estudios</Label>
+                      <GraduationCap className="h-4 w-4 text-gray-600" />
+                      <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Carrera/Programa de Estudios</Label>
                     </div>
                     {isEditing ? (
                       <Input
                         value={editData.carrera}
                         onChange={(e) => handleInputChange("carrera", e.target.value)}
-                        className="mt-2 border-cyan-200 focus:border-cyan-400"
+                        className="mt-2 border-gray-200 focus:border-gray-400"
                       />
                     ) : (
-                      <p className="font-bold text-cyan-900">{user?.carrera || 'N/A'}</p>
+                      <p className="font-bold text-gray-900">{user?.carrera || 'N/A'}</p>
                     )}
                   </div>
+                  {becario && (
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Award className="h-4 w-4 text-gray-600" />
+                        <Label className="text-xs text-gray-600 font-semibold uppercase tracking-wide">Descuento Aplicado (%)</Label>
+                      </div>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={editData.descuentoAplicado}
+                          onChange={(e) => handleInputChange("descuentoAplicado", e.target.value)}
+                          className="mt-2 border-gray-200 focus:border-gray-400"
+                          placeholder="Ej: 75.00"
+                        />
+                      ) : (
+                        <p className="font-bold text-gray-900">{becario.descuentoAplicado ? `${parseFloat(becario.descuentoAplicado).toFixed(2)}%` : 'N/A'}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -884,22 +961,22 @@ const EstudianteDetail = () => {
 
           {/* Documentos */}
           <Card className="border-orange/20 shadow-md hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 border-b border-purple-200/50">
+            <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100/50 border-b border-orange-200/50">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <div className="p-2 bg-purple-500 rounded-lg">
+                <div className="p-2 bg-orange-500 rounded-lg">
                   <FileText className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-purple-900">Documentos de la Postulación</span>
+                <span className="text-orange-900">Documentos de la Postulación</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               {Array.isArray(estudianteData.documentos) && estudianteData.documentos.length > 0 ? (
                 <div className="space-y-3">
                   {estudianteData.documentos.map((documento: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-white rounded-lg border border-purple-200/50 hover:border-purple-300 transition-all duration-200 hover:shadow-md">
+                    <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200/50 hover:border-gray-300 transition-all duration-200 hover:shadow-md">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <FileText className="h-5 w-5 text-purple-600" />
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          <FileText className="h-5 w-5 text-gray-600" />
                         </div>
                         <div>
                           <p className="font-semibold text-gray-800">{documento.nombre}</p>
@@ -907,14 +984,14 @@ const EstudianteDetail = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge className="bg-green-500 text-white hover:bg-green-600">
+                        <Badge className="bg-orange-500 text-white hover:bg-orange-600">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Cargado
                         </Badge>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                          className="border-orange-300 text-orange-700 hover:bg-orange-50"
                           onClick={() => handleDownloadDocument(documento.id, documento.nombre)}
                         >
                           <Download className="h-4 w-4 mr-1" />

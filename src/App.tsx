@@ -34,10 +34,12 @@ import ExoneracionStudent from "./pages/ExoneracionStudent";
 import ExoneracionCapitalHumano from "./pages/ExoneracionCapitalHumano";
 import AspiranteScholarshipPrograms from "./pages/AspiranteScholarshipPrograms";
 import PostulacionesBecas from "./pages/PostulacionesBecas";
+import PostRegisterApplication from "./pages/PostRegisterApplication";
 import MentorDashboard from "./pages/MentorDashboard";
 import DirectorAreaDashboard from "./pages/DirectorAreaDashboard";
 import CapitalHumanoDashboard from "./pages/CapitalHumanoDashboard";
 import SupervisorLaboralDashboard from "./pages/SupervisorLaboralDashboard";
+import AyudantiasProgram from "./pages/AyudantiasProgram";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +67,7 @@ const App = () => (
               <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
               <Route path="/aspirante-scholarship-programs" element={<AspiranteScholarshipPrograms />} />
               <Route path="/postulaciones-becas" element={<PostulacionesBecas />} />
+              <Route path="/post-register-application" element={<PostRegisterApplication />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/requisitos" element={<Requisitos />} />
               <Route path="/postulaciones" element={<PostulacionesList />} />
@@ -74,6 +77,7 @@ const App = () => (
         <Route path="/exoneracion" element={<ExoneracionProgram />} />
               <Route path="/excelencia" element={<ExcelenciaProgram />} />
               <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
+              <Route path="/ayudantias" element={<AyudantiasProgram />} />
 
               <Route path="/formacion-docente-admin" element={<FormacionDocenteAdmin />} />
               <Route path="/exoneracion-student" element={<ExoneracionStudent />} />
