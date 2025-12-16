@@ -41,7 +41,14 @@ import CapitalHumanoDashboard from "./pages/CapitalHumanoDashboard";
 import SupervisorLaboralDashboard from "./pages/SupervisorLaboralDashboard";
 import AyudantiasProgram from "./pages/AyudantiasProgram";
 import Home from "./pages/home";
-import Vocational from "./pages/Vocacion/vocationalIndex";
+import VocationalIndex from "./pages/Vocacion/vocationalIndex";
+import VocationalTest from "./pages/Vocacion/VocationalTest";
+import VocationalProfile from "./pages/Vocacion/VocationalProfile";
+import VocationalExplorer from "./pages/Vocacion/VocationalExplorer";
+import VocationalCrm from "./pages/Vocacion/VocationalCrm";
+import VocationalAnalytics from "./pages/Vocacion/VocationalAnalytics";
+import VocationalCounselor from "./pages/Vocacion/VocationalCounselor";
+
 
 const queryClient = new QueryClient();
 
@@ -57,7 +64,14 @@ const App = () => (
               <Route path="/" element={<Index />} />
               {/* creados nuevos */}
               <Route path="/home" element={<Home/>} /> 
-              <Route path="/vocational" element={<Vocational/>}/>
+              <Route path="/vocational" element={<VocationalIndex/>}/>
+              <Route path="/vocational-test" element={<VocationalTest/>}/>
+              <Route path="/vocational-profile" element={<VocationalProfile/>}/>
+              <Route path="/vocational-explorer" element={<VocationalExplorer/>}/>
+              <Route path="/vocational-crm" element={<VocationalCrm/>}/>
+              <Route path="/vocational-analytics" element={<VocationalAnalytics/>}/>
+              <Route path="/vocational-counselor" element={<VocationalCounselor/>}/>
+
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />

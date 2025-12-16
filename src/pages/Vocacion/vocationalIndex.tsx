@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 
 const vocationalBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
-const vocationalIndex = () => {
+const VocationalIndex = () => {
   const navigate = useNavigate();
   const [isCtaVisible, setIsCtaVisible] = useState(false);
   const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
@@ -203,7 +203,7 @@ const vocationalIndex = () => {
              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                
                {/* Módulo 1: Asesoría Vocacional */}
-               <Link href="/vocational/test">
+               <Link href="/vocational-test">
                <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
                  <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
@@ -219,7 +219,7 @@ const vocationalIndex = () => {
                      <p className="text-slate-500 mb-8 leading-relaxed text-sm">
                        Aplicación de tests estandarizados interpretados por nuestro Motor LLM para generar recomendaciones personalizadas.
                      </p>
-                     <div className="flex items-center text-purple-600 font-semibold group-hover:translate-x-2 transition-transform">
+                     <div onClick={() => navigate("/vocational-test")} className="flex items-center text-purple-600 font-semibold group-hover:translate-x-2 transition-transform">
                        Iniciar diagnóstico <ChevronRight className="ml-1 w-4 h-4" />
                      </div>
                    </div>
@@ -227,33 +227,8 @@ const vocationalIndex = () => {
                </motion.div>
                </Link>
 
-               {/* Módulo 3: Contenido Académico */}
-               <Link href="/vocational/explorer">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                       <BookOpen className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-blue-500 mb-2 uppercase tracking-wider">Módulo 3</div>
-                     <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-blue-700 transition-colors">
-                       Contenido Académico
-                     </h3>
-                     <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-                       Base de conocimiento institucional: mallas curriculares, requisitos y perfiles de egreso de la UNIMET.
-                     </p>
-                     <div className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
-                       Ver catálogo <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
                {/* Módulo 2: Gestión de Perfiles */}
-               <Link href="/vocational/profile">
+               <Link href="/vocational-profile">
                <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
                  <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-teal-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
@@ -269,7 +244,7 @@ const vocationalIndex = () => {
                      <p className="text-slate-500 mb-8 leading-relaxed text-sm">
                        Gestión centralizada de tus datos, historial de tests y preferencias para alimentar al modelo de IA.
                      </p>
-                     <div className="flex items-center text-teal-600 font-semibold group-hover:translate-x-2 transition-transform">
+                     <div onClick={() => navigate("/vocational-profile")} className="flex items-center text-teal-600 font-semibold group-hover:translate-x-2 transition-transform">
                        Ver mi perfil <ChevronRight className="ml-1 w-4 h-4" />
                      </div>
                    </div>
@@ -277,8 +252,33 @@ const vocationalIndex = () => {
                </motion.div>
                </Link>
 
+               {/* Módulo 3: Contenido Académico */}
+               <Link href="/vocational-explorer">
+               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
+                 <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
+                   
+                   <div className="relative z-10">
+                     <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                       <BookOpen className="w-7 h-7" />
+                     </div>
+                     <div className="text-xs font-bold text-blue-500 mb-2 uppercase tracking-wider">Módulo 3</div>
+                     <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-blue-700 transition-colors">
+                       Contenido Académico
+                     </h3>
+                     <p className="text-slate-500 mb-8 leading-relaxed text-sm">
+                       Base de conocimiento institucional: mallas curriculares, requisitos y perfiles de egreso de la UNIMET.
+                     </p>
+                     <div onClick={() => navigate("/vocational-explorer")}className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
+                       Ver catálogo <ChevronRight className="ml-1 w-4 h-4" />
+                     </div>
+                   </div>
+                 </div>
+               </motion.div>
+               </Link>
+
                {/* Módulo 4: Comunicación CRM */}
-               <Link href="/vocational/crm">
+               <Link href="/vocational-crm">
                <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
                  <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-pink-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
@@ -294,7 +294,7 @@ const vocationalIndex = () => {
                      <p className="text-slate-500 mb-8 leading-relaxed text-sm">
                        Sistema de notificaciones inteligentes y seguimiento personalizado basado en tus intereses.
                      </p>
-                     <div className="flex items-center text-pink-600 font-semibold group-hover:translate-x-2 transition-transform">
+                     <div onClick={() => navigate("/vocational-crm")} className="flex items-center text-pink-600 font-semibold group-hover:translate-x-2 transition-transform">
                        Ver notificaciones <ChevronRight className="ml-1 w-4 h-4" />
                      </div>
                    </div>
@@ -303,7 +303,7 @@ const vocationalIndex = () => {
                </Link>
 
                {/* Módulo 6: Analytics */}
-               <Link href="/vocational/analytics">
+               <Link href="/vocational-analytics">
                <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
                  <div className="h-full bg-slate-900 rounded-[2rem] p-8 shadow-xl shadow-slate-900/20 hover:shadow-2xl transition-all border border-slate-800 group cursor-pointer relative overflow-hidden">
                    
@@ -318,7 +318,7 @@ const vocationalIndex = () => {
                      <p className="text-slate-400 mb-8 leading-relaxed text-sm">
                        Vista administrativa para medir impacto ODS 4, métricas de uso y tendencias vocacionales.
                      </p>
-                     <div className="flex items-center text-white font-semibold group-hover:translate-x-2 transition-transform">
+                     <div onClick={() => navigate("/vocational-analytics")}  className="flex items-center text-white font-semibold group-hover:translate-x-2 transition-transform">
                        Acceso Administrativo <ChevronRight className="ml-1 w-4 h-4" />
                      </div>
                    </div>
@@ -327,7 +327,7 @@ const vocationalIndex = () => {
                </Link>
 
                {/* Acceso Orientadores (Nuevo Módulo) */}
-               <Link href="/vocational/counselor">
+               <Link href="/vocational-counselor">
                <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }} className="md:col-span-2 lg:col-span-1">
                  <div className="h-full bg-teal-900 rounded-[2rem] p-8 shadow-xl shadow-teal-900/20 hover:shadow-2xl transition-all border border-teal-800 group cursor-pointer relative overflow-hidden">
                    
@@ -342,7 +342,7 @@ const vocationalIndex = () => {
                      <p className="text-teal-400 mb-8 leading-relaxed text-sm">
                        Gestión de casos, visualización de resultados de tests y seguimiento individualizado de estudiantes.
                      </p>
-                     <div className="flex items-center text-white font-semibold group-hover:translate-x-2 transition-transform">
+                     <div onClick={() => navigate("/vocational-counselor")} className="flex items-center text-white font-semibold group-hover:translate-x-2 transition-transform">
                        Ingresar al Panel <ChevronRight className="ml-1 w-4 h-4" />
                      </div>
                    </div>
@@ -371,4 +371,4 @@ const vocationalIndex = () => {
   );
 };
 
-export default vocationalIndex;
+export default VocationalIndex;
