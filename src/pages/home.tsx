@@ -211,7 +211,7 @@ const Home = () => {
                   </p>
                   
                   <div className="mt-auto z-10">
-                    <Button className="bg-blue-600 text-white rounded-full px-8 h-12 text-lg font-medium transition-all group-hover:bg-blue-700 group-hover:px-10">
+                    <Button onClick={() => navigate("/vocational")} className="bg-blue-600 text-white rounded-full px-8 h-12 text-lg font-medium transition-all group-hover:bg-blue-700 group-hover:px-10">
                       Explorar
                       <ChevronRight className="ml-2 w-5 h-5" />
                     </Button>

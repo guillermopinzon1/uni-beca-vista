@@ -41,6 +41,7 @@ import CapitalHumanoDashboard from "./pages/CapitalHumanoDashboard";
 import SupervisorLaboralDashboard from "./pages/SupervisorLaboralDashboard";
 import AyudantiasProgram from "./pages/AyudantiasProgram";
 import Home from "./pages/home";
+import Vocational from "./pages/Vocacion/vocationalIndex";
 
 const queryClient = new QueryClient();
 
@@ -54,7 +55,9 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/home" element={<Home/>} />
+              {/* creados nuevos */}
+              <Route path="/home" element={<Home/>} /> 
+              <Route path="/vocational" element={<Vocational/>}/>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/reset-password" element={<ResetPassword />} />
