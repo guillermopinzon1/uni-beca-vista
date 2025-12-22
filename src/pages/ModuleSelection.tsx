@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { GraduationCap, LogOut, CheckCircle2, Clock, AlertCircle, FileCheck } from "lucide-react";
+import { GraduationCap, LogOut, CheckCircle2, Clock, AlertCircle, FileCheck, Compass } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { verificarPostulacionesPorEmail, PostulacionPublicData } from "@/lib/api/postulacionesBecas";
@@ -85,6 +85,14 @@ const ModuleSelection = () => {
       description: "Centraliza la postulación, evaluación y seguimiento de todas las becas y ayudantías.",
       icon: GraduationCap,
       route: "/scholarship-programs",
+      available: true
+    },
+    {
+      id: 2,
+      title: "Gestión de Orientación Vocacional",
+      description: "Centraliza la realización, analisis y seguimiento de orientación vocacional.",
+      icon: Compass,
+      route: "/",
       available: true
     }
     // Future modules can be added here
