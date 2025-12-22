@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ChevronsUpDown, Check, Eye, EyeOff } from "lucide-react";
+import { ChevronsUpDown, Check, Eye, EyeOff, Brain, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserCog, Shield, CheckCircle, Clock } from "lucide-react";
@@ -16,7 +16,7 @@ import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21d
 import { registerUser, loginUser } from "@/lib/api/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
-type RegistrationType = "student" | "admin" | "supervisor";
+type RegistrationType = "student" | "admin" | "supervisor" | "specialist";
 
 const Register = () => {
   const { loginSuccess } = useAuth();
@@ -201,6 +201,12 @@ const Register = () => {
       title: "Registro Supervisor",
       description: "Para supervisores de plazas",
       icon: Shield
+    },
+    {
+      id: "specialist" as RegistrationType,
+      title: "Registro Especialista",
+      description: "Para Psicólogo/Orientador",
+      icon: Compass
     }
   ];
 
@@ -217,7 +223,7 @@ const Register = () => {
           <div className="text-center text-white p-8">
             <h1 className="text-4xl font-bold mb-4">Universidad Metropolitana</h1>
             <p className="text-xl opacity-90">Sistema de Gestión de Becas</p>
-          </div>
+          </div> 
         </div>
       </div>
 
@@ -489,7 +495,32 @@ const Register = () => {
                       </div>
                     </>
                   )}
-
+                  
+                  {/* Specialist specific fields */}
+                  {selectedType === "specialist" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="especialidad">Especialidad</Label>
+                        <Input
+                          id="especialidad"
+                          name="especialidad"
+                          placeholder="Ej: Psicología Clínica / Orientador Vocacional"
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="numColegiado">Número de Colegiado</Label>
+                        <Input
+                          id="numColegiado"
+                          name="numColegiado"
+                          placeholder="FPV-XXXXX"
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
                   {/* Supervisor specific fields */}
                   {selectedType === "supervisor" && (
                     <>

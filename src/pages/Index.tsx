@@ -104,12 +104,13 @@ const Index = () => {
               </Button>
               <Button
                 size="sm"
-                onClick={() => navigate("/postulaciones-becas")}
+                onClick={() => navigate("/")}
                 className="bg-white text-primary hover:bg-white/90"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
-                Postularme a Beca
+                Volver al Portal
               </Button>
+
             </nav>
           </div>
         </div>

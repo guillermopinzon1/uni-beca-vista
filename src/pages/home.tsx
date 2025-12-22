@@ -6,6 +6,7 @@ import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128
 import { useEffect, useRef, useState } from "react";
 import {motion} from "framer-motion";
 import { Link } from "wouter";
+import Index from "./Index";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -105,14 +106,6 @@ const Home = () => {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Registrarse
               </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/postulaciones-becas")}
-                className="bg-white text-primary hover:bg-white/90"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Postularme a Beca
-              </Button>
             </nav>
           </div>
         </div>
@@ -178,7 +171,7 @@ const Home = () => {
                   </p>
                   
                   <div className="mt-auto z-10">
-                    <Button onClick={() => navigate("/")} className="border-white/30 text-white hover:bg-white hover:text-orange-900 rounded-full px-8 h-12 text-lg font-medium transition-all group-hover:px-10">
+                    <Button onClick={() => navigate("/index")} className="border-white/30 text-white hover:bg-white hover:text-orange-900 rounded-full px-8 h-12 text-lg font-medium transition-all group-hover:px-10">
                       Ingresar
                       <ChevronRight className="ml-2 w-5 h-5" />
                     </Button>

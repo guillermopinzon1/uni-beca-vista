@@ -61,7 +61,8 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/index" element={<Index />} />
               {/* creados nuevos */}
               <Route path="/home" element={<Home/>} /> 
               <Route path="/vocational" element={<VocationalIndex/>}/>
