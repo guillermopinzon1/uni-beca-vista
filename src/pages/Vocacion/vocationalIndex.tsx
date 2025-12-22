@@ -118,74 +118,89 @@ const VocationalIndex = () => {
           </div>
         </div>
       </header>
-    {/* Hero Section - AI & Future Focus */}
-    <section className="relative min-h-[500px] flex items-center justify-center overflow-hidden">
+    {/* Hero Section */}
+    <section className="relative pt-32 pb-20 px-4 overflow-hidden bg-slate-900">
         {/* Background */}
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center scale-110"
-          style={{ backgroundImage: `url(${vocationalBg})`}}
-        />
-        <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] z-0" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-slate-900/50 z-0" />
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={vocationalBg}
+            alt="Campus Background" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-slate-900/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/50 to-slate-900" />
+        </div>
 
-        <div className="container mx-auto px-4 relative z-10 grid md:grid-cols-2 gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-white"
-          >
-            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 mb-6">
-              <Sparkles className="w-4 h-4 text-purple-300 animate-pulse" />
-              <span className="text-sm font-medium tracking-wide">Potenciado por IA</span>
-            </div>
-            
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight tracking-tight">
-              Sistema de <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">Orientación Inteligente</span>
-            </h1>
-            
-            <p className="text-xl text-blue-50 mb-10 leading-relaxed font-light max-w-lg border-l-2 border-purple-400 pl-6">
-              Una plataforma integral que conecta tus intereses con oportunidades académicas reales utilizando inteligencia artificial avanzada.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/vocational/test">
-                <Button size="lg" className="bg-white text-blue-900 hover:bg-blue-50 font-bold h-14 px-8 rounded-full shadow-lg shadow-blue-900/20 text-lg transition-all hover:scale-105">
-                  <PlayCircle className="mr-2 h-5 w-5 fill-current" />
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-white space-y-8"
+            >
+              <div className="space-y-6">
+                <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2">
+                  <Sparkles className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium">Potenciado por IA</span>
+                </div>
+                
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+                  Sistema de <br/>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                    Orientación Inteligente
+                  </span>
+                </h1>
+                
+                <div className="w-32 h-1.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full" />
+                
+                <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-xl">
+                  Una plataforma integral que conecta tus intereses con oportunidades académicas reales utilizando inteligencia artificial avanzada.
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  onClick={() => navigate("/vocational-test")}
+                  className="bg-white text-slate-900 hover:bg-slate-100 px-8 py-6 text-lg font-semibold rounded-lg transition-colors"
+                >
+                  <PlayCircle className="mr-2 h-5 w-5" />
                   Iniciar Diagnóstico
                 </Button>
-              </Link>
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
 
-          <motion.div
-             initial={{ opacity: 0, y: 30 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-             className="hidden md:block"
-          >
-             {/* AI Visualization */}
-             <div className="relative w-full aspect-square max-w-md mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/30 to-purple-600/30 rounded-full filter blur-[80px] animate-pulse"></div>
-                
-                {/* Central Node */}
-                <div className="absolute inset-0 m-auto w-48 h-48 bg-white/10 backdrop-blur-xl border border-white/30 rounded-full flex items-center justify-center shadow-2xl z-20">
-                    <BrainCircuit className="w-20 h-20 text-white" />
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="hidden lg:block"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-3xl blur-3xl" />
+                <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-12 flex items-center justify-center">
+                  <div className="grid grid-cols-2 gap-6 w-full">
+                    <div className="bg-blue-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-blue-500/30">
+                      <BrainCircuit className="w-16 h-16 text-blue-400 mb-4" />
+                      <span className="text-white font-semibold">IA Avanzada</span>
+                    </div>
+                    <div className="bg-purple-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-purple-500/30">
+                      <UserCircle className="w-16 h-16 text-purple-400 mb-4" />
+                      <span className="text-white font-semibold">Personalizado</span>
+                    </div>
+                    <div className="bg-blue-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-blue-500/30">
+                      <BookOpen className="w-16 h-16 text-blue-400 mb-4" />
+                      <span className="text-white font-semibold">Contenido</span>
+                    </div>
+                    <div className="bg-green-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-green-500/30">
+                      <BarChart3 className="w-16 h-16 text-green-400 mb-4" />
+                      <span className="text-white font-semibold">Analytics</span>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Satellite Nodes (Modules) */}
-                <div className="absolute top-10 right-10 w-20 h-20 bg-blue-500/20 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center animate-bounce-slow delay-100">
-                    <BookOpen className="w-8 h-8 text-blue-200" />
-                </div>
-                <div className="absolute bottom-20 left-10 w-24 h-24 bg-purple-500/20 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center animate-bounce-slow delay-300">
-                    <UserCircle className="w-10 h-10 text-purple-200" />
-                </div>
-                <div className="absolute bottom-10 right-20 w-16 h-16 bg-green-500/20 backdrop-blur-md border border-white/20 rounded-xl flex items-center justify-center animate-bounce-slow delay-500">
-                    <BarChart3 className="w-6 h-6 text-green-200" />
-                </div>
-             </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -204,8 +219,8 @@ const VocationalIndex = () => {
                
                {/* Módulo 1: Asesoría Vocacional */}
                <Link href="/vocational-test">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
+               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
                    
                    <div className="relative z-10">
@@ -229,8 +244,8 @@ const VocationalIndex = () => {
 
                {/* Módulo 2: Gestión de Perfiles */}
                <Link href="/vocational-profile">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-teal-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
+               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
                    
                    <div className="relative z-10">
@@ -254,8 +269,8 @@ const VocationalIndex = () => {
 
                {/* Módulo 3: Contenido Académico */}
                <Link href="/vocational-explorer">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-blue-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
+               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
                    
                    <div className="relative z-10">
@@ -279,8 +294,8 @@ const VocationalIndex = () => {
 
                {/* Módulo 4: Comunicación CRM */}
                <Link href="/vocational-crm">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-pink-500/10 transition-all border border-slate-100 group cursor-pointer relative overflow-hidden">
+               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
                    
                    <div className="relative z-10">
@@ -304,8 +319,8 @@ const VocationalIndex = () => {
 
                {/* Módulo 6: Analytics */}
                <Link href="/vocational-analytics">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-slate-900 rounded-[2rem] p-8 shadow-xl shadow-slate-900/20 hover:shadow-2xl transition-all border border-slate-800 group cursor-pointer relative overflow-hidden">
+               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                 <div className="h-full bg-slate-900 rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-800 group cursor-pointer relative overflow-hidden">
                    
                    <div className="relative z-10">
                      <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-300 group-hover:bg-white group-hover:text-slate-900 transition-colors duration-300">
@@ -328,8 +343,8 @@ const VocationalIndex = () => {
 
                {/* Acceso Orientadores (Nuevo Módulo) */}
                <Link href="/vocational-counselor">
-               <motion.div whileHover={{ y: -8 }} transition={{ type: "spring", stiffness: 300 }} className="md:col-span-2 lg:col-span-1">
-                 <div className="h-full bg-teal-900 rounded-[2rem] p-8 shadow-xl shadow-teal-900/20 hover:shadow-2xl transition-all border border-teal-800 group cursor-pointer relative overflow-hidden">
+               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }} className="md:col-span-2 lg:col-span-1">
+                 <div className="h-full bg-teal-900 rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-teal-800 group cursor-pointer relative overflow-hidden">
                    
                    <div className="relative z-10">
                      <div className="w-14 h-14 bg-teal-800 rounded-2xl flex items-center justify-center mb-6 text-teal-300 group-hover:bg-white group-hover:text-teal-900 transition-colors duration-300">
