@@ -41,13 +41,14 @@ import CapitalHumanoDashboard from "./pages/CapitalHumanoDashboard";
 import SupervisorLaboralDashboard from "./pages/SupervisorLaboralDashboard";
 import AyudantiasProgram from "./pages/AyudantiasProgram";
 import Home from "./pages/home";
-import VocationalIndex from "./pages/Vocacion/vocationalIndex";
+
 import VocationalTest from "./pages/Vocacion/VocationalTest";
 import VocationalProfile from "./pages/Vocacion/VocationalProfile";
 import VocationalExplorer from "./pages/Vocacion/VocationalExplorer";
 import VocationalCrm from "./pages/Vocacion/VocationalCrm";
 import VocationalAnalytics from "./pages/Vocacion/VocationalAnalytics";
 import VocationalCounselor from "./pages/Vocacion/VocationalCounselor";
+import VocationalIndex from "./pages/Vocacion/VocationalIndex";
 
 
 const queryClient = new QueryClient();
@@ -63,7 +64,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/index" element={<Index />} />
-              {/* creados nuevos */}
+              {/* New Items */}
               <Route path="/home" element={<Home/>} /> 
               <Route path="/vocational" element={<VocationalIndex/>}/>
               <Route path="/vocational-test" element={<VocationalTest/>}/>
@@ -78,9 +79,9 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/cambiar-password-obligatorio" element={<ChangePasswordRequired />} />
               <Route path="/modules" element={<ModuleSelection />} />
-          <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/modules" element={<PasanteModules />} />
+          <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} /> --supervisor
+          <Route path="/admin-dashboard" element={<AdminDashboard />} /> 
+          <Route path="/modules" element={<PasanteModules />} /> 
           
           <Route path="/pasante-ayudantias-modules" element={<PasanteAyudantiasModules />} />
           <Route path="/estudiante/:id" element={<EstudianteDetail />} />
