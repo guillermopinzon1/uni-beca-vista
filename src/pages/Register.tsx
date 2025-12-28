@@ -16,7 +16,7 @@ import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21d
 import { registerUser, loginUser } from "@/lib/api/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
-type RegistrationType = "student" | "admin" | "supervisor" | "specialist";
+type RegistrationType = "student" | "admin" | "supervisor" | "specialist"| "aspirante";
 
 const Register = () => {
   const { loginSuccess } = useAuth();
@@ -147,7 +147,7 @@ const Register = () => {
           console.log('🔐 Auto-login exitoso');
 
           // Guardar en el contexto
-          loginSuccess(loginResult.data.user as any, loginResult.data.tokens);
+          loginSuccess(loginResult.data.user, loginResult.data.tokens);
 
           // Redirigir a modules con flag de nuevo registro
           navigate('/modules', {
@@ -215,6 +215,12 @@ const Register = () => {
       id: "specialist" as RegistrationType,
       title: "Registro Especialista",
       description: "Para Psicólogo/Orientador",
+      icon: Compass
+    },
+    {
+      id: "aspirante" as RegistrationType,
+      title: "Registro Aspirante",
+      description: "Para Aspirante",
       icon: Compass
     }
   ];
