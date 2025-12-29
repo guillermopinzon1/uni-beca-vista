@@ -16,7 +16,7 @@ import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21d
 import { registerUser, loginUser } from "@/lib/api/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
-type RegistrationType = "student" | "admin" | "supervisor" | "specialist"| "aspirante";
+type RegistrationType = "student" | "admin" | "supervisor" | "especialista" | "aspirante";
 
 const Register = () => {
   const { loginSuccess } = useAuth();
@@ -41,7 +41,10 @@ const Register = () => {
     // Supervisor specific
     nombrePlaza: "",
     cedulaTipo: "V",
-    cedulaNumero: ""
+    cedulaNumero: "",
+    // Especialista Especific
+    especialidad: "",
+    numColegiado: ""
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -88,11 +91,14 @@ const Register = () => {
 
       // Validate required fields based on registration type
       const requiredFields = selectedType === "student"
-        ? [formData.name, formData.lastName, formData.email, formData.cedula, formData.password]
-        : selectedType === "admin"
-        ? [formData.name, formData.lastName, formData.email, formData.password]
-        : [formData.name, formData.lastName, formData.email, formData.cedula, formData.password];
-
+      ? [formData.name, formData.lastName, formData.email, formData.cedula, formData.password]
+      : selectedType === "admin"
+      ? [formData.name, formData.lastName, formData.email, formData.password]
+      : selectedType === "especialista"
+      ? [formData.name, formData.lastName, formData.email, formData.cedula, formData.password]
+      : selectedType === "aspirante"
+      ? [formData.name, formData.lastName, formData.email, formData.cedula, formData.password]
+      : [formData.name, formData.lastName, formData.email, formData.cedula, formData.password];
       if (requiredFields.some(field => !field)) {
         throw new Error("Por favor complete todos los campos requeridos");
       }
@@ -105,16 +111,19 @@ const Register = () => {
         apellido: formData.lastName,
         cedula: formData.cedula,
         telefono: formData.telefono,
-        role: selectedType === "student" 
-        ? "estudiante" 
-        : selectedType === "admin" 
-        ? "admin" 
-        : selectedType === "specialist"
+        role: selectedType === "student"
+        ? "estudiante"
+        : selectedType === "admin"
+        ? "admin"
+        : selectedType === "especialista"
         ? "especialista"
-        : "supervisor"
+        : selectedType === "aspirante"
+        ? "aspirante"
+        : selectedType === "supervisor"
+        ? "supervisor"
+        : "estudiante"
       };
 
-      // Agregar campos específicos según el tipo
       if (selectedType === "student") {
         if (formData.studentId) registerData.carnet = formData.studentId;
         if (formData.carrera) registerData.carrera = formData.carrera;
@@ -125,9 +134,13 @@ const Register = () => {
       } else if (selectedType === "supervisor") {
         if (formData.departamento) registerData.departamento = formData.departamento;
         if (formData.cargo) registerData.cargo = formData.cargo;
-      } else if (selectedType === "specialist") {
+      } else if (selectedType === "especialista") {
+        // Agregar esto
         if (formData.departamento) registerData.departamento = formData.departamento;
         if (formData.cargo) registerData.cargo = formData.cargo;
+      } else if (selectedType === "aspirante") {
+        // Agregar esto (aspirante no necesita campos adicionales, pero puedes agregar si quieres)
+        // Por ahora no necesita campos adicionales
       }
 
       // Llamar al endpoint de registro
@@ -136,7 +149,7 @@ const Register = () => {
       console.log('✅ Usuario registrado exitosamente:', result);
 
       // Si es estudiante, hacer auto-login y redirigir a /modules
-      if (selectedType === "student") {
+      if (selectedType === "student" || selectedType === "aspirante") {
         try {
           // Auto-login para entrar directamente
           const loginResult = await loginUser({
@@ -212,16 +225,16 @@ const Register = () => {
       icon: Shield
     },
     {
-      id: "specialist" as RegistrationType,
+      id: "especialista" as RegistrationType,
       title: "Registro Especialista",
       description: "Para Psicólogo/Orientador",
-      icon: Compass
+      icon: UserCog
     },
     {
       id: "aspirante" as RegistrationType,
       title: "Registro Aspirante",
       description: "Para Aspirante",
-      icon: Compass
+      icon: User
     }
   ];
 
@@ -511,139 +524,6 @@ const Register = () => {
                     </>
                   )}
                   
-                  {/* Specialist specific fields */}
-                  {selectedType === "specialist" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Correo Institucional</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          placeholder="nombre.apellido@unimet.edu.ve"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Debe ser un email institucional @unimet.edu.ve
-                        </p>
-                      </div>
-                    
-                      <div className="space-y-2">
-                        <Label htmlFor="cedula">Cédula</Label>
-                        <div className="flex gap-2">
-                          <Select value={formData.cedulaTipo} onValueChange={(tipo) => handleCedulaChange(tipo, formData.cedulaNumero)}>
-                            <SelectTrigger className="w-20">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="V">V</SelectItem>
-                              <SelectItem value="E">E</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            id="cedula"
-                            placeholder="12345678"
-                            value={formData.cedulaNumero}
-                            onChange={(e) => handleCedulaChange(formData.cedulaTipo, e.target.value)}
-                            className="flex-1"
-                            required
-                          />
-                        </div>
-                      </div>
-                    
-                      <div className="space-y-2">
-                        <Label htmlFor="telefono">Teléfono</Label>
-                        <Input
-                          id="telefono"
-                          name="telefono"
-                          type="tel"
-                          value={formData.telefono}
-                          onChange={handleChange}
-                          placeholder="+58 212 1234567"
-                        />
-                      </div>
-                    
-                      {/* ✅ AGREGAR ESTOS CAMPOS */}
-                      <div className="space-y-2">
-                        <Label>Departamento</Label>
-                        <Popover open={isDeptOpen} onOpenChange={setIsDeptOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={isDeptOpen}
-                              className="w-full justify-between"
-                            >
-                              {formData.departamento ? formData.departamento : "Selecciona un departamento"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                                <Command>
-                                  <CommandInput placeholder="Buscar departamento..." />
-                                  <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-                                  <CommandList>
-                                    <CommandGroup>
-                                      <CommandItem onSelect={() => { setIsOtherDept(false); handleSelectChange("departamento", "Orientación Vocacional"); setIsDeptOpen(false); }}>Orientación Vocacional</CommandItem>
-                                      <CommandItem onSelect={() => { setIsOtherDept(false); handleSelectChange("departamento", "Escuela de Psicología"); setIsDeptOpen(false); }}>Escuela de Psicología</CommandItem>
-                                      {/* ... otros departamentos ... */}
-                                      <CommandItem onSelect={() => { setIsOtherDept(true); handleSelectChange("departamento", "Otro"); setIsDeptOpen(false); }}>Otro</CommandItem>
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
-                        {isOtherDept && (
-                          <div className="mt-2">
-                            <Input
-                              id="departamentoOtro"
-                              name="departamento"
-                              type="text"
-                              value={formData.departamento === "Otro" ? "" : formData.departamento}
-                              onChange={(e) => handleSelectChange("departamento", e.target.value)}
-                              placeholder="Escribe el nombre del departamento"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    
-                      <div className="space-y-2">
-                        <Label htmlFor="cargo">Cargo</Label>
-                        <Input
-                          id="cargo"
-                          name="cargo"
-                          type="text"
-                          value={formData.cargo}
-                          onChange={handleChange}
-                          placeholder="Ej: Especialista en Orientación Académica"
-                        />
-                      </div>
-                    
-                      {/* Campos opcionales que puedes mantener o eliminar */}
-                      <div className="space-y-2">
-                        <Label htmlFor="especialidad">Especialidad <span className="text-muted-foreground">(opcional)</span></Label>
-                        <Input
-                          id="especialidad"
-                          name="especialidad"
-                          placeholder="Ej: Psicología Clínica / Orientador Vocacional"
-                          onChange={handleChange}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="numColegiado">Número de Colegiado <span className="text-muted-foreground">(opcional)</span></Label>
-                        <Input
-                          id="numColegiado"
-                          name="numColegiado"
-                          placeholder="FPV-XXXXX"
-                          onChange={handleChange}
-                        />
-                      </div>
-                    </>
-                  )}
-                  
                   {/* Supervisor specific fields */}
                   {selectedType === "supervisor" && (
                     <>
@@ -771,6 +651,180 @@ const Register = () => {
                           value={formData.cargo}
                           onChange={handleChange}
                           placeholder="Ej: Profesor Asociado"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Specialist specific fields */}
+                  {selectedType === "especialista" && (
+                    <>
+                      {/* Email con validación visual */}
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Correo Institucional</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="nombre.apellido@unimet.edu.ve"
+                          required
+                          className={formData.email && !formData.email.endsWith('@unimet.edu.ve') ? "border-destructive" : ""}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Debe ser un email institucional @unimet.edu.ve
+                        </p>
+                      </div>
+
+                      {/* Cédula - Asegúrate de que handleCedulaChange use value.replace(/\D/g, '') */}
+                      <div className="space-y-2">
+                        <Label htmlFor="cedula">Cédula</Label>
+                        <div className="flex gap-2">
+                          <Select 
+                            value={formData.cedulaTipo || "V"} 
+                            onValueChange={(tipo) => handleCedulaChange(tipo, formData.cedulaNumero)}
+                          >
+                            <SelectTrigger className="w-20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="V">V</SelectItem>
+                              <SelectItem value="E">E</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            id="cedula"
+                            placeholder="12345678"
+                            value={formData.cedulaNumero}
+                            onChange={(e) => handleCedulaChange(formData.cedulaTipo, e.target.value)}
+                            className="flex-1"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Departamento con lógica de "Otro" más segura */}
+                      <div className="space-y-2">
+                        <Label>Departamento</Label>
+                        <Popover open={isDeptOpen} onOpenChange={setIsDeptOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between"
+                            >
+                              {/* Si es "Otro", mostrar "Otro", sino mostrar el valor real */}
+                              {isOtherDept ? "Otro" : (formData.departamento || "Selecciona un departamento")}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                            <Command>
+                              <CommandInput placeholder="Buscar departamento..." />
+                              <CommandList>
+                                <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                                <CommandGroup>
+                                  <CommandItem onSelect={() => { setIsOtherDept(false); handleSelectChange("departamento", "Orientación Vocacional"); setIsDeptOpen(false); }}>
+                                    Orientación Vocacional
+                                  </CommandItem>
+                                  <CommandItem onSelect={() => { setIsOtherDept(false); handleSelectChange("departamento", "Escuela de Psicología"); setIsDeptOpen(false); }}>
+                                    Escuela de Psicología
+                                  </CommandItem>
+                                  <CommandItem onSelect={() => { setIsOtherDept(true); handleSelectChange("departamento", ""); setIsDeptOpen(false); }}>
+                                    Otro
+                                  </CommandItem>
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+
+                        {isOtherDept && (
+                          <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                            <Label htmlFor="departamentoOtro">Especifique el departamento</Label>
+                            <Input
+                              id="departamentoOtro"
+                              placeholder="Escriba el nombre del departamento"
+                              value={formData.departamento}
+                              onChange={(e) => handleSelectChange("departamento", e.target.value)}
+                              required
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {/* Campos opcionales */}
+                      <div className="space-y-2">
+                        <Label htmlFor="especialidad">Especialidad <span className="text-muted-foreground">(opcional)</span></Label>
+                        <Input
+                          id="especialidad"
+                          name="especialidad"
+                          placeholder="Ej: Psicología Clínica / Orientador Vocacional"
+                          onChange={handleChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="numColegiado">Número de Colegiado <span className="text-muted-foreground">(opcional)</span></Label>
+                        <Input
+                          id="numColegiado"
+                          name="numColegiado"
+                          placeholder="FPV-XXXXX"
+                          onChange={handleChange}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Aspirant specific fields */}
+                  {selectedType === "aspirante" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Correo Electrónico</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="nombre.apellido@gmail.com"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Puedes usar cualquier email (no requiere email UNIMET)
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cedula">Cédula</Label>
+                        <div className="flex gap-2">
+                          <Select value={formData.cedulaTipo} onValueChange={(tipo) => handleCedulaChange(tipo, formData.cedulaNumero)}>
+                            <SelectTrigger className="w-20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="V">V</SelectItem>
+                              <SelectItem value="E">E</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            id="cedula"
+                            placeholder="12345678"
+                            value={formData.cedulaNumero}
+                            onChange={(e) => handleCedulaChange(formData.cedulaTipo, e.target.value)}
+                            className="flex-1"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="telefono">Teléfono</Label>
+                        <Input
+                          id="telefono"
+                          name="telefono"
+                          type="tel"
+                          value={formData.telefono}
+                          onChange={handleChange}
+                          placeholder="+58 212 1234567"
                         />
                       </div>
                     </>

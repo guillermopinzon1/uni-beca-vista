@@ -30,8 +30,10 @@ const Login = () => {
 
     try {
       // Validación de dominio de email
-      if (!email.endsWith("@unimet.edu.ve") && !email.endsWith("@correo.unimet.edu.ve")) {
-        throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
+   // if (!email.endsWith("@unimet.edu.ve") && !email.endsWith("@correo.unimet.edu.ve")) {
+   //   throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
+     if (!email.includes("@") || !email.includes(".")) {
+        throw new Error("Por favor, ingresa un correo electrónico válido");
       }
 
       const result = await loginUser({ email, password });
@@ -89,6 +91,10 @@ const Login = () => {
         navigate("/capital-humano-dashboard");
       } else if (role === "supervisor-laboral") {
         navigate("/supervisor-laboral-dashboard");
+      } else if (role === "aspirante") {
+        navigate("/vocational-test");
+      } else if (role === "especialista") {
+        navigate("/vocational-counselor");
       } else {
         navigate("/");
       }
@@ -111,8 +117,10 @@ const Login = () => {
     setIsForgotPasswordLoading(true);
 
     try {
-      if (!forgotEmail.endsWith("@unimet.edu.ve") && !forgotEmail.endsWith("@correo.unimet.edu.ve")) {
-        throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
+    //if (!forgotEmail.endsWith("@unimet.edu.ve") && !forgotEmail.endsWith("@correo.unimet.edu.ve")) {
+    //  throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
+      if (!forgotEmail.includes("@") || !forgotEmail.includes(".")) {
+        throw new Error("Por favor, ingresa un correo electrónico válido");
       }
 
       await forgotPassword(forgotEmail);
