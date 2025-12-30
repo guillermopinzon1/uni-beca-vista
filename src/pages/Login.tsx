@@ -92,7 +92,8 @@ const Login = () => {
       } else if (role === "supervisor-laboral") {
         navigate("/supervisor-laboral-dashboard");
       } else if (role === "aspirante") {
-        navigate("/vocational-test");
+      //navigate("/vocational-test");
+        navigate("/modules");
       } else if (role === "especialista") {
         navigate("/vocational-counselor");
       } else {

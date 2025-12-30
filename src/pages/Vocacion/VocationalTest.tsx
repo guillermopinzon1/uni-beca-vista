@@ -1,17 +1,17 @@
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCcw, GraduationCap, Users, Award, FileText, LogIn, UserPlus, BookOpen, BrainCircuit, UserCircle, BellRing, BarChart3, ChevronRight, PlayCircle, Search, Sparkles, CheckCircle  } from "lucide-react";
-import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
-import { useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
+import { useNavigate } from "react-router-dom";
+import { 
+  GraduationCap, LogOut, Compass, BrainCircuit, 
+  ChevronRight, RefreshCcw, ChevronLeft 
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-const vocationalBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
-
-// Mock Questions for the Test
+// Restauradas las preguntas originales para el Test
 const questions = [
   {
     id: 1,
@@ -84,90 +84,27 @@ const results = {
 
 const VocationalTest = () => {
   const navigate = useNavigate();
-  const [isCtaVisible, setIsCtaVisible] = useState(false);
-  const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
-  const ctaRef = useRef<HTMLElement>(null);
-  const featuresRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.2,
-      rootMargin: "0px"
-    };
-
-    const ctaObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsCtaVisible(true);
-        }
-      });
-    }, observerOptions);
-
-    const featuresObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsFeaturesVisible(true);
-        }
-      });
-    }, observerOptions);
-
-    if (ctaRef.current) {
-      ctaObserver.observe(ctaRef.current);
-    }
-
-    if (featuresRef.current) {
-      featuresObserver.observe(featuresRef.current);
-    }
-
-    return () => {
-      ctaObserver.disconnect();
-      featuresObserver.disconnect();
-    };
-  }, []);
-
-  const features = [
-    {
-      icon: GraduationCap,
-      title: "Gestión de Becas",
-      description: "Administra y monitorea todas las becas disponibles para estudiantes"
-    },
-    {
-      icon: Users,
-      title: "Estudiantes",
-      description: "Gestiona perfiles de estudiantes y sus solicitudes de becas"
-    },
-    {
-      icon: Award,
-      title: "Seguimiento",
-      description: "Realiza seguimiento del progreso y estado de las becas otorgadas"
-    },
-    {
-      icon: FileText,
-      title: "Reportes",
-      description: "Genera reportes detallados sobre el programa de becas"
-    }
-  ];
-
-  const [currentStep, setCurrentStep] = useState(0); // 0 = Intro, 1..N = Questions, N+1 = Loading, N+2 = Result
+  const { logout } = useAuth();
+  const [currentStep, setCurrentStep] = useState(0); 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   const totalSteps = questions.length;
-  const progress = (currentStep / totalSteps) * 100;
 
-  const handleStart = () => setCurrentStep(1);
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   const handleNext = () => {
     if (selectedOption) {
       setAnswers({ ...answers, [questions[currentStep - 1].id]: selectedOption });
       setSelectedOption(null);
-      
       if (currentStep < totalSteps) {
         setCurrentStep(currentStep + 1);
       } else {
         setCurrentStep(totalSteps + 1);
-        // Simulate analysis
         let p = 0;
         const interval = setInterval(() => {
           p += 5;
@@ -184,273 +121,173 @@ const VocationalTest = () => {
   const calculateResult = () => {
     const counts: Record<string, number> = { logical: 0, creative: 0, social: 0, technical: 0 };
     Object.values(answers).forEach((answerId) => {
-        // Find category for this answer
-        for(const q of questions) {
-            const opt = q.options.find(o => o.id === answerId);
-            if(opt) {
-                counts[opt.category] = (counts[opt.category] || 0) + 1;
-            }
-        }
+      for(const q of questions) {
+        const opt = q.options.find(o => o.id === answerId);
+        if(opt) counts[opt.category]++;
+      }
     });
-    
-    // Find max category
-    let maxCat = "logical";
-    let maxVal = 0;
-    for (const [cat, val] of Object.entries(counts)) {
-        if (val > maxVal) {
-            maxVal = val;
-            maxCat = cat;
-        }
-    }
+    let maxCat = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
     return results[maxCat as keyof typeof results];
   };
 
   const resultData = currentStep > totalSteps + 1 ? calculateResult() : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-orange/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img 
-                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
-                alt="Universidad Metropolitana" 
-                className="h-12"
-              />
+    <div className="min-h-screen bg-[#F8F9FA]">
+      {/* HEADER SUPERIOR (Sin logo, idéntico a becas) */}
+      <header className="bg-white border-b border-gray-100 px-6 py-4">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate("/modules")}
+              className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
+            >
+              <ChevronLeft className="h-4 w-4" /> Volver
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-[#F37021] text-xl font-bold leading-tight">
+                Universidad Metropolitana
+              </h1>
+              <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
+                Orientación Vocacional
+              </p>
             </div>
-            <nav className="flex items-center space-x-4">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => navigate("/login")}
-                className="text-primary hover:text-primary-foreground hover:bg-primary"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Iniciar Sesión
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/register")}
-                className="bg-gradient-primary hover:opacity-90 transition-opacity"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Registrarse
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/postulaciones-becas")}
-                className="bg-white text-primary hover:bg-white/90"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Postularme a Beca
-              </Button>
-            </nav>
           </div>
+
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm border border-gray-200 rounded-md px-4 py-2 hover:bg-gray-50 transition-colors"
+          >
+            <LogOut className="h-4 w-4" /> Cerrar Sesión
+          </button>
         </div>
       </header>
-    
 
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 flex items-center justify-center p-4">
-        
-        {/* Progress Bar (Only during test) */}
-        {currentStep > 0 && currentStep <= totalSteps && (
-          <div className="fixed top-20 left-0 w-full h-1 bg-slate-200 z-40">
-            <motion.div 
-              className="h-full bg-blue-600"
-              initial={{ width: 0 }}
-              animate={{ width: `${((currentStep - 1) / totalSteps) * 100}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        )}
+      {/* BREADCRUMB (Inicio > Orientación Vocacional) */}
+      <div className="bg-white border-b border-gray-100 px-6 py-3">
+        <div className="max-w-[1400px] mx-auto flex items-center gap-2 text-sm text-gray-600">
+          <Compass className="h-4 w-4" />
+          <button 
+            onClick={() => navigate("/modules")}
+            className="hover:text-orange-500 transition-colors"
+          >
+            Inicio
+          </button>
+          <span className="text-gray-300">/</span>
+          <span className="font-bold text-gray-900">Orientación Vocacional</span>
+        </div>
+      </div>
 
-        <div className="max-w-2xl w-full">
+      <main className="container mx-auto px-4 py-12 text-center">
+        <div className="max-w-3xl mx-auto">
           <AnimatePresence mode="wait">
-            
-            {/* Step 0: Intro */}
             {currentStep === 0 && (
-              <motion.div
-                key="intro"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="text-center"
-              >
-                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/20">
-                  <BrainCircuit className="w-12 h-12 text-blue-600" />
-                </div>
-                <h1 className="text-4xl font-bold text-slate-900 mb-4">Test de Orientación Vocacional</h1>
-                <p className="text-xl text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed">
-                  Responde unas breves preguntas para que nuestra IA analice tu perfil y te recomiende las carreras ideales para ti en la UNIMET.
-                </p>
-                <div className="flex justify-center gap-8 text-sm text-slate-500 mb-10">
-                    <div className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-green-500" /> 5 minutos</div>
-                    <div className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-green-500" /> Gratis</div>
-                    <div className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-green-500" /> Resultados inmediatos</div>
-                </div>
-                <Button onClick={handleStart} size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-12 h-14 rounded-full text-lg shadow-lg hover:scale-105 transition-transform">
-                  Comenzar Test
-                </Button>
-              </motion.div>
-            )}
-
-            {/* Steps 1..N: Questions */}
-            {currentStep > 0 && currentStep <= totalSteps && (
-              <motion.div
-                key={`question-${currentStep}`}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-              >
-                <Card className="border-0 shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden">
-                  <CardContent className="p-8 md:p-12">
-                    <div className="text-sm font-bold text-blue-600 mb-4 uppercase tracking-wider">
-                      Pregunta {currentStep} de {totalSteps}
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-8 leading-tight">
-                      {questions[currentStep - 1].question}
-                    </h2>
-
-                    <RadioGroup 
-                      value={selectedOption || ""} 
-                      onValueChange={setSelectedOption}
-                      className="space-y-4"
-                    >
-                      {questions[currentStep - 1].options.map((option) => (
-                        <div key={option.id} className={`relative flex items-center space-x-2 border-2 rounded-xl p-4 transition-all cursor-pointer hover:border-blue-200 ${selectedOption === option.id ? 'border-blue-600 bg-blue-50' : 'border-slate-100 bg-white'}`}>
-                          <RadioGroupItem value={option.id} id={option.id} className="sr-only" />
-                          <Label htmlFor={option.id} className="flex-1 cursor-pointer font-medium text-lg text-slate-700 w-full h-full flex items-center">
-                            {option.text}
-                          </Label>
-                          {selectedOption === option.id && (
-                              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                  <CheckCircle className="w-6 h-6 text-blue-600" />
-                              </motion.div>
-                          )}
-                        </div>
-                      ))}
-                    </RadioGroup>
-
-                    <div className="mt-10 flex justify-end">
-                      <Button 
-                        onClick={handleNext} 
-                        disabled={!selectedOption}
-                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 h-12 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {currentStep === totalSteps ? "Finalizar" : "Siguiente"} 
-                        <ChevronRight className="ml-2 w-5 h-5" />
-                      </Button>
-                    </div>
-                  </CardContent>
+              <motion.div key="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Test Vocacional</h2>
+                <p className="text-gray-500 mb-10 text-lg">Selecciona las opciones que mejor describan tu perfil</p>
+                <Card className="border-none shadow-sm rounded-xl p-10 bg-white">
+                  <BrainCircuit className="w-16 h-16 text-orange-500 mx-auto mb-6" />
+                  <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg leading-relaxed">
+                    Responde estas preguntas con sinceridad para que podamos sugerirte las carreras que mejor se adaptan a tus intereses.
+                  </p>
+                  <Button 
+                    onClick={() => setCurrentStep(1)} 
+                    className="bg-[#F37021] hover:bg-orange-600 text-white rounded-md px-10 h-12 font-bold transition-all text-lg"
+                  >
+                    Comenzar Evaluación
+                  </Button>
                 </Card>
               </motion.div>
             )}
 
-            {/* Step N+1: Loading */}
-            {currentStep === totalSteps + 1 && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center w-full"
-              >
-                <div className="w-24 h-24 mx-auto mb-8 relative">
-                    <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                    <BrainCircuit className="absolute inset-0 m-auto text-blue-600 w-8 h-8 animate-pulse" />
+            {currentStep > 0 && currentStep <= totalSteps && (
+              <motion.div key="test" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                <div className="mb-6 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-orange-500 transition-all duration-500" 
+                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                  />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Analizando tu perfil...</h2>
-                <p className="text-slate-500 mb-8">Estamos comparando tus respuestas con nuestra oferta académica.</p>
-                <div className="w-full max-w-md mx-auto bg-slate-200 rounded-full h-2 overflow-hidden">
-                    <motion.div 
-                        className="h-full bg-blue-600"
-                        style={{ width: `${loadingProgress}%` }}
-                    />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step N+2: Results */}
-            {currentStep === totalSteps + 2 && resultData && (
-              <motion.div
-                key="results"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full"
-              >
-                <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
-                    <div className={`${resultData.color} p-10 text-white text-center relative overflow-hidden`}>
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-black opacity-10 rounded-full -ml-16 -mb-16 blur-3xl"></div>
-                        
-                        <motion.div 
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.3 }}
+                <Card className="border-none shadow-sm rounded-xl overflow-hidden text-left bg-white">
+                  <div className="p-8 md:p-12">
+                    <span className="text-orange-500 text-xs font-bold uppercase tracking-widest mb-2 block">
+                      Pregunta {currentStep} de {totalSteps}
+                    </span>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-8 leading-tight">
+                      {questions[currentStep - 1].question}
+                    </h3>
+                    <RadioGroup value={selectedOption || ""} onValueChange={setSelectedOption} className="space-y-4">
+                      {questions[currentStep - 1].options.map((option) => (
+                        <div 
+                          key={option.id} 
+                          className={`flex items-center space-x-3 p-5 rounded-lg border transition-all cursor-pointer ${
+                            selectedOption === option.id 
+                            ? 'border-orange-500 bg-orange-50 shadow-sm' 
+                            : 'border-gray-100 hover:border-gray-300'
+                          }`}
+                          onClick={() => setSelectedOption(option.id)}
                         >
-                            <div className="inline-block bg-white/20 backdrop-blur-md rounded-full px-4 py-1 text-sm font-bold mb-6">
-                                PERFIL DETECTADO
-                            </div>
-                            <h2 className="text-4xl md:text-5xl font-bold mb-4">{resultData.title}</h2>
-                            <p className="text-white/90 text-lg max-w-lg mx-auto leading-relaxed">
-                                {resultData.description}
-                            </p>
-                        </motion.div>
-                    </div>
-                    
-                    <div className="p-10">
-                        <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
-                            <GraduationCap className="w-6 h-6 mr-2 text-slate-400" />
-                            Carreras Recomendadas en UNIMET
-                        </h3>
-                        
-                        <div className="grid md:grid-cols-2 gap-4 mb-10">
-                            {resultData.careers.map((career, index) => (
-                                <motion.div 
-                                    key={career}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.5 + (index * 0.1) }}
-                                    className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all cursor-pointer"
-                                >
-                                    <span className="font-semibold text-slate-700">{career}</span>
-                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500" />
-                                </motion.div>
-                            ))}
+                          <RadioGroupItem value={option.id} id={option.id} />
+                          <Label htmlFor={option.id} className="flex-1 cursor-pointer font-medium text-lg text-gray-700">
+                            {option.text}
+                          </Label>
                         </div>
-
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6 border-t border-slate-100">
-                             <Button onClick={() => window.location.reload()} variant="outline" className="rounded-full border-slate-200 text-slate-600 hover:bg-slate-50">
-                                <RefreshCcw className="w-4 h-4 mr-2" />
-                                Repetir Test
-                             </Button>
-                             <Button className="rounded-full bg-slate-900 text-white hover:bg-slate-800 px-8">
-                                <BookOpen className="w-4 h-4 mr-2" />
-                                Ver Pensum de Estudios
-                             </Button>
-                        </div>
+                      ))}
+                    </RadioGroup>
+                    <div className="mt-10 flex justify-end">
+                      <Button onClick={handleNext} disabled={!selectedOption} className="bg-gray-900 hover:bg-black text-white px-8 h-12 rounded-md font-bold text-lg">
+                        {currentStep === totalSteps ? "Finalizar" : "Siguiente"} 
+                      </Button>
                     </div>
-                </div>
+                  </div>
+                </Card>
               </motion.div>
             )}
 
+            {currentStep === totalSteps + 1 && (
+              <div className="py-20">
+                <RefreshCcw className="w-16 h-16 animate-spin mx-auto text-orange-500 mb-6" />
+                <h2 className="text-2xl font-bold text-gray-900">Analizando tu perfil...</h2>
+                <div className="w-full max-w-md mx-auto bg-gray-200 h-2 rounded-full mt-6 overflow-hidden">
+                  <motion.div className="h-full bg-orange-500" style={{ width: `${loadingProgress}%` }} />
+                </div>
+              </div>
+            )}
+
+            {currentStep === totalSteps + 2 && resultData && (
+              <motion.div key="result" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                <Card className="border-none shadow-sm rounded-xl overflow-hidden bg-white text-left">
+                  <div className={`${resultData.color} p-10 text-white text-center`}>
+                    <h2 className="text-4xl font-black mb-4">{resultData.title}</h2>
+                    <p className="text-white/90 text-lg">{resultData.description}</p>
+                  </div>
+                  <CardContent className="p-10">
+                    <h3 className="font-bold text-gray-400 uppercase text-xs tracking-widest mb-6">Carreras Sugeridas</h3>
+                    <div className="grid gap-3">
+                      {resultData.careers.map(c => (
+                        <div key={c} className="p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:border-orange-200 transition-all">
+                          <span className="font-bold text-gray-700">{c}</span>
+                          <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-orange-500" />
+                        </div>
+                      ))}
+                    </div>
+                    <Button onClick={() => window.location.reload()} variant="outline" className="w-full mt-10 h-12 font-bold rounded-md">
+                      Repetir Evaluación
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
-      </div>
-      
-      {/* Footer */}
-      <footer className="bg-card border-t border-orange/20 py-8 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center mb-4">
-            <GraduationCap className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold text-primary">Universidad Metropolitana</span>
+      </main>
+
+      <footer className="bg-white border-t border-gray-100 py-8 px-4 text-center mt-auto">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 font-bold text-gray-900">
+            <GraduationCap className="h-5 w-5 text-orange-500" /> Universidad Metropolitana
           </div>
-          <p className="text-muted-foreground">
-            © 2025 Universidad Metropolitana. Sistema Multiplataforma.
-          </p>
+          <p className="text-gray-400 text-xs">© 2025 Universidad Metropolitana. Sistema Multiplataforma.</p>
         </div>
       </footer>
     </div>
