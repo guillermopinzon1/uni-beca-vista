@@ -312,7 +312,7 @@ const ScholarshipPrograms = () => {
           {/* Logo en el centro */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
             <img
-              src="/450.jpg"
+              src="/lovable-uploads/UNIMETLogo.png"
               alt="UNIMET Logo"
               className="h-12 object-contain"
             />
