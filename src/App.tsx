@@ -51,7 +51,7 @@ import VocationalCounselor from "./pages/Vocacion/VocationalCounselor";
 
 import OrientacionVocacional from "./pages/OrientacionVocacional";
 import DashboardAspirante from "./pages/Vocacion/DashboardAspirante";
-import VocationalIndex from "./pages/Vocacion/vocationalIndex";
+import VocationalIndex from "./pages/Vocacion/VocationalIndex";
 
 
 const queryClient = new QueryClient();

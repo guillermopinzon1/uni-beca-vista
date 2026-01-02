@@ -1,17 +1,46 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
+import VocationalTest from "./VocationalTest";
+import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const DashboardAspirante = () => {
   const navigate = useNavigate();
-  const [activeModule, setActiveModule] = useState<string>("informacion");
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [activeModule, setActiveModule] = useState<string>("tests");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [notasColegio, setNotasColegio] = useState({
+    primerAno: "",
+    segundoAno: "",
+    tercerAno: "",
+    cuartoAno: "",
+    promedio: ""
+  });
 
   const sidebarItems = [
+    {
+      title: "Tests Vocacionales",
+      icon: BrainCircuit,
+      module: "tests"
+    },
+    {
+      title: "Subir Notas del Colegio",
+      icon: Upload,
+      module: "notas"
+    },
+    {
+      title: "Mi Perfil",
+      icon: User,
+      module: "perfil"
+    },
     {
       title: "Información del Programa",
       icon: Info,
@@ -24,7 +53,237 @@ const DashboardAspirante = () => {
     }
   ];
 
+  const handleSubirNotas = async () => {
+    // Validar que todos los campos estén llenos
+    if (!notasColegio.primerAno || !notasColegio.segundoAno || !notasColegio.tercerAno || !notasColegio.cuartoAno) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todas las notas",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Calcular promedio
+    const promedio = (
+      (parseFloat(notasColegio.primerAno) +
+       parseFloat(notasColegio.segundoAno) +
+       parseFloat(notasColegio.tercerAno) +
+       parseFloat(notasColegio.cuartoAno)) / 4
+    ).toFixed(2);
+
+    setNotasColegio({ ...notasColegio, promedio });
+
+    // Aquí puedes agregar la lógica para guardar en el backend
+    toast({
+      title: "Éxito",
+      description: `Notas guardadas. Promedio calculado: ${promedio}`,
+    });
+  };
+
   const renderContent = () => {
+    if (activeModule === "tests") {
+      return <VocationalTest />;
+    }
+
+    if (activeModule === "notas") {
+      return (
+        <div className="space-y-6">
+          <Card className="border-orange/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Upload className="h-6 w-6" />
+                Subir Notas del Colegio
+              </CardTitle>
+              <CardDescription>
+                Ingresa tus notas de 1ro a 4to año de bachillerato para calcular tu promedio
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  El promedio mínimo requerido para postular es de <strong>15,00 puntos</strong>
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="primerAno">1er Año</Label>
+                  <Input
+                    id="primerAno"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={notasColegio.primerAno}
+                    onChange={(e) => setNotasColegio({ ...notasColegio, primerAno: e.target.value })}
+                    placeholder="Ej: 16.50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="segundoAno">2do Año</Label>
+                  <Input
+                    id="segundoAno"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={notasColegio.segundoAno}
+                    onChange={(e) => setNotasColegio({ ...notasColegio, segundoAno: e.target.value })}
+                    placeholder="Ej: 17.00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tercerAno">3er Año</Label>
+                  <Input
+                    id="tercerAno"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={notasColegio.tercerAno}
+                    onChange={(e) => setNotasColegio({ ...notasColegio, tercerAno: e.target.value })}
+                    placeholder="Ej: 16.75"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cuartoAno">4to Año</Label>
+                  <Input
+                    id="cuartoAno"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={notasColegio.cuartoAno}
+                    onChange={(e) => setNotasColegio({ ...notasColegio, cuartoAno: e.target.value })}
+                    placeholder="Ej: 18.00"
+                  />
+                </div>
+              </div>
+
+              {notasColegio.promedio && (
+                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Promedio Calculado:</span>
+                    <span className={`text-2xl font-bold ${
+                      parseFloat(notasColegio.promedio) >= 15 
+                        ? "text-green-600" 
+                        : "text-red-600"
+                    }`}>
+                      {notasColegio.promedio}
+                    </span>
+                  </div>
+                  {parseFloat(notasColegio.promedio) >= 15 ? (
+                    <p className="text-sm text-green-700 mt-2">
+                      ✓ Cumples con el requisito mínimo de 15,00 puntos
+                    </p>
+                  ) : (
+                    <p className="text-sm text-red-700 mt-2">
+                      ✗ No cumples con el requisito mínimo de 15,00 puntos
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <Button 
+                onClick={handleSubirNotas}
+                className="w-full bg-gradient-primary hover:opacity-90"
+              >
+                Guardar Notas
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    if (activeModule === "perfil") {
+      return (
+        <div className="space-y-6">
+          <Card className="border-orange/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <User className="h-6 w-6" />
+                Mi Perfil
+              </CardTitle>
+              <CardDescription>
+                Información personal y datos de tu cuenta
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Información Personal */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Nombre</Label>
+                  <p className="text-base font-medium text-primary">
+                    {user?.nombre || 'No disponible'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Apellido</Label>
+                  <p className="text-base font-medium text-primary">
+                    {user?.apellido || 'No disponible'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Correo Electrónico</Label>
+                  <p className="text-base font-medium text-primary">
+                    {user?.email || 'No disponible'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Cédula</Label>
+                  <p className="text-base font-medium text-primary">
+                    {user?.cedula || 'No disponible'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Teléfono</Label>
+                  <p className="text-base font-medium text-primary">
+                    {user?.telefono || 'No disponible'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Rol</Label>
+                  <p className="text-base font-medium text-primary capitalize">
+                    {user?.role || 'Aspirante'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Estado de la cuenta */}
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Estado de la cuenta:</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    user?.activo 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {user?.activo ? 'Activa' : 'Pendiente de aprobación'}
+                  </span>
+                </div>
+                {!user?.emailVerified && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    ⚠️ Tu correo electrónico aún no ha sido verificado
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     if (activeModule === "reglamento") {
       return (
         <div className="flex justify-center">
