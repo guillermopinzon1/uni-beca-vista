@@ -49,9 +49,10 @@ import VocationalCrm from "./pages/Vocacion/VocationalCrm";
 import VocationalAnalytics from "./pages/Vocacion/VocationalAnalytics";
 import VocationalCounselor from "./pages/Vocacion/VocationalCounselor";
 
-import OrientacionVocacional from "./pages/OrientacionVocacional";
+
 import DashboardAspirante from "./pages/Vocacion/DashboardAspirante";
-import VocationalIndex from "./pages/Vocacion/VocationalIndex";
+import VocationalIndex from "./pages/Vocacion/vocationalIndex";
+
 
 
 const queryClient = new QueryClient();
@@ -77,7 +78,6 @@ const App = () => (
               <Route path="/vocational-analytics" element={<VocationalAnalytics/>}/>
               <Route path="/vocational-counselor" element={<VocationalCounselor/>}/>
 
-              <Route path="/orientacion-vocacional" element={<OrientacionVocacional/>}/>
 
               <Route path="/dashboard-aspirante" element={<DashboardAspirante/>}/>
 

@@ -92,7 +92,7 @@ const ModuleSelection = () => {
       title: "Gestión de Orientación Vocacional",
       description: "Centraliza la realización, analisis y seguimiento de orientación vocacional.",
       icon: Compass,
-      route: "/vocational-test",
+      route: "/dashboard-aspirante",
       available: true
     }
     // Future modules can be added here
