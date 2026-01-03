@@ -95,7 +95,7 @@ const Login = () => {
       //navigate("/vocational-test");
         navigate("/modules");
       } else if (role === "especialista") {
-        navigate("/vocational-counselor");
+        navigate("/dashboard-especialista");
       } else {
         navigate("/");
       }

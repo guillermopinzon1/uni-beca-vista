@@ -91,8 +91,8 @@ const Home = () => {
               Accede a becas, orientación vocacional y herramientas digitales diseñadas para potenciar tu carrera universitaria.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-slate-900 text-white hover:bg-slate-800 h-14 px-8 rounded-2xl text-lg font-bold" onClick={() => navigate("/index")}>
-                Ver Becas
+              <Button size="lg" className="bg-slate-900 text-white hover:bg-slate-800 h-14 px-8 rounded-2xl text-lg font-bold" onClick={() => navigate("/postulaciones-becas")}>
+                Postularse a una Beca
               </Button>
               <Button size="lg" variant="outline" className="border-2 border-slate-200 h-14 px-8 rounded-2xl text-lg font-bold" onClick={() => navigate("/vocational")}>
                 Test Vocacional
@@ -142,7 +142,7 @@ const Home = () => {
             title="Gestión de Becas"
             description="Administra tu solicitud de ayuda económica de forma transparente y digital. Consulta estados y requisitos en tiempo real."
             icon={GraduationCap}
-            onClick={() => navigate("/index")}
+            onClick={() => navigate("/postulaciones-becas")}
           />
           <ServiceCard 
             title="Orientación Vocacional"
@@ -158,7 +158,11 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-6 text-center">
           <div className="flex justify-center items-center gap-3 mb-8">
             <div className="w-10 h-1 bg-orange-500" />
-            <span className="text-2xl font-black uppercase tracking-tighter">UNIMET</span>
+            <img
+              src="/lovable-uploads/UNIMETLogo.png"
+              alt="UNIMET Logo"
+              className="h-12 object-contain"
+            />
             <div className="w-10 h-1 bg-orange-500" />
           </div>
           <p className="text-slate-400 text-sm font-medium">

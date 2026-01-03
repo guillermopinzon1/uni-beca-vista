@@ -47,11 +47,11 @@ import VocationalProfile from "./pages/Vocacion/VocationalProfile";
 import VocationalExplorer from "./pages/Vocacion/VocationalExplorer";
 import VocationalCrm from "./pages/Vocacion/VocationalCrm";
 import VocationalAnalytics from "./pages/Vocacion/VocationalAnalytics";
-import VocationalCounselor from "./pages/Vocacion/VocationalCounselor";
 
 
 import DashboardAspirante from "./pages/Vocacion/DashboardAspirante";
 import VocationalIndex from "./pages/Vocacion/vocationalIndex";
+import DashboardEspecialist from "./pages/Vocacion/DashboardEspecialist";
 
 
 
@@ -76,11 +76,10 @@ const App = () => (
               <Route path="/vocational-explorer" element={<VocationalExplorer/>}/>
               <Route path="/vocational-crm" element={<VocationalCrm/>}/>
               <Route path="/vocational-analytics" element={<VocationalAnalytics/>}/>
-              <Route path="/vocational-counselor" element={<VocationalCounselor/>}/>
 
 
               <Route path="/dashboard-aspirante" element={<DashboardAspirante/>}/>
-
+              <Route path="/dashboard-especialista" element={<DashboardEspecialist/>}/>
 
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
