@@ -75,10 +75,9 @@ const DashboardEspecialist = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { toast } = useToast();
-  const [activeModule, setActiveModule] = useState<string>("tests");
+  const [activeModule, setActiveModule] = useState<string>("estudiantes");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [counselorTab, setCounselorTab] = useState<string>("students");
   const [notasColegio, setNotasColegio] = useState({
     primerAno: "",
     segundoAno: "",
@@ -131,11 +130,6 @@ const DashboardEspecialist = () => {
 
   const sidebarItems = [
     {
-      title: "Tests Vocacionales",
-      icon: BrainCircuit,
-      module: "tests"
-    },
-    {
       title: "Gestión de Estudiantes",
       icon: Users,
       module: "estudiantes"
@@ -151,24 +145,9 @@ const DashboardEspecialist = () => {
       module: "campanas"
     },
     {
-      title: "Subir Notas del Colegio",
-      icon: Upload,
-      module: "notas"
-    },
-    {
       title: "Mi Perfil",
       icon: User,
       module: "perfil"
-    },
-    {
-      title: "Información del Programa",
-      icon: Info,
-      module: "informacion"
-    },
-    {
-      title: "Acceso al Reglamento",
-      icon: FileText,
-      module: "reglamento"
     }
   ];
 
@@ -198,46 +177,9 @@ const DashboardEspecialist = () => {
   };
 
   const renderContent = () => {
-    if (activeModule === "tests") {
-      return (
-        <div className="space-y-6">
-          <Tabs defaultValue="chat" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="chat">Chat</TabsTrigger>
-              <TabsTrigger value="consulta">Consulta</TabsTrigger>
-              <TabsTrigger value="recomendaciones">Recomendaciones</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="chat" className="mt-4">
-              <ChatOrientacion />
-            </TabsContent>
-
-            <TabsContent value="consulta" className="mt-4">
-              <ConsultaLLM />
-            </TabsContent>
-
-            <TabsContent value="recomendaciones" className="mt-4">
-              <RecomendacionesCarrera
-                perfilEstudiante={perfilEstudiante}
-                carrerasDisponibles={carrerasDisponibles}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-      );
-    }
-
     if (activeModule === "estudiantes") {
       return (
         <div className="space-y-6">
-          <Tabs value={counselorTab} onValueChange={setCounselorTab} className="w-full">
-            <TabsList className="w-full justify-start bg-white border border-slate-200 p-1 rounded-xl mb-6">
-              <TabsTrigger value="students" className="rounded-lg px-6 flex-1">Gestión de Estudiantes</TabsTrigger>
-              <TabsTrigger value="admissions" className="rounded-lg px-6 flex-1">Admisiones y Aspirantes</TabsTrigger>
-              <TabsTrigger value="bulk-campaigns" className="rounded-lg px-6 flex-1">Campañas Masivas</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="students">
               <div className="flex flex-col lg:flex-row gap-8">
                 {/* Student List Sidebar */}
                 <div className="w-full lg:w-1/3 space-y-4">
@@ -479,10 +421,13 @@ const DashboardEspecialist = () => {
                   )}
                 </div>
               </div>
-            </TabsContent>
+        </div>
+      );
+    }
 
-            <TabsContent value="admissions">
-              <div className="space-y-8">
+    if (activeModule === "admissions") {
+      return (
+        <div className="space-y-8">
                 {/* KPI Cards */}
                 <div className="grid md:grid-cols-4 gap-4">
                   <Card className="bg-white border-slate-200 shadow-sm">
@@ -661,10 +606,12 @@ const DashboardEspecialist = () => {
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
+      );
+    }
 
-            <TabsContent value="bulk-campaigns">
-              <div className="space-y-6">
+    if (activeModule === "campanas") {
+      return (
+        <div className="space-y-6">
                 <Card className="rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-2xl text-slate-900">Gestor de Campañas Masivas</CardTitle>
@@ -766,136 +713,6 @@ const DashboardEspecialist = () => {
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      );
-    }
-
-    if (activeModule === "admissions") {
-      setCounselorTab("admissions");
-      setActiveModule("estudiantes");
-      return null;
-    }
-
-    if (activeModule === "campanas") {
-      setCounselorTab("bulk-campaigns");
-      setActiveModule("estudiantes");
-      return null;
-    }
-
-    if (activeModule === "notas") {
-      return (
-        <div className="space-y-6">
-          <Card className="border-orange/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Upload className="h-6 w-6" />
-                Subir Notas del Colegio
-              </CardTitle>
-              <CardDescription>
-                Ingresa tus notas de 1ro a 4to año de bachillerato para calcular tu promedio
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  El promedio mínimo requerido para postular es de <strong>15,00 puntos</strong>
-                </AlertDescription>
-              </Alert>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primerAno">1er Año</Label>
-                  <Input
-                    id="primerAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.primerAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, primerAno: e.target.value })}
-                    placeholder="Ej: 16.50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="segundoAno">2do Año</Label>
-                  <Input
-                    id="segundoAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.segundoAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, segundoAno: e.target.value })}
-                    placeholder="Ej: 17.00"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tercerAno">3er Año</Label>
-                  <Input
-                    id="tercerAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.tercerAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, tercerAno: e.target.value })}
-                    placeholder="Ej: 16.75"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cuartoAno">4to Año</Label>
-                  <Input
-                    id="cuartoAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.cuartoAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, cuartoAno: e.target.value })}
-                    placeholder="Ej: 18.00"
-                  />
-                </div>
-              </div>
-
-              {notasColegio.promedio && (
-                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Promedio Calculado:</span>
-                    <span className={`text-2xl font-bold ${
-                      parseFloat(notasColegio.promedio) >= 15 
-                        ? "text-green-600" 
-                        : "text-red-600"
-                    }`}>
-                      {notasColegio.promedio}
-                    </span>
-                  </div>
-                  {parseFloat(notasColegio.promedio) >= 15 ? (
-                    <p className="text-sm text-green-700 mt-2">
-                      ✓ Cumples con el requisito mínimo de 15,00 puntos
-                    </p>
-                  ) : (
-                    <p className="text-sm text-red-700 mt-2">
-                      ✗ No cumples con el requisito mínimo de 15,00 puntos
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <Button 
-                onClick={handleSubirNotas}
-                className="w-full bg-gradient-primary hover:opacity-90"
-              >
-                Guardar Notas
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       );
     }
 
@@ -980,61 +797,7 @@ const DashboardEspecialist = () => {
       );
     }
 
-    if (activeModule === "reglamento") {
-      return (
-        <div className="flex justify-center">
-          <ReglamentoAccess becaType="impacto" />
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-8">
-        {/* Hero Section */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-          <CardContent className="p-8">
-            <div className="flex items-start gap-4">
-              <div className="p-4 bg-primary/10 rounded-full">
-                <Heart className="h-12 w-12 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold text-foreground mb-3">
-                  Democratización e Inclusión Educativa
-                </h2>
-                <p className="text-lg text-muted-foreground mb-4">
-                  El Programa Beca Impacto está orientado a fomentar la democratización e inclusión de bachilleres,
-                  promoviendo la conformación de una población estudiantil diversa socialmente a través de alianzas
-                  estratégicas con instituciones educativas, empresas u organizaciones.
-                </p>
-                <div className="flex items-center gap-2 text-primary font-semibold">
-                  <Award className="h-5 w-5" />
-                  <span>Cobertura: 100% de matrícula + cuota de inscripción</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Resto del contenido de información del programa - similar a DashboardAspirante */}
-        <Card className="border-orange/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Award className="h-6 w-6" />
-              Naturaleza y Cobertura del Beneficio
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                La Beca Impacto es la <strong>exoneración total del pago de la matrícula de pregrado</strong> para
-                estudiantes que cumplan los requisitos establecidos.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return null;
   };
 
   return (
@@ -1092,16 +855,7 @@ const DashboardEspecialist = () => {
                 onMouseLeave={() => setHoveredItem(null)}
               >
                 <button
-                  onClick={() => {
-                    setActiveModule(item.module);
-                    if (item.module === "admissions") {
-                      setCounselorTab("admissions");
-                      setActiveModule("estudiantes");
-                    } else if (item.module === "campanas") {
-                      setCounselorTab("bulk-campaigns");
-                      setActiveModule("estudiantes");
-                    }
-                  }}
+                  onClick={() => setActiveModule(item.module)}
                   className={`w-12 h-12 flex items-center justify-center rounded-lg border border-orange/20 transition-all duration-200 ${
                     activeModule === item.module
                       ? "bg-orange/10 border-orange/40"
