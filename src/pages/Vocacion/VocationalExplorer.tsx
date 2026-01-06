@@ -72,7 +72,7 @@ async function fetchCareers(params: {
   qs.set("page", String(params.page ?? 1));
   qs.set("limit", String(params.limit ?? 50));
 
-  const res = await fetch(`${base}/api/careers?${qs.toString()}`);
+  const res = await fetch(`${base}/careers?${qs.toString()}`);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `Error ${res.status} cargando carreras`);

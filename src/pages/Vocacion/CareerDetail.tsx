@@ -20,7 +20,7 @@ type CareerDetail = {
 
 async function fetchCareer(id: string) {
   const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-  const res = await fetch(`${base}/api/careers/${id}`);
+  const res = await fetch(`${base}/careers/${id}`);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `Error ${res.status} cargando carrera`);
