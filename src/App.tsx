@@ -47,6 +47,7 @@ import VocationalProfile from "./pages/Vocacion/VocationalProfile";
 import VocationalExplorer from "./pages/Vocacion/VocationalExplorer";
 import VocationalCrm from "./pages/Vocacion/VocationalCrm";
 import VocationalAnalytics from "./pages/Vocacion/VocationalAnalytics";
+import CareerDetailPage from "./pages/Vocacion/CareerDetail";
 
 
 import DashboardAspirante from "./pages/Vocacion/DashboardAspirante";
@@ -76,6 +77,8 @@ const App = () => (
               <Route path="/vocational-explorer" element={<VocationalExplorer/>}/>
               <Route path="/vocational-crm" element={<VocationalCrm/>}/>
               <Route path="/vocational-analytics" element={<VocationalAnalytics/>}/>
+
+              <Route path="/career/:id" element={<CareerDetailPage />} />
 
 
               <Route path="/dashboard-aspirante" element={<DashboardAspirante/>}/>
