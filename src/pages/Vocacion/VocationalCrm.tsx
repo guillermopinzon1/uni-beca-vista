@@ -1,129 +1,17 @@
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star,Calendar, Bell, MessageSquare, Mail, GraduationCap, Users, Award, FileText, LogIn, UserPlus, BookOpen, BrainCircuit, UserCircle, BellRing, BarChart3, ChevronRight, PlayCircle, Search, Sparkles  } from "lucide-react";
-import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
-import { useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Star, Calendar, Bell, MessageSquare, Mail, GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 
 const vocationalBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
 const VocationalCrm = () => {
-  const navigate = useNavigate();
-  const [isCtaVisible, setIsCtaVisible] = useState(false);
-  const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
-  const ctaRef = useRef<HTMLElement>(null);
-  const featuresRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.2,
-      rootMargin: "0px"
-    };
-
-    const ctaObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsCtaVisible(true);
-        }
-      });
-    }, observerOptions);
-
-    const featuresObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsFeaturesVisible(true);
-        }
-      });
-    }, observerOptions);
-
-    if (ctaRef.current) {
-      ctaObserver.observe(ctaRef.current);
-    }
-
-    if (featuresRef.current) {
-      featuresObserver.observe(featuresRef.current);
-    }
-
-    return () => {
-      ctaObserver.disconnect();
-      featuresObserver.disconnect();
-    };
-  }, []);
-
-  const features = [
-    {
-      icon: GraduationCap,
-      title: "Gestión de Becas",
-      description: "Administra y monitorea todas las becas disponibles para estudiantes"
-    },
-    {
-      icon: Users,
-      title: "Estudiantes",
-      description: "Gestiona perfiles de estudiantes y sus solicitudes de becas"
-    },
-    {
-      icon: Award,
-      title: "Seguimiento",
-      description: "Realiza seguimiento del progreso y estado de las becas otorgadas"
-    },
-    {
-      icon: FileText,
-      title: "Reportes",
-      description: "Genera reportes detallados sobre el programa de becas"
-    }
-  ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-orange/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img 
-                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
-                alt="Universidad Metropolitana" 
-                className="h-12"
-              />
-            </div>
-            <nav className="flex items-center space-x-4">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => navigate("/login")}
-                className="text-primary hover:text-primary-foreground hover:bg-primary"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Iniciar Sesión
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/register")}
-                className="bg-gradient-primary hover:opacity-90 transition-opacity"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Registrarse
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/postulaciones-becas")}
-                className="bg-white text-primary hover:bg-white/90"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Postularme a Beca
-              </Button>
-            </nav>
-          </div>
-        </div>
-      </header>
-    
-      
-      <div className="min-h-screen bg-slate-50">
-        {/* Header */}
-        <div className="relative bg-pink-50 border-b border-pink-100 py-12 overflow-hidden">
+      <div className="relative bg-pink-50 border-b border-pink-100 py-12 overflow-hidden">
            <div 
              className="absolute inset-0 opacity-40 mix-blend-multiply"
              style={{ backgroundImage: `url(${vocationalBg})`, backgroundSize: 'cover' }}
@@ -263,7 +151,6 @@ const VocationalCrm = () => {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Footer */}
       <footer className="bg-card border-t border-orange/20 py-8 px-4">

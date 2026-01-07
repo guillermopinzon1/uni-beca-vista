@@ -43,7 +43,6 @@ import AyudantiasProgram from "./pages/AyudantiasProgram";
 import Home from "./pages/home";
 
 import VocationalTest from "./pages/Vocacion/VocationalTest";
-import VocationalProfile from "./pages/Vocacion/VocationalProfile";
 import VocationalExplorer from "./pages/Vocacion/VocationalExplorer";
 import VocationalCrm from "./pages/Vocacion/VocationalCrm";
 import VocationalAnalytics from "./pages/Vocacion/VocationalAnalytics";
@@ -73,7 +72,6 @@ const App = () => (
               <Route path="/home" element={<Home/>} /> 
               <Route path="/vocational" element={<VocationalIndex/>}/>
               <Route path="/vocational-test" element={<VocationalTest/>}/>
-              <Route path="/vocational-profile" element={<VocationalProfile/>}/>
               <Route path="/vocational-explorer" element={<VocationalExplorer/>}/>
               <Route path="/vocational-crm" element={<VocationalCrm/>}/>
               <Route path="/vocational-analytics" element={<VocationalAnalytics/>}/>
