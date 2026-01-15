@@ -1,3 +1,22 @@
+# Código del Sistema de Orientación Vocacional
+
+Este documento contiene todo el código relacionado con el sistema de orientación vocacional que fue implementado en el frontend.
+
+## Archivos incluidos
+
+1. **SeleccionarTest.tsx** - Selección del tipo de test (Holland RIASEC o Kuder)
+2. **Ronda1.tsx** - Primera ronda de preguntas
+3. **Ronda2.tsx** - Segunda ronda de preguntas adaptativas
+4. **Resultados.tsx** - Visualización de resultados del test
+5. **PerfilVocacional.tsx** - Perfil vocacional consolidado del usuario
+6. **Historial.tsx** - Historial de tests realizados
+7. **orientacionVocacional.ts** - API service con todas las funciones y tipos
+
+---
+
+## 1. SeleccionarTest.tsx
+
+```typescript
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -301,3 +320,164 @@ const SeleccionarTest = () => {
 };
 
 export default SeleccionarTest;
+```
+
+---
+
+## 2. Ronda1.tsx
+
+**Ubicación:** `src/pages/Vocacion/Ronda1.tsx`  
+**Líneas:** 597
+
+El archivo completo está disponible en el repositorio. Contiene:
+- Carga de preguntas desde localStorage
+- Manejo de respuestas con tiempo de respuesta
+- Cálculo de nivel de seguridad basado en tiempo
+- Envío de respuestas al backend
+- Manejo robusto de errores de sesión
+- Verificación de estado de sesión antes de guardar
+- Redirección automática a Ronda 2
+
+---
+
+## 3. Ronda2.tsx
+
+**Ubicación:** `src/pages/Vocacion/Ronda2.tsx`  
+**Líneas:** 549
+
+El archivo completo está disponible en el repositorio. Contiene:
+- Carga de preguntas desde localStorage o backend
+- Sistema de reintentos para obtener preguntas
+- Botón manual para cargar preguntas
+- Manejo de respuestas similar a Ronda 1
+- Finalización del test y redirección a resultados
+
+---
+
+## 4. Resultados.tsx
+
+**Ubicación:** `src/pages/Vocacion/Resultados.tsx`  
+**Líneas:** 385
+
+El archivo completo está disponible en el repositorio. Contiene:
+- Visualización de perfil dominante y perfiles secundarios
+- Gráfico de barras con puntuaciones por dimensión (usando Recharts)
+- Lista de carreras recomendadas con match scores
+- Lista de actividades recomendadas
+- Análisis LLM personalizado
+- Discrepancias detectadas
+
+---
+
+## 5. PerfilVocacional.tsx
+
+**Ubicación:** `src/pages/Vocacion/PerfilVocacional.tsx`  
+**Líneas:** 416
+
+El archivo completo está disponible en el repositorio. Contiene:
+- Perfil vocacional consolidado del usuario
+- Puntuaciones por dimensión
+- Carreras recomendadas con opción de actualizar
+- Actividades recomendadas
+- Diálogo para actualizar recomendaciones con contexto adicional
+
+---
+
+## 6. Historial.tsx
+
+**Ubicación:** `src/pages/Vocacion/Historial.tsx`  
+**Líneas:** 279
+
+El archivo completo está disponible en el repositorio. Contiene:
+- Lista de todos los tests realizados
+- Estado de cada test (completado, en ronda 1, en ronda 2)
+- Fechas de inicio y fin
+- Perfil dominante de cada test
+- Navegación a resultados de tests completados
+
+---
+
+## 7. orientacionVocacional.ts (API Service)
+
+**Ubicación:** `src/lib/api/orientacionVocacional.ts`  
+**Líneas:** 490
+
+### Interfaces principales:
+
+```typescript
+export type TipoTest = 'Holland_RIASEC' | 'Kuder';
+
+export interface Pregunta {
+  id: string;
+  texto: string;
+  opciones?: string[] | null;
+  tipo?: string;
+  instrucciones?: string | null;
+  dimension?: string;
+}
+
+export interface RespuestaPregunta {
+  preguntaId: string;
+  respuesta: string | boolean;
+  tiempoSegundos?: number;
+  nivelSeguridad?: 'muy_seguro' | 'seguro' | 'indeciso' | 'muy_indeciso';
+}
+```
+
+### Funciones API:
+
+1. `iniciarTest(accessToken, tipoTest)` - Inicia un nuevo test
+2. `guardarRespuestasRonda1(accessToken, sesionId, respuestas)` - Guarda respuestas de Ronda 1
+3. `guardarRespuestasRonda2(accessToken, sesionId, respuestas)` - Guarda respuestas de Ronda 2
+4. `obtenerSesion(accessToken, sesionId)` - Obtiene información de una sesión
+5. `obtenerResultados(accessToken, sesionId)` - Obtiene resultados completos
+6. `obtenerPerfilVocacional(accessToken)` - Obtiene perfil consolidado
+7. `obtenerHistorial(accessToken)` - Obtiene historial de tests
+8. `generarRecomendacionesContinuas(accessToken, contextoAdicional)` - Genera recomendaciones actualizadas
+9. `analizarCambioCarrera(accessToken, carreraDestinoId, razones, preocupaciones)` - Analiza cambio de carrera
+
+El archivo completo está disponible en el repositorio.
+
+---
+
+## Rutas en App.tsx
+
+Las siguientes rutas fueron agregadas al archivo `App.tsx`:
+
+```typescript
+// Imports
+import SeleccionarTest from "./pages/Vocacion/SeleccionarTest";
+import Ronda1 from "./pages/Vocacion/Ronda1";
+import Ronda2 from "./pages/Vocacion/Ronda2";
+import Resultados from "./pages/Vocacion/Resultados";
+import PerfilVocacional from "./pages/Vocacion/PerfilVocacional";
+import Historial from "./pages/Vocacion/Historial";
+
+// Dentro de <Routes>:
+<Route path="/orientacion/seleccionar-test" element={<SeleccionarTest/>}/>
+<Route path="/orientacion/ronda-1" element={<Ronda1/>}/>
+<Route path="/orientacion/ronda-2" element={<Ronda2/>}/>
+<Route path="/orientacion/resultados/:sesionId?" element={<Resultados/>}/>
+<Route path="/orientacion/perfil" element={<PerfilVocacional/>}/>
+<Route path="/orientacion/historial" element={<Historial/>}/>
+```
+
+---
+
+## Notas importantes
+
+- Todos los archivos utilizan `localStorage` para persistir datos entre sesiones
+- El sistema maneja estados de sesión: `iniciada`, `ronda_2`, `completado`
+- Se implementó manejo robusto de errores, especialmente para errores 401 y 403
+- El sistema permite múltiples intentos y maneja casos donde la sesión ya cambió de estado
+- Las preguntas de Ronda 2 pueden generarse de forma asíncrona en el backend
+- El nivel de seguridad se calcula basado en el tiempo de respuesta:
+  - < 5s = muy_seguro
+  - 5-15s = seguro
+  - 15-30s = indeciso
+  - > 30s = muy_indeciso
+
+---
+
+**Fecha de creación:** 2025-01-14  
+**Última actualización:** 2025-01-14
