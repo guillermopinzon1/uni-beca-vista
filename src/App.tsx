@@ -52,6 +52,12 @@ import CareerDetailPage from "./pages/Vocacion/CareerDetail";
 import DashboardAspirante from "./pages/Vocacion/DashboardAspirante";
 import VocationalIndex from "./pages/Vocacion/vocationalIndex";
 import DashboardEspecialist from "./pages/Vocacion/DashboardEspecialist";
+import SeleccionarTest from "./pages/Vocacion/SeleccionarTest";
+import Ronda1 from "./pages/Vocacion/Ronda1";
+import Ronda2 from "./pages/Vocacion/Ronda2";
+import Resultados from "./pages/Vocacion/Resultados";
+import PerfilVocacional from "./pages/Vocacion/PerfilVocacional";
+import Historial from "./pages/Vocacion/Historial";
 
 
 
@@ -81,6 +87,14 @@ const App = () => (
 
               <Route path="/dashboard-aspirante" element={<DashboardAspirante/>}/>
               <Route path="/dashboard-especialista" element={<DashboardEspecialist/>}/>
+
+              {/* Rutas de Orientación Vocacional */}
+              <Route path="/orientacion/seleccionar-test" element={<SeleccionarTest/>}/>
+              <Route path="/orientacion/ronda-1" element={<Ronda1/>}/>
+              <Route path="/orientacion/ronda-2" element={<Ronda2/>}/>
+              <Route path="/orientacion/resultados/:sesionId?" element={<Resultados/>}/>
+              <Route path="/orientacion/perfil" element={<PerfilVocacional/>}/>
+              <Route path="/orientacion/historial" element={<Historial/>}/>
 
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

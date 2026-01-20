@@ -1,0 +1,412 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { 
+  GraduationCap, LogOut, Compass, ChevronLeft, 
+  ChevronRight, Loader2 
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { 
+  guardarRespuestasRonda1,
+  Pregunta, 
+  RespuestaPregunta 
+} from "@/lib/api/orientacionVocacional";
+
+const Ronda1 = () => {
+  const navigate = useNavigate();
+  const { tokens, logout } = useAuth();
+  const { toast } = useToast();
+  
+  const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
+  const [preguntaActual, setPreguntaActual] = useState(0);
+  const [respuestas, setRespuestas] = useState<Record<string, RespuestaPregunta>>({});
+  const [tiempos, setTiempos] = useState<Record<string, number>>({});
+  const [inicioTiempo, setInicioTiempo] = useState<number | null>(null);
+  const [respuestaSeleccionada, setRespuestaSeleccionada] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(false);
+
+  const accessToken = tokens?.accessToken || 
+    JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+  useEffect(() => {
+    // Cargar preguntas de localStorage
+    const preguntasGuardadas = localStorage.getItem('preguntasRonda1');
+    if (!preguntasGuardadas) {
+      toast({
+        title: "Error",
+        description: "No se encontraron preguntas. Por favor inicia un nuevo test.",
+        variant: "destructive",
+      });
+      navigate('/orientacion/seleccionar-test');
+      return;
+    }
+
+    try {
+      const preguntasData = JSON.parse(preguntasGuardadas);
+      const listaPreguntas = Array.isArray(preguntasData) ? preguntasData : (preguntasData.preguntas || []);
+      setPreguntas(listaPreguntas);
+      
+      // Inicializar tiempos
+      const tiemposIniciales: Record<string, number> = {};
+      listaPreguntas.forEach((preg: Pregunta) => {
+        tiemposIniciales[preg.id] = 0;
+      });
+      setTiempos(tiemposIniciales);
+      
+      // Iniciar timer para primera pregunta
+      setInicioTiempo(Date.now());
+      
+      // Cargar respuestas guardadas si existen
+      const respuestasGuardadas = localStorage.getItem('respuestasRonda1');
+      if (respuestasGuardadas) {
+        const respuestasParseadas = JSON.parse(respuestasGuardadas);
+        // Filtrar solo las respuestas que corresponden a las preguntas actuales
+        const idsPreguntasActuales = new Set(listaPreguntas.map((p: Pregunta) => p.id));
+        const respuestasFiltradas: Record<string, RespuestaPregunta> = {};
+        
+        Object.keys(respuestasParseadas).forEach((preguntaId) => {
+          if (idsPreguntasActuales.has(preguntaId)) {
+            respuestasFiltradas[preguntaId] = respuestasParseadas[preguntaId];
+          }
+        });
+        
+        setRespuestas(respuestasFiltradas);
+        if (Object.keys(respuestasFiltradas).length > 0) {
+          localStorage.setItem('respuestasRonda1', JSON.stringify(respuestasFiltradas));
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar preguntas:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar las preguntas. Por favor intenta nuevamente.",
+        variant: "destructive",
+      });
+      navigate('/orientacion/seleccionar-test');
+    }
+  }, [navigate, toast]);
+
+  const calcularNivelSeguridad = (tiempoSegundos: number): 'seguro' | 'no_seguro' => {
+    // Lógica basada en tiempo de respuesta:
+    // - Rápido (< 10s) = seguro (respuesta rápida, alta confianza)
+    // - Lento (>= 10s) = no_seguro (dudando)
+    return tiempoSegundos < 10 ? 'seguro' : 'no_seguro';
+  };
+
+  const responderPregunta = (preguntaId: string, respuesta: string | boolean) => {
+    if (!inicioTiempo) return;
+
+    // Calcular tiempo transcurrido
+    const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+    
+    // Guardar respuesta
+    const nuevaRespuesta: RespuestaPregunta = {
+      preguntaId,
+      respuesta,
+      tiempoRespuesta: tiempoTranscurrido,
+      nivelSeguridad: calcularNivelSeguridad(tiempoTranscurrido),
+    };
+
+    const nuevasRespuestas = {
+      ...respuestas,
+      [preguntaId]: nuevaRespuesta,
+    };
+    
+    setRespuestas(nuevasRespuestas);
+    setTiempos({
+      ...tiempos,
+      [preguntaId]: tiempoTranscurrido,
+    });
+
+    // Guardar en localStorage para persistencia
+    localStorage.setItem('respuestasRonda1', JSON.stringify(nuevasRespuestas));
+
+    // Si es la última pregunta, enviar respuestas
+    if (preguntaActual === preguntas.length - 1) {
+      enviarRespuestasRonda1(nuevasRespuestas);
+    } else {
+      // Avanzar a siguiente pregunta
+      setPreguntaActual(preguntaActual + 1);
+      setInicioTiempo(Date.now());
+      setRespuestaSeleccionada(null);
+    }
+  };
+
+  const enviarRespuestasRonda1 = async (respuestasParaEnviar: Record<string, RespuestaPregunta>) => {
+    if (!accessToken) {
+      toast({
+        title: "Sesión expirada",
+        description: "Por favor inicia sesión nuevamente",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    const sesionId = localStorage.getItem('sesionId');
+    if (!sesionId) {
+      toast({
+        title: "Error",
+        description: "No se encontró la sesión. Por favor inicia un nuevo test.",
+        variant: "destructive",
+      });
+      navigate('/orientacion/seleccionar-test');
+      return;
+    }
+
+    setCargando(true);
+
+    try {
+      // Filtrar solo las respuestas que corresponden a las preguntas actuales
+      const idsPreguntasActuales = new Set(preguntas.map(p => p.id));
+      const respuestasFiltradas = Object.values(respuestasParaEnviar).filter(
+        r => idsPreguntasActuales.has(r.preguntaId)
+      );
+      
+      // Verificar que todas las preguntas estén respondidas
+      if (respuestasFiltradas.length !== preguntas.length) {
+        const preguntasSinResponder = preguntas.filter(
+          p => !respuestasFiltradas.find(r => r.preguntaId === p.id)
+        );
+        toast({
+          title: "Error de validación",
+          description: `Faltan ${preguntas.length - respuestasFiltradas.length} pregunta(s) por responder.`,
+          variant: "destructive",
+        });
+        setCargando(false);
+        return;
+      }
+
+      const respuesta = await guardarRespuestasRonda1(accessToken, sesionId, respuestasFiltradas);
+      
+      // Guardar datos de Ronda 1
+      if (respuesta.data.puntuacionesRonda1) {
+        localStorage.setItem('puntuacionesRonda1', JSON.stringify(respuesta.data.puntuacionesRonda1));
+      }
+      
+      // Guardar preguntas de Ronda 2
+      if (respuesta.data.preguntasRonda2 && respuesta.data.preguntasRonda2.length > 0) {
+        localStorage.setItem('preguntasRonda2', JSON.stringify(respuesta.data.preguntasRonda2));
+        localStorage.setItem('estadoSesion', respuesta.data.estado);
+        
+        toast({
+          title: "Ronda 1 completada",
+          description: "Ahora continuarás con la Ronda 2",
+        });
+
+        // Redirigir a Ronda 2
+        navigate('/orientacion/ronda-2');
+      } else {
+        toast({
+          title: "Ronda 1 completada",
+          description: "Las preguntas de Ronda 2 se están generando...",
+        });
+        localStorage.setItem('estadoSesion', respuesta.data.estado);
+        navigate('/orientacion/ronda-2');
+      }
+    } catch (error: any) {
+      console.error('Error al guardar respuestas:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al guardar respuestas. Por favor intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  const pregunta = preguntas[preguntaActual];
+  const porcentajeProgreso = preguntas.length > 0 
+    ? ((preguntaActual + 1) / preguntas.length) * 100 
+    : 0;
+
+  if (preguntas.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F8F9FA]">
+      {/* HEADER SUPERIOR */}
+      <header className="bg-white border-b border-gray-100 px-6 py-4">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate("/orientacion/seleccionar-test")}
+              className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
+            >
+              <ChevronLeft className="h-4 w-4" /> Volver
+            </button>
+            <div className="flex flex-col">
+              <h1 className="text-[#F37021] text-xl font-bold leading-tight">
+                Universidad Metropolitana
+              </h1>
+              <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
+                Orientación Vocacional - Ronda 1
+              </p>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm border border-gray-200 rounded-md px-4 py-2 hover:bg-gray-50 transition-colors"
+          >
+            <LogOut className="h-4 w-4" /> Cerrar Sesión
+          </button>
+        </div>
+      </header>
+
+      {/* BREADCRUMB */}
+      <div className="bg-white border-b border-gray-100 px-6 py-3">
+        <div className="max-w-[1400px] mx-auto flex items-center gap-2 text-sm text-gray-600">
+          <Compass className="h-4 w-4" />
+          <button 
+            onClick={() => navigate("/modules")}
+            className="hover:text-orange-500 transition-colors"
+          >
+            Inicio
+          </button>
+          <span className="text-gray-300">/</span>
+          <span className="hover:text-orange-500 transition-colors cursor-pointer"
+            onClick={() => navigate("/orientacion/seleccionar-test")}
+          >
+            Seleccionar Test
+          </span>
+          <span className="text-gray-300">/</span>
+          <span className="font-bold text-gray-900">Ronda 1</span>
+        </div>
+      </div>
+
+      <main className="container mx-auto px-4 py-12">
+        <div className="max-w-3xl mx-auto">
+          {/* Barra de progreso */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">
+                Pregunta {preguntaActual + 1} de {preguntas.length}
+              </span>
+              <span className="text-sm text-gray-500">
+                {Math.round(porcentajeProgreso)}%
+              </span>
+            </div>
+            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-orange-500 transition-all duration-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${porcentajeProgreso}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Pregunta */}
+          <Card className="border-none shadow-sm rounded-xl overflow-hidden bg-white">
+            <CardContent className="p-8 md:p-12">
+              <span className="text-orange-500 text-xs font-bold uppercase tracking-widest mb-2 block">
+                Ronda 1
+              </span>
+              <h3 className="text-2xl font-bold text-gray-900 mb-8 leading-tight">
+                {pregunta?.texto}
+              </h3>
+
+              {pregunta?.opcionesRespuesta && pregunta.opcionesRespuesta.length > 0 ? (
+                <RadioGroup 
+                  value={respuestaSeleccionada || ""} 
+                  onValueChange={setRespuestaSeleccionada}
+                  className="space-y-4"
+                >
+                  {pregunta.opcionesRespuesta.map((opcion, index) => (
+                    <div 
+                      key={index}
+                      className={`flex items-center space-x-3 p-5 rounded-lg border transition-all cursor-pointer ${
+                        respuestaSeleccionada === opcion
+                          ? 'border-orange-500 bg-orange-50 shadow-sm' 
+                          : 'border-gray-100 hover:border-gray-300'
+                      }`}
+                      onClick={() => setRespuestaSeleccionada(opcion)}
+                    >
+                      <RadioGroupItem value={opcion} id={`opcion-${index}`} />
+                      <Label 
+                        htmlFor={`opcion-${index}`} 
+                        className="flex-1 cursor-pointer font-medium text-lg text-gray-700"
+                      >
+                        {opcion}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              ) : (
+                <div className="space-y-4">
+                  <Button
+                    onClick={() => {
+                      responderPregunta(pregunta.id, true);
+                    }}
+                    className="w-full h-16 text-lg font-medium bg-green-50 hover:bg-green-100 text-green-700 border-2 border-green-200"
+                  >
+                    Sí
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      responderPregunta(pregunta.id, false);
+                    }}
+                    className="w-full h-16 text-lg font-medium bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200"
+                  >
+                    No
+                  </Button>
+                </div>
+              )}
+
+              {pregunta?.opcionesRespuesta && pregunta.opcionesRespuesta.length > 0 && (
+                <div className="mt-10 flex justify-end">
+                  <Button 
+                    onClick={() => respuestaSeleccionada && responderPregunta(pregunta.id, respuestaSeleccionada)}
+                    disabled={!respuestaSeleccionada || cargando}
+                    className="bg-gray-900 hover:bg-black text-white px-8 h-12 rounded-md font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {cargando ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Procesando...
+                      </>
+                    ) : preguntaActual === preguntas.length - 1 ? (
+                      "Finalizar Ronda 1"
+                    ) : (
+                      <>
+                        Siguiente
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      <footer className="bg-white border-t border-gray-100 py-8 px-4 text-center mt-auto">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 font-bold text-gray-900">
+            <GraduationCap className="h-5 w-5 text-orange-500" /> Universidad Metropolitana
+          </div>
+          <p className="text-gray-400 text-xs">© 2025 Universidad Metropolitana. Sistema Multiplataforma.</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default Ronda1;
