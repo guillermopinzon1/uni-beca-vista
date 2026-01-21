@@ -187,13 +187,40 @@ const Ronda2 = () => {
     setCargando(true);
 
     try {
-      const respuestasArray = Object.values(respuestasParaEnviar);
+      // Filtrar solo las respuestas que corresponden a las preguntas actuales
+      const idsPreguntasActuales = new Set(preguntas.map(p => p.id));
+      
+      // Crear un Map para eliminar duplicados (mantener solo la última respuesta por pregunta)
+      const respuestasMap = new Map<string, RespuestaPregunta>();
+      
+      Object.values(respuestasParaEnviar).forEach(respuesta => {
+        if (idsPreguntasActuales.has(respuesta.preguntaId)) {
+          respuestasMap.set(respuesta.preguntaId, respuesta);
+        }
+      });
+      
+      const respuestasArray = Array.from(respuestasMap.values());
+      
+      console.log('📊 Ronda 2 - Total de preguntas:', preguntas.length);
+      console.log('📊 Ronda 2 - Respuestas filtradas:', respuestasArray.length);
       
       // Verificar que todas las preguntas estén respondidas
       if (respuestasArray.length !== preguntas.length) {
         toast({
           title: "Error de validación",
           description: `Faltan ${preguntas.length - respuestasArray.length} pregunta(s) por responder.`,
+          variant: "destructive",
+        });
+        setCargando(false);
+        return;
+      }
+
+      // Verificar que no haya más respuestas que preguntas
+      if (respuestasArray.length > preguntas.length) {
+        console.error('❌ Ronda 2 - Hay más respuestas que preguntas:', respuestasArray.length, 'vs', preguntas.length);
+        toast({
+          title: "Error de validación",
+          description: `Se detectaron respuestas duplicadas. Por favor recarga la página e intenta nuevamente.`,
           variant: "destructive",
         });
         setCargando(false);
@@ -214,7 +241,10 @@ const Ronda2 = () => {
         description: "Tus respuestas han sido procesadas. Generando resultados...",
       });
 
-      navigate(`/orientacion/resultados/${sesionId}`);
+      // Esperar un poco antes de redirigir para que el backend procese
+      setTimeout(() => {
+        navigate(`/orientacion/resultados/${sesionId}`);
+      }, 1000);
       
     } catch (error: any) {
       console.error('Error al completar test:', error);

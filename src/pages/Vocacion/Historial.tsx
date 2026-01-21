@@ -41,12 +41,34 @@ const Historial = () => {
 
     try {
       const respuesta = await obtenerHistorial(accessToken);
-      setHistorial(respuesta.data);
+      // Asegurarse de que data sea un array
+      const historialData = Array.isArray(respuesta.data) ? respuesta.data : [];
+      setHistorial(historialData);
+      console.log('📋 Historial cargado:', historialData.length, 'tests');
     } catch (error: any) {
       console.error('Error al cargar historial:', error);
+      console.error('Error completo:', JSON.stringify(error, null, 2));
+      setHistorial([]); // Asegurar que siempre sea un array
+      
+      // Mensaje más amigable según el tipo de error
+      let mensajeError = error.message || "Error al cargar el historial";
+      
+      if (error.status === 500) {
+        if (mensajeError.includes('usuarioId') || mensajeError.includes('columna')) {
+          mensajeError = 'Error en la configuración del servidor. Por favor contacta al administrador del sistema.';
+        } else {
+          mensajeError = 'Error interno del servidor. Por favor intenta más tarde o contacta al administrador.';
+        }
+      } else if (error.status === 401) {
+        mensajeError = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+        setTimeout(() => navigate("/login"), 2000);
+      } else if (error.status === 403) {
+        mensajeError = 'No tienes permisos para ver el historial.';
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Error al cargar el historial",
+        description: mensajeError,
         variant: "destructive",
       });
     } finally {

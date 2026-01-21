@@ -51,10 +51,65 @@ const Resultados = () => {
       setError(null);
 
       try {
-        const respuesta = await obtenerResultados(accessToken, sesionId);
-        setResultados(respuesta.data);
+        // Intentar múltiples veces si los resultados no están listos
+        let respuesta: any = null;
+        let intentos = 0;
+        const maxIntentos = 5;
+        
+        while (intentos < maxIntentos) {
+          // Esperar antes de cada intento (más tiempo en los primeros intentos)
+          if (intentos > 0) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+          
+          try {
+            respuesta = await obtenerResultados(accessToken, sesionId);
+            console.log(`📊 Intento ${intentos + 1} - Respuesta completa:`, JSON.stringify(respuesta, null, 2));
+            console.log('📊 respuesta.data:', respuesta.data);
+            console.log('📊 respuesta.data.resultado:', respuesta.data?.resultado);
+            console.log('📊 Tipo de respuesta.data:', typeof respuesta.data);
+            
+            // Verificar diferentes estructuras posibles
+            if (respuesta.data) {
+              // Estructura esperada: respuesta.data.resultado
+              if (respuesta.data.resultado) {
+                console.log('✅ Resultados encontrados en respuesta.data.resultado');
+                setResultados(respuesta.data);
+                return; // Salir del loop si encontramos los resultados
+              }
+              // Estructura alternativa: respuesta.data puede ser el resultado directamente
+              else if (respuesta.data.perfilDominante || respuesta.data.codigoHolland) {
+                console.log('✅ Resultados encontrados directamente en respuesta.data');
+                // Reestructurar para que coincida con la interfaz esperada
+                setResultados({
+                  sesionId: respuesta.data.sesionId || sesionId,
+                  resultado: respuesta.data,
+                  puntuacionesFinales: respuesta.data.puntuacionesFinales || respuesta.data.puntuaciones || {},
+                });
+                return;
+              }
+            }
+            
+            // Si llegamos aquí, los resultados no están listos
+            console.log(`⚠️ Intento ${intentos + 1}: Los resultados aún no están disponibles`);
+            intentos++;
+            
+          } catch (intentoError: any) {
+            console.error(`❌ Error en intento ${intentos + 1}:`, intentoError);
+            // Si es un error 404 o similar, no tiene sentido seguir intentando
+            if (intentoError.status === 404) {
+              throw intentoError;
+            }
+            intentos++;
+          }
+        }
+        
+        // Si llegamos aquí, agotamos los intentos
+        throw new Error('Los resultados están siendo procesados. Por favor espera unos segundos y recarga la página, o intenta verlos desde el historial.');
+        
       } catch (error: any) {
-        console.error('Error al cargar resultados:', error);
+        console.error('❌ Error final al cargar resultados:', error);
+        console.error('❌ Stack:', error.stack);
         const mensajeError = error.message || "Error al cargar resultados";
         setError(mensajeError);
         toast({
@@ -93,7 +148,18 @@ const Resultados = () => {
     );
   }
 
-  if (error || !resultados || !resultados.resultado) {
+  // Verificar si tenemos resultados válidos
+  const tieneResultados = resultados && (
+    resultados.resultado || 
+    (resultados as any).perfilDominante || 
+    (resultados as any).codigoHolland
+  );
+
+  if (error || !tieneResultados) {
+    // Si hay resultados pero no tienen la estructura esperada, intentar mostrar lo que hay
+    if (resultados && !resultados.resultado) {
+      console.warn('⚠️ Resultados sin estructura esperada:', resultados);
+    }
     return (
       <div className="min-h-screen bg-[#F8F9FA]">
         <header className="bg-white border-b border-gray-100 px-6 py-4">
@@ -132,7 +198,37 @@ const Resultados = () => {
     );
   }
 
-  const { resultado } = resultados;
+  // Manejar diferentes estructuras de respuesta
+  const resultado = resultados.resultado || resultados as any;
+  
+  // Validar que tenemos los datos mínimos necesarios
+  if (!resultado || (!resultado.perfilDominante && !(resultado as any).perfil_dominante)) {
+    console.error('❌ No se encontraron datos de resultado válidos');
+    console.error('❌ Estructura recibida:', JSON.stringify(resultados, null, 2));
+    setError('Los resultados no tienen la estructura esperada. Por favor contacta al administrador.');
+    return (
+      <div className="min-h-screen bg-[#F8F9FA]">
+        <main className="container mx-auto px-4 py-12">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
+              <p className="text-gray-600 mb-4">Los resultados no tienen la estructura esperada.</p>
+              <p className="text-gray-500 text-sm mb-6">Revisa la consola del navegador para más detalles.</p>
+              <Button onClick={() => navigate('/orientacion/historial')}>
+                Ver Historial
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+  
+  // Normalizar nombres de propiedades (por si el backend usa snake_case)
+  const perfilDominante = resultado.perfilDominante || (resultado as any).perfil_dominante || 'No disponible';
+  const perfilSecundario = resultado.perfilSecundario || (resultado as any).perfil_secundario;
+  const codigoHolland = resultado.codigoHolland || (resultado as any).codigo_holland || 'N/A';
+  const nivelConfianza = resultado.nivelConfianza || (resultado as any).nivel_confianza || 0;
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -188,19 +284,19 @@ const Resultados = () => {
                 <h2 className="text-3xl font-bold">Tu Perfil Vocacional</h2>
               </div>
               <div className="mb-4">
-                <h3 className="text-4xl font-black mb-2">{resultado.perfilDominante}</h3>
-                {resultado.perfilSecundario && (
+                <h3 className="text-4xl font-black mb-2">{perfilDominante}</h3>
+                {perfilSecundario && (
                   <p className="text-orange-50 text-lg">
-                    Perfil Secundario: <span className="font-bold">{resultado.perfilSecundario}</span>
+                    Perfil Secundario: <span className="font-bold">{perfilSecundario}</span>
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-4">
                 <p className="text-orange-50 text-lg">
-                  Código Holland: <span className="font-bold text-2xl">{resultado.codigoHolland}</span>
+                  Código Holland: <span className="font-bold text-2xl">{codigoHolland}</span>
                 </p>
                 <p className="text-orange-50 text-lg">
-                  Nivel de confianza: <span className="font-bold">{Math.round(resultado.nivelConfianza)}%</span>
+                  Nivel de confianza: <span className="font-bold">{Math.round(nivelConfianza)}%</span>
                 </p>
               </div>
             </CardContent>
@@ -262,7 +358,7 @@ const Resultados = () => {
           )}
 
           {/* Perfil Vocacional */}
-          {resultado.perfilVocacional && (
+          {(resultado.perfilVocacional || (resultado as any).perfil_vocacional) && (
             <Card className="border-none shadow-sm rounded-xl">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -270,14 +366,22 @@ const Resultados = () => {
                   Perfil Vocacional
                 </h3>
                 <div className="grid md:grid-cols-3 gap-6">
-                  {resultado.perfilVocacional.fortalezas && resultado.perfilVocacional.fortalezas.length > 0 && (
+                  {(() => {
+                    const perfilVoc = resultado.perfilVocacional || (resultado as any).perfil_vocacional || {};
+                    const fortalezas = perfilVoc.fortalezas || perfilVoc.fortaleza || [];
+                    const debilidades = perfilVoc.debilidades || perfilVoc.debilidad || [];
+                    const oportunidades = perfilVoc.oportunidades || perfilVoc.oportunidad || [];
+                    
+                    return (
+                      <>
+                        {fortalezas.length > 0 && (
                     <div>
                       <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5" />
                         Fortalezas
                       </h4>
                       <ul className="space-y-2">
-                        {resultado.perfilVocacional.fortalezas.map((fortaleza, index) => (
+                        {fortalezas.map((fortaleza: string, index: number) => (
                           <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
                             <span className="text-green-500 mt-1">•</span>
                             {fortaleza}
@@ -286,14 +390,14 @@ const Resultados = () => {
                       </ul>
                     </div>
                   )}
-                  {resultado.perfilVocacional.debilidades && resultado.perfilVocacional.debilidades.length > 0 && (
+                  {debilidades.length > 0 && (
                     <div>
                       <h4 className="font-bold text-red-700 mb-3 flex items-center gap-2">
                         <Target className="h-5 w-5" />
                         Debilidades
                       </h4>
                       <ul className="space-y-2">
-                        {resultado.perfilVocacional.debilidades.map((debilidad, index) => (
+                        {debilidades.map((debilidad: string, index: number) => (
                           <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
                             <span className="text-red-500 mt-1">•</span>
                             {debilidad}
@@ -302,14 +406,14 @@ const Resultados = () => {
                       </ul>
                     </div>
                   )}
-                  {resultado.perfilVocacional.oportunidades && resultado.perfilVocacional.oportunidades.length > 0 && (
+                  {oportunidades.length > 0 && (
                     <div>
                       <h4 className="font-bold text-blue-700 mb-3 flex items-center gap-2">
                         <Lightbulb className="h-5 w-5" />
                         Oportunidades
                       </h4>
                       <ul className="space-y-2">
-                        {resultado.perfilVocacional.oportunidades.map((oportunidad, index) => (
+                        {oportunidades.map((oportunidad: string, index: number) => (
                           <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
                             <span className="text-blue-500 mt-1">•</span>
                             {oportunidad}
@@ -318,6 +422,14 @@ const Resultados = () => {
                       </ul>
                     </div>
                   )}
+                  {fortalezas.length === 0 && debilidades.length === 0 && oportunidades.length === 0 && (
+                    <div className="col-span-3 text-center text-gray-500 py-8">
+                      No hay información de perfil vocacional disponible.
+                    </div>
+                  )}
+                      </>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -371,7 +483,7 @@ const Resultados = () => {
           )}
 
           {/* Plan de Desarrollo */}
-          {resultado.planDesarrollo && (
+          {(resultado.planDesarrollo || (resultado as any).plan_desarrollo) && (
             <Card className="border-none shadow-sm rounded-xl">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -379,45 +491,61 @@ const Resultados = () => {
                   Plan de Desarrollo
                 </h3>
                 <div className="space-y-6">
-                  {resultado.planDesarrollo.cortoPlazo && resultado.planDesarrollo.cortoPlazo.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-gray-900 mb-3">Corto Plazo</h4>
-                      <ul className="space-y-2">
-                        {resultado.planDesarrollo.cortoPlazo.map((item, index) => (
-                          <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                            <span className="text-orange-500 mt-1">•</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {resultado.planDesarrollo.medianoPlazo && resultado.planDesarrollo.medianoPlazo.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-gray-900 mb-3">Mediano Plazo</h4>
-                      <ul className="space-y-2">
-                        {resultado.planDesarrollo.medianoPlazo.map((item, index) => (
-                          <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                            <span className="text-orange-500 mt-1">•</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {resultado.planDesarrollo.largoPlazo && resultado.planDesarrollo.largoPlazo.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-gray-900 mb-3">Largo Plazo</h4>
-                      <ul className="space-y-2">
-                        {resultado.planDesarrollo.largoPlazo.map((item, index) => (
-                          <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                            <span className="text-orange-500 mt-1">•</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {(() => {
+                    const planDes = resultado.planDesarrollo || (resultado as any).plan_desarrollo || {};
+                    const cortoPlazo = planDes.cortoPlazo || planDes.corto_plazo || [];
+                    const medianoPlazo = planDes.medianoPlazo || planDes.mediano_plazo || [];
+                    const largoPlazo = planDes.largoPlazo || planDes.largo_plazo || [];
+                    
+                    return (
+                      <>
+                        {cortoPlazo.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-gray-900 mb-3">Corto Plazo</h4>
+                            <ul className="space-y-2">
+                              {cortoPlazo.map((item: string, index: number) => (
+                                <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                                  <span className="text-orange-500 mt-1">•</span>
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {medianoPlazo.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-gray-900 mb-3">Mediano Plazo</h4>
+                            <ul className="space-y-2">
+                              {medianoPlazo.map((item: string, index: number) => (
+                                <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                                  <span className="text-orange-500 mt-1">•</span>
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {largoPlazo.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-gray-900 mb-3">Largo Plazo</h4>
+                            <ul className="space-y-2">
+                              {largoPlazo.map((item: string, index: number) => (
+                                <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                                  <span className="text-orange-500 mt-1">•</span>
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {cortoPlazo.length === 0 && medianoPlazo.length === 0 && largoPlazo.length === 0 && (
+                          <div className="text-center text-gray-500 py-8">
+                            No hay plan de desarrollo disponible.
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>

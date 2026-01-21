@@ -380,8 +380,21 @@ export async function obtenerHistorial(
   const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    const message = payload?.message || `Error al obtener historial (${response.status})`;
-    throw new Error(message);
+    let message = payload?.message || `Error al obtener historial (${response.status})`;
+    
+    // Manejar errores específicos del backend
+    if (response.status === 500) {
+      if (message.includes('usuarioId') || message.includes('columna')) {
+        message = 'Error en la base de datos del servidor. Por favor contacta al administrador.';
+      } else {
+        message = 'Error interno del servidor. Por favor intenta más tarde.';
+      }
+    }
+    
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
   }
 
   return payload as HistorialResponse;

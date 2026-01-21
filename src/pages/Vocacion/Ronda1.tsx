@@ -164,18 +164,44 @@ const Ronda1 = () => {
     try {
       // Filtrar solo las respuestas que corresponden a las preguntas actuales
       const idsPreguntasActuales = new Set(preguntas.map(p => p.id));
-      const respuestasFiltradas = Object.values(respuestasParaEnviar).filter(
-        r => idsPreguntasActuales.has(r.preguntaId)
-      );
+      
+      // Crear un Map para eliminar duplicados (mantener solo la última respuesta por pregunta)
+      const respuestasMap = new Map<string, RespuestaPregunta>();
+      
+      Object.values(respuestasParaEnviar).forEach(respuesta => {
+        if (idsPreguntasActuales.has(respuesta.preguntaId)) {
+          respuestasMap.set(respuesta.preguntaId, respuesta);
+        }
+      });
+      
+      const respuestasFiltradas = Array.from(respuestasMap.values());
+      
+      console.log('📊 Total de preguntas:', preguntas.length);
+      console.log('📊 Respuestas filtradas:', respuestasFiltradas.length);
+      console.log('📊 IDs de preguntas actuales:', Array.from(idsPreguntasActuales));
+      console.log('📊 IDs de respuestas:', respuestasFiltradas.map(r => r.preguntaId));
       
       // Verificar que todas las preguntas estén respondidas
       if (respuestasFiltradas.length !== preguntas.length) {
         const preguntasSinResponder = preguntas.filter(
-          p => !respuestasFiltradas.find(r => r.preguntaId === p.id)
+          p => !respuestasMap.has(p.id)
         );
+        console.error('❌ Preguntas sin responder:', preguntasSinResponder.map(p => ({ id: p.id, texto: p.texto })));
         toast({
           title: "Error de validación",
           description: `Faltan ${preguntas.length - respuestasFiltradas.length} pregunta(s) por responder.`,
+          variant: "destructive",
+        });
+        setCargando(false);
+        return;
+      }
+
+      // Verificar que no haya más respuestas que preguntas
+      if (respuestasFiltradas.length > preguntas.length) {
+        console.error('❌ Hay más respuestas que preguntas:', respuestasFiltradas.length, 'vs', preguntas.length);
+        toast({
+          title: "Error de validación",
+          description: `Se detectaron respuestas duplicadas. Por favor recarga la página e intenta nuevamente.`,
           variant: "destructive",
         });
         setCargando(false);

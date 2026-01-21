@@ -96,7 +96,35 @@ const PerfilVocacional = () => {
   }
 
   const { resultadoActual } = perfil;
-  const resultado = resultadoActual.resultado;
+  
+  // Manejar diferentes estructuras de respuesta
+  const resultado = resultadoActual?.resultado || resultadoActual || null;
+  
+  if (!resultado || (!resultado.perfilDominante && !(resultado as any).perfil_dominante)) {
+    console.error('❌ No se encontraron datos de resultado válidos en perfil');
+    console.error('❌ Estructura recibida:', JSON.stringify(perfil, null, 2));
+    return (
+      <div className="min-h-screen bg-[#F8F9FA]">
+        <main className="container mx-auto px-4 py-12">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay datos disponibles</h2>
+              <p className="text-gray-600 mb-6">El perfil vocacional no tiene datos de resultado. Completa un test para ver tu perfil.</p>
+              <Button onClick={() => navigate('/orientacion/seleccionar-test')}>
+                Realizar Test
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+  
+  // Normalizar nombres de propiedades
+  const perfilDominante = resultado.perfilDominante || (resultado as any).perfil_dominante || 'No disponible';
+  const perfilSecundario = resultado.perfilSecundario || (resultado as any).perfil_secundario;
+  const codigoHolland = resultado.codigoHolland || (resultado as any).codigo_holland || 'N/A';
+  const nivelConfianza = resultado.nivelConfianza || (resultado as any).nivel_confianza || 0;
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -152,7 +180,7 @@ const PerfilVocacional = () => {
                   <h2 className="text-3xl font-bold">Tu Perfil Vocacional Consolidado</h2>
                 </div>
                 <div className="text-right">
-                  <p className="text-orange-50 text-sm">Total de tests: {perfil.historial?.length || 0}</p>
+                  <p className="text-orange-50 text-sm">Total de tests: {Array.isArray(perfil.historial) ? perfil.historial.length : 0}</p>
                   {resultadoActual.sesionId && (
                     <Button
                       variant="secondary"
@@ -165,18 +193,18 @@ const PerfilVocacional = () => {
                   )}
                 </div>
               </div>
-              <h3 className="text-4xl font-black mb-2">{resultado.perfilDominante}</h3>
+              <h3 className="text-4xl font-black mb-2">{perfilDominante}</h3>
               <div className="flex items-center gap-4">
-                {resultado.perfilSecundario && (
+                {perfilSecundario && (
                   <p className="text-orange-50 text-lg">
-                    Perfil Secundario: <span className="font-bold">{resultado.perfilSecundario}</span>
+                    Perfil Secundario: <span className="font-bold">{perfilSecundario}</span>
                   </p>
                 )}
                 <p className="text-orange-50 text-lg">
-                  Código Holland: <span className="font-bold text-2xl">{resultado.codigoHolland}</span>
+                  Código Holland: <span className="font-bold text-2xl">{codigoHolland}</span>
                 </p>
                 <p className="text-orange-50 text-lg">
-                  Nivel de confianza: <span className="font-bold">{Math.round(resultado.nivelConfianza)}%</span>
+                  Nivel de confianza: <span className="font-bold">{Math.round(nivelConfianza)}%</span>
                 </p>
               </div>
             </CardContent>
