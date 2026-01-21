@@ -379,6 +379,12 @@ export async function obtenerHistorial(
   const isJson = contentType.includes('application/json');
   const payload = isJson ? await response.json() : null;
 
+  console.log('📥 [Frontend] Respuesta del backend - Status:', response.status);
+  console.log('📥 [Frontend] Respuesta del backend - Payload completo:', JSON.stringify(payload, null, 2));
+  console.log('📥 [Frontend] payload.data:', payload?.data);
+  console.log('📥 [Frontend] Tipo de payload.data:', typeof payload?.data);
+  console.log('📥 [Frontend] Es array?', Array.isArray(payload?.data));
+
   if (!response.ok) {
     let message = payload?.message || `Error al obtener historial (${response.status})`;
     
@@ -397,5 +403,47 @@ export async function obtenerHistorial(
     throw error;
   }
 
-  return payload as HistorialResponse;
+  // Asegurarse de que la respuesta tenga la estructura correcta
+  if (!payload) {
+    throw new Error('El servidor no devolvió datos');
+  }
+
+  // Si el backend devuelve directamente un array en lugar de { success, data }
+  if (Array.isArray(payload)) {
+    console.log('⚠️ [Frontend] El backend devolvió un array directamente, ajustando estructura');
+    return {
+      success: true,
+      data: payload
+    } as HistorialResponse;
+  }
+
+  // Si tiene la estructura { success, data }
+  if (payload.success !== undefined && payload.data !== undefined) {
+    console.log('✅ [Frontend] Estructura correcta con success y data');
+    return payload as HistorialResponse;
+  }
+
+  // Si solo tiene data
+  if (payload.data) {
+    console.log('✅ [Frontend] Estructura con solo data, ajustando');
+    return {
+      success: true,
+      data: Array.isArray(payload.data) ? payload.data : []
+    } as HistorialResponse;
+  }
+
+  // Si es un array directamente en el payload
+  if (Array.isArray(payload)) {
+    console.log('✅ [Frontend] Payload es un array directamente');
+    return {
+      success: true,
+      data: payload
+    } as HistorialResponse;
+  }
+
+  console.warn('⚠️ [Frontend] Estructura inesperada, devolviendo array vacío');
+  return {
+    success: true,
+    data: []
+  } as HistorialResponse;
 }

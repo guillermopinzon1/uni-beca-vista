@@ -41,10 +41,30 @@ const Historial = () => {
 
     try {
       const respuesta = await obtenerHistorial(accessToken);
+      console.log('📋 [Frontend] Respuesta completa de obtenerHistorial:', JSON.stringify(respuesta, null, 2));
+      console.log('📋 [Frontend] respuesta.data:', respuesta.data);
+      console.log('📋 [Frontend] Tipo de respuesta.data:', typeof respuesta.data);
+      console.log('📋 [Frontend] Es array?', Array.isArray(respuesta.data));
+      
       // Asegurarse de que data sea un array
-      const historialData = Array.isArray(respuesta.data) ? respuesta.data : [];
+      let historialData: any[] = [];
+      
+      if (Array.isArray(respuesta.data)) {
+        historialData = respuesta.data;
+      } else if (respuesta.data && Array.isArray(respuesta.data.data)) {
+        historialData = respuesta.data.data;
+      } else if (respuesta.data && typeof respuesta.data === 'object') {
+        // Si data es un objeto, intentar extraer un array
+        const keys = Object.keys(respuesta.data);
+        if (keys.length > 0 && Array.isArray(respuesta.data[keys[0]])) {
+          historialData = respuesta.data[keys[0]];
+        }
+      }
+      
+      console.log('📋 [Frontend] Historial procesado:', historialData.length, 'tests');
+      console.log('📋 [Frontend] Datos del historial:', JSON.stringify(historialData, null, 2));
+      
       setHistorial(historialData);
-      console.log('📋 Historial cargado:', historialData.length, 'tests');
     } catch (error: any) {
       console.error('Error al cargar historial:', error);
       console.error('Error completo:', JSON.stringify(error, null, 2));
