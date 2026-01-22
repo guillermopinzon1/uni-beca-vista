@@ -5,12 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Clock, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
 import { loginUser, forgotPassword } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useState as useStateReact } from "react";
+
+const BECA_ROUTES: Record<string, string> = {
+  "Ayudantía": "/pasante-ayudantias-modules",
+  "Excelencia": "/excelencia",
+  "Impacto": "/impacto",
+  "Exoneración de Pago": "/exoneracion",
+  "Formación Docente": "/formacion-docente",
+};
+
+const ROLE_ROUTES: Record<string, string> = {
+  "supervisor": "/supervisor-laboral-dashboard",
+  "supervisor-laboral": "/supervisor-laboral-dashboard",
+  "mentor": "/mentor-dashboard",
+  "admin": "/admin-dashboard",
+  "director-area": "/director-area-dashboard",
+  "capital-humano": "/capital-humano-dashboard",
+  "aspirante": "/modules",
+  "especialista": "/dashboard-especialista",
+};
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -20,93 +38,56 @@ const Login = () => {
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [isForgotPasswordLoading, setIsForgotPasswordLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
   const { toast } = useToast();
   const navigate = useNavigate();
   const { loginSuccess } = useAuth();
+
+  const getRedirectPath = (user: any) => {
+    if (user.role === "estudiante") {
+      return BECA_ROUTES[user.tipoBeca] || "/modules";
+    }
+    return ROLE_ROUTES[user.role] || "/";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Validación de dominio de email
-   // if (!email.endsWith("@unimet.edu.ve") && !email.endsWith("@correo.unimet.edu.ve")) {
-   //   throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
-     if (!email.includes("@") || !email.includes(".")) {
+      if (!email.includes("@") || !email.includes(".")) {
         throw new Error("Por favor, ingresa un correo electrónico válido");
       }
 
       const result = await loginUser({ email, password });
+      const { user, tokens } = result.data;
 
-      // Guardar en contexto + localStorage
       loginSuccess({
-        ...result.data.user,
-        apellido: result.data.user.apellido || ""
-      }, result.data.tokens);
+        ...user,
+        apellido: user.apellido || ""
+      }, tokens);
 
-      // Verificar si es primer login (debe cambiar contraseña)
-      if (result.data.user.firstLogin === true) {
+      if (user.firstLogin) {
         toast({
           title: "Cambio de contraseña requerido",
-          description: "Por seguridad, debes cambiar tu contraseña temporal antes de continuar",
+          description: "Por seguridad, debes cambiar tu contraseña temporal",
         });
-        navigate("/cambiar-password-obligatorio");
-        return;
+        return navigate("/cambiar-password-obligatorio");
       }
 
       toast({
-        title: "Inicio de sesión exitoso",
-        description: result.message || "Bienvenido al Sistema de Gestión de Becas",
+        title: "Bienvenido",
+        description: `Hola, ${user.nombre}. Inicio de sesión exitoso.`,
       });
 
-      // Navegar según el rol que retorna el backend
-      const role = result.data.user.role;
-      const tipoBeca = result.data.user.tipoBeca; // El backend ahora incluye tipoBeca en la respuesta del login
+      navigate(getRedirectPath(user));
 
-      if (role === "estudiante") {
-        // Redirigir según el tipo de beca del estudiante
-        if (tipoBeca === "Ayudantía") {
-          navigate("/pasante-ayudantias-modules");
-        } else if (tipoBeca === "Excelencia") {
-          navigate("/excelencia");
-        } else if (tipoBeca === "Impacto") {
-          navigate("/impacto");
-        } else if (tipoBeca === "Exoneración de Pago") {
-          navigate("/exoneracion");
-        } else if (tipoBeca === "Formación Docente") {
-          navigate("/formacion-docente");
-        } else {
-          // Fallback: si no coincide ningún tipo, ir a selección de módulos
-          navigate("/modules");
-        }
-      } else if (role === "supervisor") {
-        navigate("/supervisor-laboral-dashboard");
-      } else if (role === "mentor") {
-        navigate("/mentor-dashboard");
-      } else if (role === "admin") {
-        navigate("/admin-dashboard");
-      } else if (role === "director-area") {
-        navigate("/director-area-dashboard");
-      } else if (role === "capital-humano") {
-        navigate("/capital-humano-dashboard");
-      } else if (role === "supervisor-laboral") {
-        navigate("/supervisor-laboral-dashboard");
-      } else if (role === "aspirante") {
-      //navigate("/vocational-test");
-        navigate("/modules");
-      } else if (role === "especialista") {
-        navigate("/dashboard-especialista");
-      } else {
-        navigate("/");
-      }
     } catch (err: any) {
       const errorMessage = err?.message || "Credenciales inválidas";
-      const isPendingApproval = errorMessage.toLowerCase().includes('pendiente de aprobación');
-
       toast({
-        title: isPendingApproval ? "Cuenta Pendiente de Aprobación" : "Error de inicio de sesión",
+        title: "Error de acceso",
         description: errorMessage,
-        variant: isPendingApproval ? "default" : "destructive",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -118,23 +99,17 @@ const Login = () => {
     setIsForgotPasswordLoading(true);
 
     try {
-    //if (!forgotEmail.endsWith("@unimet.edu.ve") && !forgotEmail.endsWith("@correo.unimet.edu.ve")) {
-    //  throw new Error("El correo debe ser del dominio @unimet.edu.ve o @correo.unimet.edu.ve");
-      if (!forgotEmail.includes("@") || !forgotEmail.includes(".")) {
-        throw new Error("Por favor, ingresa un correo electrónico válido");
-      }
-
       await forgotPassword(forgotEmail);
       toast({
-        title: "Solicitud enviada",
-        description: "Si el email existe, recibirás instrucciones para restablecer tu contraseña",
+        title: "Correo enviado",
+        description: "Revisa tu bandeja de entrada para restablecer tu contraseña",
       });
       setIsForgotPasswordOpen(false);
       setForgotEmail("");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "No se pudo enviar la solicitud de recuperación",
+        description: error.message || "No se pudo procesar la solicitud",
         variant: "destructive",
       });
     } finally {
@@ -143,151 +118,139 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Image */}
-      <div className="hidden lg:flex lg:w-1/2 relative">
-        <img
-          src={universityCampus}
-          alt="Universidad Metropolitana"
-          className="object-cover w-full h-full"
+    <div className="relative h-screen w-full flex items-center justify-center p-4 overflow-hidden font-sans">
+      {/* 1. Fondo (Igual al Registro) */}
+      <div className="absolute inset-0 z-0">
+        <div 
+          className="absolute inset-0 bg-cover bg-center scale-105" 
+          style={{ backgroundImage: `url(${universityCampus})` }} 
         />
-        <div className="absolute inset-0 bg-gradient-hero flex items-center justify-center">
-          <div className="text-center text-white p-8">
-            <h1 className="text-4xl font-bold mb-4">Universidad Metropolitana</h1>
-            <p className="text-xl opacity-90">Sistema de Gestión de Becas</p>
-          </div>
-        </div>
+        <div className="absolute inset-0 bg-black/75 backdrop-blur-[1px]" />
       </div>
 
-      {/* Right side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary mb-2">Universidad Metropolitana</h1>
-            <p className="text-muted-foreground">Sistema de Gestión de Becas</p>
-          </div>
+      {/* 2. Tarjeta Centrada (Ajustada a max-w-lg) */}
+      <div className="relative z-10 w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="border-none shadow-2xl bg-white/95 backdrop-blur-md overflow-hidden flex flex-col rounded-2xl">
           
-          <Card className="border-orange/20 shadow-lg">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-primary">Iniciar Sesión</CardTitle>
-              <CardDescription>
-                Ingresa tus credenciales para acceder al sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
+          <CardHeader className="pt-8 pb-4 text-center shrink-0">
+            {/* Logo integrado dentro de la tarjeta igual que en Registro */}
+            <div className="mb-4">
+              <img 
+                src="/lovable-uploads/UNIMETLogo.png" 
+                alt="UNIMET Logo" 
+                className="w-48 h-auto mx-auto" 
+              />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-800 tracking-tight">Iniciar Sesión</CardTitle>
+            <CardDescription className="text-gray-500 text-sm">
+              Usa tu cuenta institucional para acceder al sistema
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="px-8 pb-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-[11px] font-bold uppercase text-gray-500 tracking-wider ml-1">
+                  Correo Electrónico
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="usuario@correo.unimet.edu.ve"
+                  required
+                  className="h-11 rounded-lg border-gray-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                />
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-[11px] font-bold uppercase text-gray-500 tracking-wider ml-1">
+                  Contraseña
+                </Label>
+                <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu.email@universidad.edu"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     required
+                    className="h-11 pr-10 rounded-lg border-gray-200 focus:ring-orange-500 focus:border-orange-500 transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <div className="relative">
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full h-12 bg-orange-600 hover:bg-orange-700 font-bold shadow-lg transition-all rounded-lg mt-6 active:scale-[0.98]" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Accediendo...</>
+                ) : (
+                  "Entrar al Sistema"
+                )}
+              </Button>
+            </form>
+            
+            <div className="flex flex-col gap-3 text-center pt-6 mt-4 border-t border-gray-100">
+              <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="link" className="text-sm font-medium text-gray-500 hover:text-orange-600">
+                    ¿Olvidaste tu contraseña?
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Recuperar Acceso</DialogTitle>
+                    <DialogDescription>
+                      Te enviaremos las instrucciones de restablecimiento a tu email.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleForgotPassword} className="space-y-4 pt-4">
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="tu-email@unimet.edu.ve"
                       required
-                      className="pr-10"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-orange-600 font-bold" 
+                      disabled={isForgotPasswordLoading}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
+                      {isForgotPasswordLoading ? "Enviando..." : "Enviar Instrucciones"}
                     </Button>
-                  </div>
-                </div>
-                {/* El rol ahora lo determina el backend a partir del email */}
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-                </Button>
-              </form>
-              
-              <div className="mt-4 text-center">
-                <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="link" className="text-sm text-muted-foreground hover:text-primary">
-                      ¿Olvidaste tu contraseña?
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Recuperar Contraseña</DialogTitle>
-                      <DialogDescription>
-                        Ingresa tu correo electrónico institucional y te enviaremos instrucciones para restablecer tu contraseña.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleForgotPassword} className="space-y-4">
-                      <div>
-                        <Label htmlFor="forgot-email">Correo Electrónico</Label>
-                        <Input
-                          id="forgot-email"
-                          type="email"
-                          value={forgotEmail}
-                          onChange={(e) => setForgotEmail(e.target.value)}
-                          placeholder="tu.email@unimet.edu.ve o @correo.unimet.edu.ve"
-                          required
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsForgotPasswordOpen(false)}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          type="submit"
-                          disabled={isForgotPasswordLoading}
-                        >
-                          {isForgotPasswordLoading ? "Enviando..." : "Enviar"}
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              <div className="mt-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  ¿No tienes una cuenta?{" "}
-                  <Link to="/register" className="text-primary hover:underline">
-                    Regístrate aquí
-                  </Link>
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/')}
-                  className="mt-4"
-                >
-                  Volver al Inicio
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <p className="text-sm text-gray-500">
+                ¿No tienes una cuenta?{" "}
+                <Link to="/register" className="text-orange-600 font-bold hover:underline ml-1">
+                  Regístrate
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/')} 
+          className="w-full mt-6 text-white/70 hover:text-white hover:bg-white/10 transition-all font-medium"
+        >
+          Volver a la página de inicio
+        </Button>
       </div>
     </div>
   );
