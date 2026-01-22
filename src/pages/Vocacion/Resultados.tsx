@@ -71,15 +71,21 @@ const Resultados = () => {
             
             // Verificar diferentes estructuras posibles
             if (respuesta.data) {
-              // Estructura esperada: respuesta.data.resultado
+              // Estructura esperada: respuesta.data.resultado (con perfilVocacional, planDesarrollo, etc.)
               if (respuesta.data.resultado) {
                 console.log('✅ Resultados encontrados en respuesta.data.resultado');
+                console.log('📊 perfilVocacional:', respuesta.data.resultado.perfilVocacional);
+                console.log('📊 planDesarrollo:', respuesta.data.resultado.planDesarrollo);
+                console.log('📊 areasDesarrollo:', respuesta.data.resultado.areasDesarrollo);
                 setResultados(respuesta.data);
                 return; // Salir del loop si encontramos los resultados
               }
               // Estructura alternativa: respuesta.data puede ser el resultado directamente
               else if (respuesta.data.perfilDominante || respuesta.data.codigoHolland) {
                 console.log('✅ Resultados encontrados directamente en respuesta.data');
+                console.log('📊 perfilVocacional:', respuesta.data.perfilVocacional);
+                console.log('📊 planDesarrollo:', respuesta.data.planDesarrollo);
+                console.log('📊 areasDesarrollo:', respuesta.data.areasDesarrollo);
                 // Reestructurar para que coincida con la interfaz esperada
                 setResultados({
                   sesionId: respuesta.data.sesionId || sesionId,
@@ -358,82 +364,84 @@ const Resultados = () => {
           )}
 
           {/* Perfil Vocacional */}
-          {(resultado.perfilVocacional || (resultado as any).perfil_vocacional) && (
-            <Card className="border-none shadow-sm rounded-xl">
-              <CardContent className="p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Target className="h-6 w-6 text-orange-500" />
-                  Perfil Vocacional
-                </h3>
-                <div className="grid md:grid-cols-3 gap-6">
-                  {(() => {
-                    const perfilVoc = resultado.perfilVocacional || (resultado as any).perfil_vocacional || {};
-                    const fortalezas = perfilVoc.fortalezas || perfilVoc.fortaleza || [];
-                    const debilidades = perfilVoc.debilidades || perfilVoc.debilidad || [];
-                    const oportunidades = perfilVoc.oportunidades || perfilVoc.oportunidad || [];
-                    
-                    return (
-                      <>
-                        {fortalezas.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5" />
-                        Fortalezas
-                      </h4>
-                      <ul className="space-y-2">
-                        {fortalezas.map((fortaleza: string, index: number) => (
-                          <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                            <span className="text-green-500 mt-1">•</span>
-                            {fortaleza}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {debilidades.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-red-700 mb-3 flex items-center gap-2">
-                        <Target className="h-5 w-5" />
-                        Debilidades
-                      </h4>
-                      <ul className="space-y-2">
-                        {debilidades.map((debilidad: string, index: number) => (
-                          <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                            <span className="text-red-500 mt-1">•</span>
-                            {debilidad}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {oportunidades.length > 0 && (
-                    <div>
-                      <h4 className="font-bold text-blue-700 mb-3 flex items-center gap-2">
-                        <Lightbulb className="h-5 w-5" />
-                        Oportunidades
-                      </h4>
-                      <ul className="space-y-2">
-                        {oportunidades.map((oportunidad: string, index: number) => (
-                          <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                            <span className="text-blue-500 mt-1">•</span>
-                            {oportunidad}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {fortalezas.length === 0 && debilidades.length === 0 && oportunidades.length === 0 && (
-                    <div className="col-span-3 text-center text-gray-500 py-8">
-                      No hay información de perfil vocacional disponible.
-                    </div>
-                  )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {(() => {
+            const perfilVoc = resultado.perfilVocacional || (resultado as any).perfil_vocacional || {};
+            const fortalezas = perfilVoc.fortalezas || perfilVoc.fortaleza || [];
+            const debilidades = perfilVoc.debilidades || perfilVoc.debilidad || [];
+            const oportunidades = perfilVoc.oportunidades || perfilVoc.oportunidad || [];
+            const tieneDatos = fortalezas.length > 0 || debilidades.length > 0 || oportunidades.length > 0;
+            
+            // Mostrar la sección si existe el objeto (aunque esté vacío) o si tiene datos
+            if (!resultado.perfilVocacional && !(resultado as any).perfil_vocacional && !tieneDatos) {
+              return null; // No mostrar si no existe y no tiene datos
+            }
+            
+            return (
+              <Card className="border-none shadow-sm rounded-xl">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <Target className="h-6 w-6 text-orange-500" />
+                    Perfil Vocacional
+                  </h3>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {fortalezas.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5" />
+                          Fortalezas
+                        </h4>
+                        <ul className="space-y-2">
+                          {fortalezas.map((fortaleza: string, index: number) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                              <span className="text-green-500 mt-1">•</span>
+                              {fortaleza}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {debilidades.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-red-700 mb-3 flex items-center gap-2">
+                          <Target className="h-5 w-5" />
+                          Debilidades
+                        </h4>
+                        <ul className="space-y-2">
+                          {debilidades.map((debilidad: string, index: number) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                              <span className="text-red-500 mt-1">•</span>
+                              {debilidad}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {oportunidades.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-blue-700 mb-3 flex items-center gap-2">
+                          <Lightbulb className="h-5 w-5" />
+                          Oportunidades
+                        </h4>
+                        <ul className="space-y-2">
+                          {oportunidades.map((oportunidad: string, index: number) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                              <span className="text-blue-500 mt-1">•</span>
+                              {oportunidad}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {fortalezas.length === 0 && debilidades.length === 0 && oportunidades.length === 0 && (
+                      <div className="col-span-3 text-center text-gray-500 py-8">
+                        No hay información de perfil vocacional disponible.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Áreas de Desarrollo */}
           {resultado.areasDesarrollo && resultado.areasDesarrollo.length > 0 && (
@@ -483,73 +491,75 @@ const Resultados = () => {
           )}
 
           {/* Plan de Desarrollo */}
-          {(resultado.planDesarrollo || (resultado as any).plan_desarrollo) && (
-            <Card className="border-none shadow-sm rounded-xl">
-              <CardContent className="p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Target className="h-6 w-6 text-orange-500" />
-                  Plan de Desarrollo
-                </h3>
-                <div className="space-y-6">
-                  {(() => {
-                    const planDes = resultado.planDesarrollo || (resultado as any).plan_desarrollo || {};
-                    const cortoPlazo = planDes.cortoPlazo || planDes.corto_plazo || [];
-                    const medianoPlazo = planDes.medianoPlazo || planDes.mediano_plazo || [];
-                    const largoPlazo = planDes.largoPlazo || planDes.largo_plazo || [];
-                    
-                    return (
-                      <>
-                        {cortoPlazo.length > 0 && (
-                          <div>
-                            <h4 className="font-bold text-gray-900 mb-3">Corto Plazo</h4>
-                            <ul className="space-y-2">
-                              {cortoPlazo.map((item: string, index: number) => (
-                                <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                                  <span className="text-orange-500 mt-1">•</span>
-                                  {item}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {medianoPlazo.length > 0 && (
-                          <div>
-                            <h4 className="font-bold text-gray-900 mb-3">Mediano Plazo</h4>
-                            <ul className="space-y-2">
-                              {medianoPlazo.map((item: string, index: number) => (
-                                <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                                  <span className="text-orange-500 mt-1">•</span>
-                                  {item}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {largoPlazo.length > 0 && (
-                          <div>
-                            <h4 className="font-bold text-gray-900 mb-3">Largo Plazo</h4>
-                            <ul className="space-y-2">
-                              {largoPlazo.map((item: string, index: number) => (
-                                <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
-                                  <span className="text-orange-500 mt-1">•</span>
-                                  {item}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {cortoPlazo.length === 0 && medianoPlazo.length === 0 && largoPlazo.length === 0 && (
-                          <div className="text-center text-gray-500 py-8">
-                            No hay plan de desarrollo disponible.
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {(() => {
+            const planDes = resultado.planDesarrollo || (resultado as any).plan_desarrollo || {};
+            const cortoPlazo = planDes.cortoPlazo || planDes.corto_plazo || [];
+            const medianoPlazo = planDes.medianoPlazo || planDes.mediano_plazo || [];
+            const largoPlazo = planDes.largoPlazo || planDes.largo_plazo || [];
+            const tieneDatos = cortoPlazo.length > 0 || medianoPlazo.length > 0 || largoPlazo.length > 0;
+            
+            // Mostrar la sección si existe el objeto (aunque esté vacío) o si tiene datos
+            if (!resultado.planDesarrollo && !(resultado as any).plan_desarrollo && !tieneDatos) {
+              return null; // No mostrar si no existe y no tiene datos
+            }
+            
+            return (
+              <Card className="border-none shadow-sm rounded-xl">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <Target className="h-6 w-6 text-orange-500" />
+                    Plan de Desarrollo
+                  </h3>
+                  <div className="space-y-6">
+                    {cortoPlazo.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-3">Corto Plazo</h4>
+                        <ul className="space-y-2">
+                          {cortoPlazo.map((item: string, index: number) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                              <span className="text-orange-500 mt-1">•</span>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {medianoPlazo.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-3">Mediano Plazo</h4>
+                        <ul className="space-y-2">
+                          {medianoPlazo.map((item: string, index: number) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                              <span className="text-orange-500 mt-1">•</span>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {largoPlazo.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-3">Largo Plazo</h4>
+                        <ul className="space-y-2">
+                          {largoPlazo.map((item: string, index: number) => (
+                            <li key={index} className="text-gray-700 text-sm flex items-start gap-2">
+                              <span className="text-orange-500 mt-1">•</span>
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {cortoPlazo.length === 0 && medianoPlazo.length === 0 && largoPlazo.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">
+                        No hay plan de desarrollo disponible.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-4 justify-center">
