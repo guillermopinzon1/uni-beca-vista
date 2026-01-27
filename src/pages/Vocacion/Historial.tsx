@@ -151,7 +151,7 @@ const Historial = () => {
 
   if (cargando) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-orange-500 mx-auto mb-4" />
           <p className="text-gray-600">Cargando historial...</p>
@@ -161,49 +161,7 @@ const Historial = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <header className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate("/modules")}
-              className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
-            >
-              <ChevronLeft className="h-4 w-4" /> Volver
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-[#F37021] text-xl font-bold leading-tight">
-                Universidad Metropolitana
-              </h1>
-              <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
-                Historial de Tests
-              </p>
-            </div>
-          </div>
-
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-sm border border-gray-200 rounded-md px-4 py-2 hover:bg-gray-50 transition-colors"
-          >
-            <LogOut className="h-4 w-4" /> Cerrar Sesión
-          </button>
-        </div>
-      </header>
-
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
-        <div className="max-w-[1400px] mx-auto flex items-center gap-2 text-sm text-gray-600">
-          <Compass className="h-4 w-4" />
-          <button 
-            onClick={() => navigate("/modules")}
-            className="hover:text-orange-500 transition-colors"
-          >
-            Inicio
-          </button>
-          <span className="text-gray-300">/</span>
-          <span className="font-bold text-gray-900">Historial</span>
-        </div>
-      </div>
-
+    <div className="w-full">
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
@@ -316,14 +274,6 @@ const Historial = () => {
         </div>
       </main>
 
-      <footer className="bg-white border-t border-gray-100 py-8 px-4 text-center mt-auto">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2 font-bold text-gray-900">
-            <GraduationCap className="h-5 w-5 text-orange-500" /> Universidad Metropolitana
-          </div>
-          <p className="text-gray-400 text-xs">© 2025 Universidad Metropolitana. Sistema Multiplataforma.</p>
-        </div>
-      </footer>
     </div>
   );
 };

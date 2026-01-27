@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { 
   GraduationCap, LogOut, Compass, ChevronLeft, 
-  ChevronRight, Loader2 
+  ChevronRight, Loader2, AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { 
@@ -270,7 +270,7 @@ const Ronda2 = () => {
 
   if (cargandoPreguntas) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-orange-500 mx-auto mb-4" />
           <p className="text-gray-600">Cargando preguntas de Ronda 2...</p>
@@ -281,97 +281,35 @@ const Ronda2 = () => {
 
   if (preguntas.length === 0) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA]">
-        <header className="bg-white border-b border-gray-100 px-6 py-4">
-          <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate("/orientacion/ronda-1")}
-                className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
-              >
-                <ChevronLeft className="h-4 w-4" /> Volver
-              </button>
-              <div className="flex flex-col">
-                <h1 className="text-[#F37021] text-xl font-bold leading-tight">
-                  Universidad Metropolitana
-                </h1>
-                <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
-                  Orientación Vocacional - Ronda 2
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto text-center">
-            <Card className="border-none shadow-sm rounded-xl">
-              <CardContent className="p-12">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Esperando preguntas de Ronda 2
-                </h2>
+      <div className="w-full">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto">
+            <Card>
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  No hay preguntas disponibles
+                </h3>
                 <p className="text-gray-600 mb-6">
-                  Las preguntas se están generando en el servidor. Por favor espera unos segundos y recarga la página.
+                  No se encontraron preguntas para la Ronda 2. Por favor contacta al administrador.
                 </p>
                 <Button
-                  onClick={() => window.location.reload()}
-                  className="bg-[#F37021] hover:bg-orange-600 text-white"
+                  onClick={() => navigate("/orientacion/ronda-1")}
+                  variant="outline"
                 >
-                  Recargar
+                  <ChevronLeft className="h-4 w-4 mr-2" /> Volver a Ronda 1
                 </Button>
               </CardContent>
             </Card>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <header className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate("/orientacion/ronda-1")}
-              className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
-            >
-              <ChevronLeft className="h-4 w-4" /> Volver
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-[#F37021] text-xl font-bold leading-tight">
-                Universidad Metropolitana
-              </h1>
-              <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
-                Orientación Vocacional - Ronda 2
-              </p>
-            </div>
-          </div>
-
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-sm border border-gray-200 rounded-md px-4 py-2 hover:bg-gray-50 transition-colors"
-          >
-            <LogOut className="h-4 w-4" /> Cerrar Sesión
-          </button>
-        </div>
-      </header>
-
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
-        <div className="max-w-[1400px] mx-auto flex items-center gap-2 text-sm text-gray-600">
-          <Compass className="h-4 w-4" />
-          <button 
-            onClick={() => navigate("/modules")}
-            className="hover:text-orange-500 transition-colors"
-          >
-            Inicio
-          </button>
-          <span className="text-gray-300">/</span>
-          <span className="font-bold text-gray-900">Ronda 2</span>
-        </div>
-      </div>
-
-      <main className="container mx-auto px-4 py-12">
+    <div className="w-full">
+      <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -469,16 +407,7 @@ const Ronda2 = () => {
             </CardContent>
           </Card>
         </div>
-      </main>
-
-      <footer className="bg-white border-t border-gray-100 py-8 px-4 text-center mt-auto">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2 font-bold text-gray-900">
-            <GraduationCap className="h-5 w-5 text-orange-500" /> Universidad Metropolitana
-          </div>
-          <p className="text-gray-400 text-xs">© 2025 Universidad Metropolitana. Sistema Multiplataforma.</p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };

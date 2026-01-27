@@ -1,9 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles } from "lucide-react";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,12 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { Outlet } from "react-router-dom";
+import { iniciarTest, TipoTest } from "@/lib/api/orientacionVocacional";
 
 const profileBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
 const DashboardAspirante = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const location = useLocation();
+  const { user, logout, tokens } = useAuth();
   const { toast } = useToast();
   const [activeModule, setActiveModule] = useState<string>("tests");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -31,6 +34,36 @@ const DashboardAspirante = () => {
     cuartoAno: "",
     promedio: ""
   });
+  
+  // Estado para Orientación Vocacional
+  const [tipoTest, setTipoTest] = useState<TipoTest | null>(null);
+  const [cargandoTest, setCargandoTest] = useState(false);
+  
+  // Detectar la ruta actual para mostrar navegación
+  const [currentStep, setCurrentStep] = useState<string>("seleccionar");
+  
+  useEffect(() => {
+    // Detectar el paso actual basado en la ruta
+    const path = location.pathname;
+    if (path.includes('/orientacion/ronda-1')) {
+      setCurrentStep('ronda1');
+      setActiveModule('orientacion');
+    } else if (path.includes('/orientacion/ronda-2')) {
+      setCurrentStep('ronda2');
+      setActiveModule('orientacion');
+    } else if (path.includes('/orientacion/resultados')) {
+      setCurrentStep('resultados');
+      setActiveModule('orientacion');
+    } else if (path.includes('/orientacion/historial')) {
+      setCurrentStep('historial');
+      setActiveModule('orientacion');
+    } else if (path.includes('/orientacion/seleccionar-test')) {
+      setCurrentStep('seleccionar');
+      setActiveModule('orientacion');
+    } else if (path === '/dashboard-aspirante' && activeModule === 'orientacion') {
+      setCurrentStep('seleccionar');
+    }
+  }, [location.pathname, activeModule]);
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -81,6 +114,11 @@ const DashboardAspirante = () => {
       module: "tests"
     },
     {
+      title: "Orientación Vocacional",
+      icon: Compass,
+      module: "orientacion"
+    },
+    {
       title: "Subir Notas del Colegio",
       icon: Upload,
       module: "notas"
@@ -103,6 +141,7 @@ const DashboardAspirante = () => {
       return;
     }
 
+
     // Calcular promedio
     const promedio = (
       (parseFloat(notasColegio.primerAno) +
@@ -120,7 +159,214 @@ const DashboardAspirante = () => {
     });
   };
 
+  const handleIniciarTest = async () => {
+    if (!tipoTest) {
+      toast({
+        title: "Selección requerida",
+        description: "Por favor selecciona un tipo de test para continuar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const accessToken = tokens?.accessToken || 
+      JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+    if (!accessToken) {
+      toast({
+        title: "Sesión expirada",
+        description: "Por favor inicia sesión nuevamente",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    setCargandoTest(true);
+
+    try {
+      const respuesta = await iniciarTest(accessToken, tipoTest);
+      
+      // Guardar datos en localStorage
+      localStorage.setItem('sesionId', respuesta.data.sesionId);
+      localStorage.setItem('tipoTest', respuesta.data.tipoTest);
+      localStorage.setItem('estadoSesion', respuesta.data.estado);
+      localStorage.setItem('preguntasRonda1', JSON.stringify(respuesta.data.preguntas));
+      
+      toast({
+        title: "Test iniciado",
+        description: `Has comenzado el test ${tipoTest === 'Holland_RIASEC' ? 'Holland RIASEC' : 'Kuder'}`,
+      });
+
+      // Redirigir a Ronda 1
+      navigate('/orientacion/ronda-1');
+      
+    } catch (error: any) {
+      console.error('Error al iniciar test:', error);
+      
+      if (error.status === 401) {
+        toast({
+          title: "Sesión expirada",
+          description: error.message || "Tu sesión ha expirado. Por favor inicia sesión nuevamente.",
+          variant: "destructive",
+        });
+        navigate("/login");
+      } else if (error.status === 403) {
+        toast({
+          title: "Sin permisos",
+          description: error.message || "No tienes permisos para realizar este test. Contacta al administrador.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Error al iniciar el test. Por favor intenta nuevamente.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setCargandoTest(false);
+    }
+  };
+
   const renderContent = () => {
+    if (activeModule === "orientacion") {
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <Compass className="w-16 h-16 text-orange-500 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Selecciona el Tipo de Test
+            </h2>
+            <p className="text-gray-500 text-lg">
+              Elige el test que mejor se adapte a tus necesidades
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* Test Holland RIASEC */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card 
+                className={`cursor-pointer transition-all border-2 ${
+                  tipoTest === 'Holland_RIASEC' 
+                    ? 'border-orange-500 bg-orange-50 shadow-lg' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setTipoTest('Holland_RIASEC')}
+              >
+                <CardContent className="p-8">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        Test Holland RIASEC
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        Evalúa 6 dimensiones de personalidad vocacional:
+                      </p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Realista (R)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Investigador (I)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Artístico (A)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Social (S)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Emprendedor (E)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Convencional (C)
+                        </li>
+                      </ul>
+                    </div>
+                    {tipoTest === 'Holland_RIASEC' && (
+                      <CheckCircle2 className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Test Kuder */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card 
+                className={`cursor-pointer transition-all border-2 ${
+                  tipoTest === 'Kuder' 
+                    ? 'border-orange-500 bg-orange-50 shadow-lg' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setTipoTest('Kuder')}
+              >
+                <CardContent className="p-8">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        Test Kuder
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        Evalúa 10 áreas de interés profesional:
+                      </p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Mecánico, Científico, Computacional
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Artístico, Literario, Musical
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          Social, Administrativo, Al aire libre
+                        </li>
+                      </ul>
+                    </div>
+                    {tipoTest === 'Kuder' && (
+                      <CheckCircle2 className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          <div className="text-center">
+            <Button
+              onClick={handleIniciarTest}
+              disabled={!tipoTest || cargandoTest}
+              className="bg-[#F37021] hover:bg-orange-600 text-white rounded-md px-10 h-12 font-bold transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cargandoTest ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Iniciando...
+                </>
+              ) : (
+                "Comenzar Test"
+              )}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     if (activeModule === "tests") {
       return (
         <div className="space-y-6">
@@ -264,7 +510,7 @@ const DashboardAspirante = () => {
         </div>
       );
     }
-
+    
     if (activeModule === "perfil") {
       return (
         <div className="space-y-4 sm:space-y-6">
@@ -580,6 +826,70 @@ const DashboardAspirante = () => {
             Cerrar Sesión
           </Button>
         </div>
+        
+        {/* Navegación del flujo de Orientación Vocacional */}
+        {(activeModule === "orientacion" || location.pathname.includes('/orientacion/')) && (
+          <div className="mt-4 border-t border-orange/20 pt-4">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <Button
+                variant={currentStep === 'seleccionar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => {
+                  setActiveModule('orientacion');
+                  navigate('/orientacion/seleccionar-test');
+                }}
+                className={currentStep === 'seleccionar' ? 'bg-primary text-white' : ''}
+              >
+                <ListChecks className="h-4 w-4 mr-2" />
+                Seleccionar Test
+              </Button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <Button
+                variant={currentStep === 'ronda1' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => navigate('/orientacion/ronda-1')}
+                className={currentStep === 'ronda1' ? 'bg-primary text-white' : ''}
+                disabled={!localStorage.getItem('sesionId')}
+              >
+                Ronda 1
+              </Button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <Button
+                variant={currentStep === 'ronda2' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => navigate('/orientacion/ronda-2')}
+                className={currentStep === 'ronda2' ? 'bg-primary text-white' : ''}
+                disabled={!localStorage.getItem('sesionId')}
+              >
+                Ronda 2
+              </Button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <Button
+                variant={currentStep === 'resultados' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => {
+                  const sesionId = localStorage.getItem('sesionId');
+                  if (sesionId) {
+                    navigate(`/orientacion/resultados/${sesionId}`);
+                  }
+                }}
+                className={currentStep === 'resultados' ? 'bg-primary text-white' : ''}
+                disabled={!localStorage.getItem('sesionId')}
+              >
+                Resultados
+              </Button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <Button
+                variant={currentStep === 'historial' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => navigate('/orientacion/historial')}
+                className={currentStep === 'historial' ? 'bg-primary text-white' : ''}
+              >
+                Historial
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       <div className="flex">
@@ -620,7 +930,12 @@ const DashboardAspirante = () => {
         <main className="flex-1 px-6 py-8">
           <div className="max-w-6xl mx-auto">
             <div className="pt-0">
-              {renderContent()}
+              {/* Si hay una ruta hija (Outlet), renderizarla, sino mostrar el contenido del módulo activo */}
+              {location.pathname.includes('/orientacion/') ? (
+                <Outlet />
+              ) : (
+                renderContent()
+              )}
             </div>
           </div>
         </main>

@@ -86,15 +86,18 @@ const App = () => (
 
 
               <Route path="/dashboard-aspirante" element={<DashboardAspirante/>}/>
+              
+              {/* Rutas de Orientación Vocacional con DashboardAspirante como layout */}
+              <Route path="/orientacion" element={<DashboardAspirante/>}>
+                <Route path="seleccionar-test" element={<SeleccionarTest/>}/>
+                <Route path="ronda-1" element={<Ronda1/>}/>
+                <Route path="ronda-2" element={<Ronda2/>}/>
+                <Route path="resultados/:sesionId?" element={<Resultados/>}/>
+                <Route path="perfil" element={<PerfilVocacional/>}/>
+                <Route path="historial" element={<Historial/>}/>
+              </Route>
+              
               <Route path="/dashboard-especialista" element={<DashboardEspecialist/>}/>
-
-              {/* Rutas de Orientación Vocacional */}
-              <Route path="/orientacion/seleccionar-test" element={<SeleccionarTest/>}/>
-              <Route path="/orientacion/ronda-1" element={<Ronda1/>}/>
-              <Route path="/orientacion/ronda-2" element={<Ronda2/>}/>
-              <Route path="/orientacion/resultados/:sesionId?" element={<Resultados/>}/>
-              <Route path="/orientacion/perfil" element={<PerfilVocacional/>}/>
-              <Route path="/orientacion/historial" element={<Historial/>}/>
 
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

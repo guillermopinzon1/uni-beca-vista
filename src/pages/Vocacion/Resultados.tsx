@@ -167,29 +167,8 @@ const Resultados = () => {
       console.warn('⚠️ Resultados sin estructura esperada:', resultados);
     }
     return (
-      <div className="min-h-screen bg-[#F8F9FA]">
-        <header className="bg-white border-b border-gray-100 px-6 py-4">
-          <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate("/orientacion/historial")}
-                className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
-              >
-                <ChevronLeft className="h-4 w-4" /> Volver
-              </button>
-              <div className="flex flex-col">
-                <h1 className="text-[#F37021] text-xl font-bold leading-tight">
-                  Universidad Metropolitana
-                </h1>
-                <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
-                  Orientación Vocacional
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-12">
+      <div className="w-full">
+        <main className="w-full">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-8 text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
@@ -238,48 +217,6 @@ const Resultados = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <header className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate("/orientacion/historial")}
-              className="flex items-center gap-1 text-orange-500 font-medium hover:underline text-sm"
-            >
-              <ChevronLeft className="h-4 w-4" /> Volver
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-[#F37021] text-xl font-bold leading-tight">
-                Universidad Metropolitana
-              </h1>
-              <p className="text-gray-500 text-xs font-medium uppercase tracking-tight">
-                Resultados del Test
-              </p>
-            </div>
-          </div>
-
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-sm border border-gray-200 rounded-md px-4 py-2 hover:bg-gray-50 transition-colors"
-          >
-            <LogOut className="h-4 w-4" /> Cerrar Sesión
-          </button>
-        </div>
-      </header>
-
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
-        <div className="max-w-[1400px] mx-auto flex items-center gap-2 text-sm text-gray-600">
-          <Compass className="h-4 w-4" />
-          <button 
-            onClick={() => navigate("/modules")}
-            className="hover:text-orange-500 transition-colors"
-          >
-            Inicio
-          </button>
-          <span className="text-gray-300">/</span>
-          <span className="font-bold text-gray-900">Resultados</span>
-        </div>
-      </div>
-
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto space-y-8">
           {/* Perfil Dominante */}
@@ -586,15 +523,6 @@ const Resultados = () => {
           </div>
         </div>
       </main>
-
-      <footer className="bg-white border-t border-gray-100 py-8 px-4 text-center mt-auto">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2 font-bold text-gray-900">
-            <GraduationCap className="h-5 w-5 text-orange-500" /> Universidad Metropolitana
-          </div>
-          <p className="text-gray-400 text-xs">© 2025 Universidad Metropolitana. Sistema Multiplataforma.</p>
-        </div>
-      </footer>
     </div>
   );
 };
