@@ -158,6 +158,28 @@ export interface HistorialResponse {
   }>;
 }
 
+export interface HistorialEspecialistaResponse {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  data: Array<{
+    estudiante: {
+      id: string;
+      nombre: string;
+      email: string;
+    };
+    perfilDominante: string;
+    codigoHolland: string;
+    recomendacionesCarreras: Array<{
+      id: number;
+      name: string;
+      razon: string;
+    }>;
+    totalSesiones: number;
+    ultimaFechaTest: string;
+  }>;
+}
+
 // ==================== FUNCIONES API ====================
 
 /**
@@ -446,4 +468,40 @@ export async function obtenerHistorial(
     success: true,
     data: []
   } as HistorialResponse;
+}
+
+/**
+ * Obtener historial de tests para especialista
+ */
+export async function obtenerHistorialEspecialista(
+  accessToken: string
+): Promise<HistorialEspecialistaResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/historial-especialista`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    let message = payload?.message || `Error al obtener historial del especialista (${response.status})`;
+    
+    if (response.status === 401) {
+      message = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+    } else if (response.status === 403) {
+      message = 'No tienes permisos para acceder a esta información.';
+    }
+    
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as HistorialEspecialistaResponse;
 }

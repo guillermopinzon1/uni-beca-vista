@@ -1,9 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -16,68 +16,40 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
+import { obtenerHistorialEspecialista, HistorialEspecialistaResponse } from "@/lib/api/orientacionVocacional";
 
-// Mock Data for Students (from VocationalCounselor)
-const students = [
-  {
-    id: 1,
-    name: "Ana García",
-    career_interest: "Ingeniería",
-    status: "Requiere Asesoría",
-    last_test: "10 Dic 2025",
-    result: "Perfil Lógico-Matemático",
-    risk_level: "Bajo",
-    avatar: "AG"
-  },
-  {
-    id: 2,
-    name: "Carlos Rodríguez",
-    career_interest: "Artes",
-    status: "En Seguimiento",
-    last_test: "09 Dic 2025",
-    result: "Perfil Creativo",
-    risk_level: "Medio",
-    avatar: "CR"
-  },
-  {
-    id: 3,
-    name: "María Pérez",
-    career_interest: "Ciencias Sociales",
-    status: "Orientación Completada",
-    last_test: "05 Dic 2025",
-    result: "Perfil Social-Humanista",
-    risk_level: "Bajo",
-    avatar: "MP"
-  },
-  {
-    id: 4,
-    name: "Luis Hernández",
-    career_interest: "Indeciso",
-    status: "Urgente",
-    last_test: "11 Dic 2025",
-    result: "Perfil Disperso",
-    risk_level: "Alto",
-    avatar: "LH"
-  },
-  {
-    id: 5,
-    name: "Sofia Martínez",
-    career_interest: "Salud",
-    status: "En Seguimiento",
-    last_test: "08 Dic 2025",
-    result: "Perfil Científico",
-    risk_level: "Bajo",
-    avatar: "SM"
-  }
-];
+// Interface para mapear datos del backend
+interface StudentData {
+  id: string;
+  name: string;
+  career_interest: string;
+  status: string;
+  last_test: string;
+  result: string;
+  risk_level: "Alto" | "Medio" | "Bajo";
+  avatar: string;
+  email: string;
+  codigoHolland: string;
+  totalSesiones: number;
+  recomendacionesCarreras: Array<{
+    id: number;
+    name: string;
+    razon: string;
+  }>;
+}
 
 const DashboardEspecialist = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, tokens } = useAuth();
   const { toast } = useToast();
   const [activeModule, setActiveModule] = useState<string>("estudiantes");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = useState<StudentData | null>(null);
+  const [students, setStudents] = useState<StudentData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingAdmissions, setLoadingAdmissions] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [admissionsData, setAdmissionsData] = useState<HistorialEspecialistaResponse['data']>([]);
   const [notasColegio, setNotasColegio] = useState({
     primerAno: "",
     segundoAno: "",
@@ -128,6 +100,188 @@ const DashboardEspecialist = () => {
     navigate("/");
   };
 
+  // Función para formatear fecha
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const day = date.getDate();
+      const month = date.toLocaleString('es-ES', { month: 'short' });
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Función para obtener iniciales del nombre
+  const getInitials = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Función para determinar el nivel de riesgo basado en el perfil
+  const getRiskLevel = (perfilDominante: string, totalSesiones: number): "Alto" | "Medio" | "Bajo" => {
+    // Si tiene múltiples sesiones, es menos riesgoso
+    if (totalSesiones > 2) return "Bajo";
+    // Si el perfil es muy específico, es menos riesgoso
+    if (perfilDominante && perfilDominante.length > 10) return "Bajo";
+    // Si tiene pocas sesiones y perfil disperso, es más riesgoso
+    if (totalSesiones === 1) return "Alto";
+    return "Medio";
+  };
+
+  // Función para determinar el estado basado en los datos
+  const getStatus = (totalSesiones: number, ultimaFechaTest: string): string => {
+    const daysSinceLastTest = Math.floor(
+      (new Date().getTime() - new Date(ultimaFechaTest).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    if (daysSinceLastTest > 30) return "Requiere Asesoría";
+    if (daysSinceLastTest > 14) return "En Seguimiento";
+    if (totalSesiones >= 2) return "Orientación Completada";
+    return "En Proceso";
+  };
+
+  // Cargar datos del historial
+  useEffect(() => {
+    const cargarHistorial = async () => {
+      const accessToken = tokens?.accessToken || 
+        JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+      if (!accessToken) {
+        toast({
+          title: "Sesión expirada",
+          description: "Por favor inicia sesión nuevamente",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
+      const isLoadingEstudiantes = activeModule === "estudiantes";
+      const isLoadingAdmissions = activeModule === "admissions";
+
+      if (isLoadingEstudiantes) setLoading(true);
+      if (isLoadingAdmissions) setLoadingAdmissions(true);
+
+      try {
+        const respuesta = await obtenerHistorialEspecialista(accessToken);
+        
+        // Guardar datos crudos para el módulo de admissions
+        if (isLoadingAdmissions) {
+          setAdmissionsData(respuesta.data);
+        }
+        
+        // Mapear datos del backend a la estructura del componente para estudiantes
+        if (isLoadingEstudiantes) {
+          const estudiantesMapeados: StudentData[] = respuesta.data.map((item) => {
+            const careerInterest = item.recomendacionesCarreras.length > 0 
+              ? item.recomendacionesCarreras[0].name 
+              : "Indeciso";
+            
+            return {
+              id: item.estudiante.id,
+              name: item.estudiante.nombre,
+              email: item.estudiante.email,
+              career_interest: careerInterest,
+              status: getStatus(item.totalSesiones, item.ultimaFechaTest),
+              last_test: formatDate(item.ultimaFechaTest),
+              result: `Perfil ${item.perfilDominante}`,
+              risk_level: getRiskLevel(item.perfilDominante, item.totalSesiones),
+              avatar: getInitials(item.estudiante.nombre),
+              codigoHolland: item.codigoHolland,
+              totalSesiones: item.totalSesiones,
+              recomendacionesCarreras: item.recomendacionesCarreras
+            };
+          });
+
+          setStudents(estudiantesMapeados);
+        }
+      } catch (error: any) {
+        console.error('Error al cargar historial:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Error al cargar el historial de estudiantes",
+          variant: "destructive",
+        });
+      } finally {
+        if (isLoadingEstudiantes) setLoading(false);
+        if (isLoadingAdmissions) setLoadingAdmissions(false);
+      }
+    };
+
+    if (activeModule === "estudiantes" || activeModule === "admissions") {
+      cargarHistorial();
+    }
+  }, [activeModule, tokens, navigate, toast]);
+
+  // Calcular estadísticas de admisiones
+  const calcularEstadisticasAdmisiones = () => {
+    const totalAspirantes = admissionsData.length;
+    
+    // Interés Alto: estudiantes con perfil dominante claro y múltiples sesiones
+    const interesAlto = admissionsData.filter(item => 
+      item.totalSesiones >= 2 && 
+      item.recomendacionesCarreras.length >= 2 &&
+      item.perfilDominante && item.perfilDominante.length > 5
+    ).length;
+
+    // Identificados como potenciales: todos los que completaron al menos 1 test
+    const potenciales = admissionsData.filter(item => item.totalSesiones >= 1).length;
+    const porcentajePotenciales = totalAspirantes > 0 
+      ? Math.round((potenciales / totalAspirantes) * 100) 
+      : 0;
+
+    // Contactados/Invitados: estudiantes con múltiples sesiones (asumiendo que fueron contactados)
+    const contactados = admissionsData.filter(item => item.totalSesiones >= 2).length;
+    const porcentajeContactados = totalAspirantes > 0 
+      ? Math.round((contactados / totalAspirantes) * 100) 
+      : 0;
+
+    // Proyectado matriculados: estimación conservadora (30% de los contactados)
+    const proyectadoMatriculados = Math.round(contactados * 0.3);
+    const porcentajeMatriculados = totalAspirantes > 0 
+      ? Math.round((proyectadoMatriculados / totalAspirantes) * 100) 
+      : 0;
+
+    return {
+      totalAspirantes,
+      interesAlto,
+      contactados,
+      proyectadoMatriculados,
+      potenciales,
+      porcentajePotenciales,
+      porcentajeContactados,
+      porcentajeMatriculados
+    };
+  };
+
+  // Calcular probabilidad de matrícula basada en perfil
+  const calcularProbabilidad = (item: HistorialEspecialistaResponse['data'][0]): { nivel: string; porcentaje: number } => {
+    let score = 0;
+    
+    // Más sesiones = mayor probabilidad
+    if (item.totalSesiones >= 3) score += 40;
+    else if (item.totalSesiones === 2) score += 25;
+    else score += 10;
+
+    // Perfil dominante claro
+    if (item.perfilDominante && item.perfilDominante.length > 8) score += 30;
+    else if (item.perfilDominante && item.perfilDominante.length > 5) score += 15;
+
+    // Múltiples recomendaciones
+    if (item.recomendacionesCarreras.length >= 3) score += 30;
+    else if (item.recomendacionesCarreras.length >= 2) score += 15;
+
+    if (score >= 80) return { nivel: "Muy Alta", porcentaje: 95 };
+    if (score >= 60) return { nivel: "Alta", porcentaje: 85 };
+    if (score >= 40) return { nivel: "Media", porcentaje: 65 };
+    return { nivel: "Baja", porcentaje: 45 };
+  };
+
   const sidebarItems = [
     {
       title: "Gestión de Estudiantes",
@@ -176,6 +330,13 @@ const DashboardEspecialist = () => {
     });
   };
 
+  // Filtrar estudiantes por término de búsqueda
+  const filteredStudents = students.filter(student =>
+    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.career_interest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+ 
   const renderContent = () => {
     if (activeModule === "estudiantes") {
       return (
@@ -187,15 +348,30 @@ const DashboardEspecialist = () => {
                     <div className="flex items-center gap-2 mb-4">
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                        <Input placeholder="Buscar estudiante..." className="pl-9 bg-slate-50 border-slate-200" />
+                        <Input 
+                          placeholder="Buscar estudiante..." 
+                          className="pl-9 bg-slate-50 border-slate-200"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                       </div>
                       <Button variant="outline" size="icon" className="border-slate-200">
                         <Filter className="h-4 w-4 text-slate-500" />
                       </Button>
                     </div>
 
-                    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
-                      {students.map(student => (
+                    {loading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+                      </div>
+                    ) : filteredStudents.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400">
+                        <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        <p>No se encontraron estudiantes</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                        {filteredStudents.map(student => (
                         <div 
                           key={student.id}
                           onClick={() => setSelectedStudent(student)}
@@ -225,7 +401,8 @@ const DashboardEspecialist = () => {
                           </div>
                         </div>
                       ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -248,7 +425,7 @@ const DashboardEspecialist = () => {
                             </Avatar>
                             <div>
                               <CardTitle className="text-2xl text-slate-900">{selectedStudent.name}</CardTitle>
-                              <CardDescription>ID: 2025-{selectedStudent.id}00 | {selectedStudent.career_interest}</CardDescription>
+                              <CardDescription>{selectedStudent.email} | {selectedStudent.career_interest}</CardDescription>
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -272,8 +449,14 @@ const DashboardEspecialist = () => {
                             </div>
                             <div className="text-center">
                               <p className="text-xs text-slate-500 uppercase font-bold">Última Actividad</p>
-                              <p className="text-sm font-semibold text-slate-900 mt-1">Hace 2 horas</p>
+                              <p className="text-sm font-semibold text-slate-900 mt-1">{selectedStudent.last_test}</p>
                             </div>
+                          </div>
+                          <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <p className="text-xs text-slate-500 uppercase font-bold mb-2">Código Holland</p>
+                            <Badge variant="outline" className="text-sm font-mono">{selectedStudent.codigoHolland}</Badge>
+                            <p className="text-xs text-slate-500 mt-3 mb-1">Total de Sesiones</p>
+                            <p className="text-sm font-semibold text-slate-900">{selectedStudent.totalSesiones} sesión(es)</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -326,13 +509,24 @@ const DashboardEspecialist = () => {
                               <div className="mt-6 p-4 bg-teal-50 border border-teal-100 rounded-xl">
                                 <h4 className="font-bold text-teal-800 mb-2 flex items-center">
                                   <BrainCircuit className="w-4 h-4 mr-2" />
-                                  Interpretación IA
+                                  Carreras Recomendadas
                                 </h4>
-                                <p className="text-sm text-teal-700 leading-relaxed">
-                                  El estudiante muestra una fuerte inclinación hacia el pensamiento estructurado y la resolución de problemas abstractos. 
-                                  Se observa una brecha en habilidades sociales que podría beneficiarse de talleres de comunicación.
-                                  Carreras recomendadas: Ingeniería de Sistemas, Matemáticas, Física.
-                                </p>
+                                <div className="space-y-3">
+                                  {selectedStudent.recomendacionesCarreras && selectedStudent.recomendacionesCarreras.length > 0 ? (
+                                    selectedStudent.recomendacionesCarreras.map((carrera, index) => (
+                                      <div key={carrera.id} className="bg-white p-3 rounded-lg border border-teal-200">
+                                        <p className="font-semibold text-teal-900 text-sm mb-1">
+                                          {index + 1}. {carrera.name}
+                                        </p>
+                                        <p className="text-xs text-teal-700 leading-relaxed">
+                                          {carrera.razon}
+                                        </p>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-teal-700">No hay recomendaciones disponibles</p>
+                                  )}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -426,8 +620,16 @@ const DashboardEspecialist = () => {
     }
 
     if (activeModule === "admissions") {
+      const stats = calcularEstadisticasAdmisiones();
+      
       return (
         <div className="space-y-8">
+                {loadingAdmissions ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+                  </div>
+                ) : (
+                  <>
                 {/* KPI Cards */}
                 <div className="grid md:grid-cols-4 gap-4">
                   <Card className="bg-white border-slate-200 shadow-sm">
@@ -436,10 +638,9 @@ const DashboardEspecialist = () => {
                         <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
                           <Users className="w-5 h-5" />
                         </div>
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200">+12%</Badge>
                       </div>
                       <p className="text-sm text-slate-500 font-medium">Total Aspirantes</p>
-                      <h3 className="text-2xl font-bold text-slate-900">2,543</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{stats.totalAspirantes}</h3>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-slate-200 shadow-sm">
@@ -448,10 +649,9 @@ const DashboardEspecialist = () => {
                         <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
                           <Sparkles className="w-5 h-5" />
                         </div>
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200">+5%</Badge>
                       </div>
                       <p className="text-sm text-slate-500 font-medium">Interés Alto</p>
-                      <h3 className="text-2xl font-bold text-slate-900">856</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{stats.interesAlto}</h3>
                     </CardContent>
                   </Card>
                   <Card className="bg-white border-slate-200 shadow-sm">
@@ -460,10 +660,9 @@ const DashboardEspecialist = () => {
                         <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
                           <Megaphone className="w-5 h-5" />
                         </div>
-                        <Badge className="bg-slate-100 text-slate-600">--</Badge>
                       </div>
                       <p className="text-sm text-slate-500 font-medium">Invitaciones Enviadas</p>
-                      <h3 className="text-2xl font-bold text-slate-900">1,204</h3>
+                      <h3 className="text-2xl font-bold text-slate-900">{stats.contactados}</h3>
                     </CardContent>
                   </Card>
                   <Card className="bg-teal-900 border-teal-800 shadow-sm text-white">
@@ -472,10 +671,9 @@ const DashboardEspecialist = () => {
                         <div className="p-2 bg-teal-800 rounded-lg text-teal-300">
                           <GraduationCap className="w-5 h-5" />
                         </div>
-                        <Badge className="bg-teal-500 text-white border-0">+8%</Badge>
                       </div>
                       <p className="text-sm text-teal-200 font-medium">Proyectado Matriculados</p>
-                      <h3 className="text-2xl font-bold">450</h3>
+                      <h3 className="text-2xl font-bold">{stats.proyectadoMatriculados}</h3>
                     </CardContent>
                   </Card>
                 </div>
@@ -494,7 +692,7 @@ const DashboardEspecialist = () => {
                             <span className="w-3 h-3 rounded-full bg-slate-300"></span>
                             <span className="font-semibold text-slate-700">Realizaron Test Vocacional</span>
                           </div>
-                          <span className="font-bold text-slate-900">2,543</span>
+                          <span className="font-bold text-slate-900">{stats.totalAspirantes}</span>
                         </div>
                         <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
                           <div className="h-full bg-slate-400 w-full rounded-full"></div>
@@ -507,10 +705,10 @@ const DashboardEspecialist = () => {
                             <span className="w-3 h-3 rounded-full bg-blue-500"></span>
                             <span className="font-semibold text-slate-700">Identificados como Potenciales</span>
                           </div>
-                          <span className="font-bold text-slate-900">1,850 (72%)</span>
+                          <span className="font-bold text-slate-900">{stats.potenciales} ({stats.porcentajePotenciales}%)</span>
                         </div>
                         <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 w-[72%] rounded-full"></div>
+                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${stats.porcentajePotenciales}%` }}></div>
                         </div>
                       </div>
 
@@ -520,10 +718,10 @@ const DashboardEspecialist = () => {
                             <span className="w-3 h-3 rounded-full bg-purple-500"></span>
                             <span className="font-semibold text-slate-700">Contactados / Invitados</span>
                           </div>
-                          <span className="font-bold text-slate-900">1,204 (47%)</span>
+                          <span className="font-bold text-slate-900">{stats.contactados} ({stats.porcentajeContactados}%)</span>
                         </div>
                         <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-purple-500 w-[47%] rounded-full"></div>
+                          <div className="h-full bg-purple-500 rounded-full" style={{ width: `${stats.porcentajeContactados}%` }}></div>
                         </div>
                       </div>
 
@@ -531,12 +729,12 @@ const DashboardEspecialist = () => {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <span className="w-3 h-3 rounded-full bg-teal-500"></span>
-                            <span className="font-semibold text-slate-700">Inscritos / Matriculados</span>
+                            <span className="font-semibold text-slate-700">Proyectado Matriculados</span>
                           </div>
-                          <span className="font-bold text-slate-900">450 (18%)</span>
+                          <span className="font-bold text-slate-900">{stats.proyectadoMatriculados} ({stats.porcentajeMatriculados}%)</span>
                         </div>
                         <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-teal-500 w-[18%] rounded-full"></div>
+                          <div className="h-full bg-teal-500 rounded-full" style={{ width: `${stats.porcentajeMatriculados}%` }}></div>
                         </div>
                       </div>
                     </div>
@@ -555,56 +753,76 @@ const DashboardEspecialist = () => {
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-500 font-medium">
-                          <tr>
-                            <th className="p-4 rounded-l-lg">Aspirante</th>
-                            <th className="p-4">Interés Principal</th>
-                            <th className="p-4">Probabilidad (IA)</th>
-                            <th className="p-4">Estado</th>
-                            <th className="p-4 rounded-r-lg text-right">Acción</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {[
-                            { name: "Valentina Ruiz", interest: "Psicología", prob: "Alta (92%)", status: "Contactado" },
-                            { name: "Javier Méndez", interest: "Ing. Mecánica", prob: "Media (65%)", status: "Pendiente" },
-                            { name: "Camila Torres", interest: "Derecho", prob: "Muy Alta (98%)", status: "En Proceso" },
-                            { name: "Andrés Silva", interest: "Economía", prob: "Alta (88%)", status: "Pendiente" },
-                          ].map((aspirant, i) => (
-                            <tr key={i} className="hover:bg-slate-50 group">
-                              <td className="p-4 font-medium text-slate-900">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-8 w-8 bg-slate-200 text-slate-500">
-                                    <AvatarFallback>{aspirant.name.charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                  {aspirant.name}
-                                </div>
-                              </td>
-                              <td className="p-4 text-slate-600">{aspirant.interest}</td>
-                              <td className="p-4">
-                                <Badge variant="outline" className={`
-                                  ${aspirant.prob.includes("Muy Alta") ? "bg-green-50 text-green-700 border-green-200" : 
-                                    aspirant.prob.includes("Alta") ? "bg-blue-50 text-blue-700 border-blue-200" : 
-                                    "bg-yellow-50 text-yellow-700 border-yellow-200"}
-                                `}>
-                                  {aspirant.prob}
-                                </Badge>
-                              </td>
-                              <td className="p-4 text-slate-600">{aspirant.status}</td>
-                              <td className="p-4 text-right">
-                                <Button size="sm" className="bg-white border border-slate-200 text-slate-700 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-sm opacity-0 group-hover:opacity-100 transition-all">
-                                  Invitar <ArrowUpRight className="w-3 h-3 ml-1" />
-                                </Button>
-                              </td>
+                    {admissionsData.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400">
+                        <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        <p>No hay aspirantes disponibles</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-slate-50 text-slate-500 font-medium">
+                            <tr>
+                              <th className="p-4 rounded-l-lg">Aspirante</th>
+                              <th className="p-4">Interés Principal</th>
+                              <th className="p-4">Probabilidad (IA)</th>
+                              <th className="p-4">Estado</th>
+                              <th className="p-4 rounded-r-lg text-right">Acción</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {admissionsData
+                              .sort((a, b) => {
+                                const probA = calcularProbabilidad(a);
+                                const probB = calcularProbabilidad(b);
+                                return probB.porcentaje - probA.porcentaje;
+                              })
+                              .slice(0, 10)
+                              .map((aspirant) => {
+                                const probabilidad = calcularProbabilidad(aspirant);
+                                const interesPrincipal = aspirant.recomendacionesCarreras.length > 0 
+                                  ? aspirant.recomendacionesCarreras[0].name 
+                                  : "Indeciso";
+                                const estado = getStatus(aspirant.totalSesiones, aspirant.ultimaFechaTest);
+                                
+                                return (
+                                  <tr key={aspirant.estudiante.id} className="hover:bg-slate-50 group">
+                                    <td className="p-4 font-medium text-slate-900">
+                                      <div className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8 bg-slate-200 text-slate-500">
+                                          <AvatarFallback>{getInitials(aspirant.estudiante.nombre)}</AvatarFallback>
+                                        </Avatar>
+                                        {aspirant.estudiante.nombre}
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-slate-600">{interesPrincipal}</td>
+                                    <td className="p-4">
+                                      <Badge variant="outline" className={`
+                                        ${probabilidad.nivel === "Muy Alta" ? "bg-green-50 text-green-700 border-green-200" : 
+                                          probabilidad.nivel === "Alta" ? "bg-blue-50 text-blue-700 border-blue-200" : 
+                                          probabilidad.nivel === "Media" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                          "bg-orange-50 text-orange-700 border-orange-200"}
+                                      `}>
+                                        {probabilidad.nivel} ({probabilidad.porcentaje}%)
+                                      </Badge>
+                                    </td>
+                                    <td className="p-4 text-slate-600">{estado}</td>
+                                    <td className="p-4 text-right">
+                                      <Button size="sm" className="bg-white border border-slate-200 text-slate-700 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-sm opacity-0 group-hover:opacity-100 transition-all">
+                                        Invitar <ArrowUpRight className="w-3 h-3 ml-1" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+                  </>
+                )}
               </div>
       );
     }
