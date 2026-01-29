@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
-import { iniciarTest, TipoTest } from "@/lib/api/orientacionVocacional";
+import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria } from "@/lib/api/orientacionVocacional";
 
 const profileBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
@@ -27,13 +27,22 @@ const DashboardAspirante = () => {
   const { toast } = useToast();
   const [activeModule, setActiveModule] = useState<string>("tests");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [notasColegio, setNotasColegio] = useState({
-    primerAno: "",
-    segundoAno: "",
-    tercerAno: "",
-    cuartoAno: "",
-    promedio: ""
+
+  // Trayectoria académica (bachillerato) – campos según spec del back
+  const [trayectoria, setTrayectoria] = useState<TrayectoriaBody>({
+    promediosPorAno: {},
+    promedioGeneral: undefined,
+    gradoActual: "",
+    materiasDestacadas: [],
+    actividadesExtracurriculares: [],
+    proyectosRealizados: [],
   });
+  const [trayectoriaLoading, setTrayectoriaLoading] = useState(false);
+  const [trayectoriaSaving, setTrayectoriaSaving] = useState(false);
+  // Inputs temporales para agregar ítems a listas
+  const [nuevaMateria, setNuevaMateria] = useState("");
+  const [nuevaActividad, setNuevaActividad] = useState("");
+  const [nuevoProyecto, setNuevoProyecto] = useState("");
   
   // Estado para Orientación Vocacional
   const [tipoTest, setTipoTest] = useState<TipoTest | null>(null);
@@ -119,7 +128,7 @@ const DashboardAspirante = () => {
       module: "orientacion"
     },
     {
-      title: "Subir Notas del Colegio",
+      title: "Trayectoria académica",
       icon: Upload,
       module: "notas"
     },
@@ -130,32 +139,100 @@ const DashboardAspirante = () => {
     }
   ];
 
-  const handleSubirNotas = async () => {
-    // Validar que todos los campos estén llenos
-    if (!notasColegio.primerAno || !notasColegio.segundoAno || !notasColegio.tercerAno || !notasColegio.cuartoAno) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todas las notas",
-        variant: "destructive"
-      });
+  // Cargar trayectoria al entrar al módulo notas
+  useEffect(() => {
+    if (activeModule !== "notas") return;
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) return;
+
+    setTrayectoriaLoading(true);
+    obtenerMiTrayectoria(accessToken)
+      .then((res) => {
+        const normalizada = normalizarTrayectoria(res.data);
+        if (normalizada) {
+          setTrayectoria({
+            promediosPorAno: normalizada.promediosPorAno ?? {},
+            promedioGeneral: normalizada.promedioGeneral,
+            gradoActual: normalizada.gradoActual ?? "",
+            materiasDestacadas: normalizada.materiasDestacadas ?? [],
+            actividadesExtracurriculares: normalizada.actividadesExtracurriculares ?? [],
+            proyectosRealizados: normalizada.proyectosRealizados ?? [],
+          });
+        }
+      })
+      .catch(() => {
+        // 404 o sin datos: se mantiene el estado inicial
+      })
+      .finally(() => setTrayectoriaLoading(false));
+  }, [activeModule, tokens]);
+
+  const handleGuardarTrayectoria = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) {
+      toast({ title: "Sesión expirada", description: "Inicia sesión nuevamente", variant: "destructive" });
       return;
     }
 
+    setTrayectoriaSaving(true);
+    try {
+      const body: TrayectoriaBody = {
+        promediosPorAno: Object.keys(trayectoria.promediosPorAno || {}).length
+          ? trayectoria.promediosPorAno
+          : undefined,
+        promedioGeneral: trayectoria.promedioGeneral != null && trayectoria.promedioGeneral !== undefined
+          ? Number(trayectoria.promedioGeneral)
+          : undefined,
+        gradoActual: trayectoria.gradoActual?.trim() || undefined,
+        materiasDestacadas: (trayectoria.materiasDestacadas?.length && trayectoria.materiasDestacadas.length > 0)
+          ? trayectoria.materiasDestacadas
+          : undefined,
+        actividadesExtracurriculares: (trayectoria.actividadesExtracurriculares?.length && trayectoria.actividadesExtracurriculares.length > 0)
+          ? trayectoria.actividadesExtracurriculares
+          : undefined,
+        proyectosRealizados: (trayectoria.proyectosRealizados?.length && trayectoria.proyectosRealizados.length > 0)
+          ? trayectoria.proyectosRealizados
+          : undefined,
+      };
+      await actualizarMiTrayectoria(accessToken, body);
+      toast({ title: "Éxito", description: "Trayectoria académica guardada correctamente." });
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: e?.message || "No se pudo guardar la trayectoria.",
+        variant: "destructive",
+      });
+    } finally {
+      setTrayectoriaSaving(false);
+    }
+  };
 
-    // Calcular promedio
-    const promedio = (
-      (parseFloat(notasColegio.primerAno) +
-       parseFloat(notasColegio.segundoAno) +
-       parseFloat(notasColegio.tercerAno) +
-       parseFloat(notasColegio.cuartoAno)) / 4
-    ).toFixed(2);
-
-    setNotasColegio({ ...notasColegio, promedio });
-
-    // Aquí puedes agregar la lógica para guardar en el backend
-    toast({
-      title: "Éxito",
-      description: `Notas guardadas. Promedio calculado: ${promedio}`,
+  const aniosDefault = ["1er año", "2do año", "3er año", "4to año", "5to año"] as const;
+  const setPromedioPorAno = (ano: string, value: string) => {
+    const num = value === "" ? undefined : parseFloat(value);
+    const isValid = num != null && !Number.isNaN(num);
+    setTrayectoria((prev) => {
+      const next = { ...(prev.promediosPorAno || {}) };
+      if (isValid) next[ano] = num;
+      else delete next[ano];
+      return { ...prev, promediosPorAno: next };
+    });
+  };
+  const addToList = (key: 'materiasDestacadas' | 'actividadesExtracurriculares' | 'proyectosRealizados', value: string) => {
+    const v = value?.trim();
+    if (!v) return;
+    setTrayectoria((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), v],
+    }));
+    if (key === 'materiasDestacadas') setNuevaMateria("");
+    if (key === 'actividadesExtracurriculares') setNuevaActividad("");
+    if (key === 'proyectosRealizados') setNuevoProyecto("");
+  };
+  const removeFromList = (key: 'materiasDestacadas' | 'actividadesExtracurriculares' | 'proyectosRealizados', index: number) => {
+    setTrayectoria((prev) => {
+      const arr = [...(prev[key] || [])];
+      arr.splice(index, 1);
+      return { ...prev, [key]: arr };
     });
   };
 
@@ -288,7 +365,7 @@ const DashboardAspirante = () => {
                           Emprendedor (E)
                         </li>
                         <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                          <span className="w-2 h-2 bg-orange-500   rounded-full"></span>
                           Convencional (C)
                         </li>
                       </ul>
@@ -403,108 +480,176 @@ const DashboardAspirante = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Upload className="h-6 w-6" />
-                Subir Notas del Colegio
+                Trayectoria académica (Bachillerato)
               </CardTitle>
               <CardDescription>
-                Ingresa tus notas de 1ro a 4to año de bachillerato para calcular tu promedio
+                Completa tus datos de bachillerato para enriquecer tu perfil vocacional. Todos los campos son opcionales.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  El promedio mínimo requerido para postular es de <strong>15,00 puntos</strong>
-                </AlertDescription>
-              </Alert>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primerAno">1er Año</Label>
-                  <Input
-                    id="primerAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.primerAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, primerAno: e.target.value })}
-                    placeholder="Ej: 16.50"
-                  />
+            <CardContent className="space-y-6">
+              {trayectoriaLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
+              ) : (
+                <>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Estos datos se usan en tu perfil de orientación vocacional. Escala de notas sugerida: 0–20.
+                    </AlertDescription>
+                  </Alert>
 
-                <div className="space-y-2">
-                  <Label htmlFor="segundoAno">2do Año</Label>
-                  <Input
-                    id="segundoAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.segundoAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, segundoAno: e.target.value })}
-                    placeholder="Ej: 17.00"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tercerAno">3er Año</Label>
-                  <Input
-                    id="tercerAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.tercerAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, tercerAno: e.target.value })}
-                    placeholder="Ej: 16.75"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cuartoAno">4to Año</Label>
-                  <Input
-                    id="cuartoAno"
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.01"
-                    value={notasColegio.cuartoAno}
-                    onChange={(e) => setNotasColegio({ ...notasColegio, cuartoAno: e.target.value })}
-                    placeholder="Ej: 18.00"
-                  />
-                </div>
-              </div>
-
-              {notasColegio.promedio && (
-                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Promedio Calculado:</span>
-                    <span className={`text-2xl font-bold ${
-                      parseFloat(notasColegio.promedio) >= 15 
-                        ? "text-green-600" 
-                        : "text-red-600"
-                    }`}>
-                      {notasColegio.promedio}
-                    </span>
+                  {/* Promedios por año */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-medium">Promedios por año / periodo</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Ej: &quot;1er año&quot;: 14, &quot;2do año&quot;: 15, etc.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {aniosDefault.map((ano) => (
+                        <div key={ano} className="space-y-1">
+                          <Label htmlFor={`prom-${ano}`} className="text-xs">{ano}</Label>
+                          <Input
+                            id={`prom-${ano}`}
+                            type="number"
+                            min={0}
+                            max={20}
+                            step={0.01}
+                            placeholder="—"
+                            value={trayectoria.promediosPorAno?.[ano] ?? ""}
+                            onChange={(e) => setPromedioPorAno(ano, e.target.value)}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  {parseFloat(notasColegio.promedio) >= 15 ? (
-                    <p className="text-sm text-green-700 mt-2">
-                      ✓ Cumples con el requisito mínimo de 15,00 puntos
-                    </p>
-                  ) : (
-                    <p className="text-sm text-red-700 mt-2">
-                      ✗ No cumples con el requisito mínimo de 15,00 puntos
-                    </p>
-                  )}
-                </div>
-              )}
 
-              <Button 
-                onClick={handleSubirNotas}
-                className="w-full bg-gradient-primary hover:opacity-90"
-              >
-                Guardar Notas
-              </Button>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="promedioGeneral">Promedio general (0–20)</Label>
+                      <Input
+                        id="promedioGeneral"
+                        type="number"
+                        min={0}
+                        max={20}
+                        step={0.01}
+                        placeholder="Ej: 16.00"
+                        value={trayectoria.promedioGeneral ?? ""}
+                        onChange={(e) =>
+                          setTrayectoria((prev) => ({
+                            ...prev,
+                            promedioGeneral: e.target.value === "" ? undefined : parseFloat(e.target.value),
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gradoActual">Grado actual (máx. 50 caracteres)</Label>
+                      <Input
+                        id="gradoActual"
+                        maxLength={50}
+                        placeholder="Ej: 5to año, 3er año bachillerato"
+                        value={trayectoria.gradoActual ?? ""}
+                        onChange={(e) => setTrayectoria((prev) => ({ ...prev, gradoActual: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Materias destacadas */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-medium">Materias destacadas</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(trayectoria.materiasDestacadas || []).map((m, i) => (
+                        <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1">
+                          {m}
+                          <button type="button" onClick={() => removeFromList("materiasDestacadas", i)} className="ml-1 rounded-full hover:bg-muted p-0.5">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ej: Matemáticas, Física"
+                        value={nuevaMateria}
+                        onChange={(e) => setNuevaMateria(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addToList("materiasDestacadas", nuevaMateria))}
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={() => addToList("materiasDestacadas", nuevaMateria)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Actividades extracurriculares */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-medium">Actividades extracurriculares</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(trayectoria.actividadesExtracurriculares || []).map((a, i) => (
+                        <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1">
+                          {a}
+                          <button type="button" onClick={() => removeFromList("actividadesExtracurriculares", i)} className="ml-1 rounded-full hover:bg-muted p-0.5">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ej: Deportes, Teatro, Voluntariado"
+                        value={nuevaActividad}
+                        onChange={(e) => setNuevaActividad(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addToList("actividadesExtracurriculares", nuevaActividad))}
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={() => addToList("actividadesExtracurriculares", nuevaActividad)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Proyectos realizados */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-medium">Proyectos realizados</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(trayectoria.proyectosRealizados || []).map((p, i) => (
+                        <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1">
+                          {p}
+                          <button type="button" onClick={() => removeFromList("proyectosRealizados", i)} className="ml-1 rounded-full hover:bg-muted p-0.5">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ej: Feria científica 2024, Proyecto comunitario"
+                        value={nuevoProyecto}
+                        onChange={(e) => setNuevoProyecto(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addToList("proyectosRealizados", nuevoProyecto))}
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={() => addToList("proyectosRealizados", nuevoProyecto)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleGuardarTrayectoria}
+                    disabled={trayectoriaSaving}
+                    className="w-full bg-gradient-primary hover:opacity-90"
+                  >
+                    {trayectoriaSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Guardando…
+                      </>
+                    ) : (
+                      "Guardar trayectoria académica"
+                    )}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

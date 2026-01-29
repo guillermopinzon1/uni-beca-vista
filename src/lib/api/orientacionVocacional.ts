@@ -505,3 +505,111 @@ export async function obtenerHistorialEspecialista(
 
   return payload as HistorialEspecialistaResponse;
 }
+
+// ==================== TRAYECTORIA ACADÉMICA (BACHILLERATO) ====================
+
+/** Body para crear/actualizar trayectoria (camelCase, enviar al back) */
+export interface TrayectoriaBody {
+  promediosPorAno?: Record<string, number>;
+  promedioGeneral?: number;
+  gradoActual?: string;
+  materiasDestacadas?: string[];
+  actividadesExtracurriculares?: string[];
+  proyectosRealizados?: string[];
+}
+
+/** Respuesta del back (puede venir en snake_case) */
+export interface TrayectoriaResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    promedio_general_acumulado?: number;
+    promedioGeneral?: number;
+    grado_actual?: string;
+    gradoActual?: string;
+    promedios_por_ano?: Record<string, number>;
+    promediosPorAno?: Record<string, number>;
+    materias_destacadas?: string[];
+    materiasDestacadas?: string[];
+    actividades_extracurriculares?: string[];
+    actividadesExtracurriculares?: string[];
+    proyectos_realizados?: string[];
+    proyectosRealizados?: string[];
+  };
+}
+
+/** Normaliza datos de trayectoria (snake_case → camelCase para el front) */
+export function normalizarTrayectoria(data: TrayectoriaResponse['data']): TrayectoriaBody | null {
+  if (!data) return null;
+  return {
+    promediosPorAno: data.promediosPorAno ?? data.promedios_por_ano ?? undefined,
+    promedioGeneral: data.promedioGeneral ?? data.promedio_general_acumulado ?? undefined,
+    gradoActual: data.gradoActual ?? data.grado_actual ?? undefined,
+    materiasDestacadas: data.materiasDestacadas ?? data.materias_destacadas ?? undefined,
+    actividadesExtracurriculares: data.actividadesExtracurriculares ?? data.actividades_extracurriculares ?? undefined,
+    proyectosRealizados: data.proyectosRealizados ?? data.proyectos_realizados ?? undefined,
+  };
+}
+
+/**
+ * Obtener mi trayectoria académica (bachillerato)
+ */
+export async function obtenerMiTrayectoria(accessToken: string): Promise<TrayectoriaResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/mi-trayectoria`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { success: true, data: undefined };
+    }
+    const message = payload?.message || `Error al obtener trayectoria (${response.status})`;
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as TrayectoriaResponse;
+}
+
+/**
+ * Crear o actualizar mi trayectoria académica (PUT/PATCH).
+ * Body en camelCase según especificación.
+ */
+export async function actualizarMiTrayectoria(
+  accessToken: string,
+  body: TrayectoriaBody
+): Promise<TrayectoriaResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/mi-trayectoria`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error al guardar trayectoria (${response.status})`;
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as TrayectoriaResponse;
+}
