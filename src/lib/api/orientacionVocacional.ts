@@ -130,6 +130,9 @@ export interface ResultadosResponse {
   };
 }
 
+/** Objeto "resultado" interno (perfilDominante, recomendacionesCarreras, etc.) para usar en PerfilVocacional */
+export type ResultadoVocacional = ResultadosResponse['data']['resultado'];
+
 export interface PerfilVocacionalResponse {
   success: boolean;
   data: {
