@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-import { obtenerHistorialEspecialista, HistorialEspecialistaResponse } from "@/lib/api/orientacionVocacional";
+import { obtenerHistorialEspecialista, HistorialEspecialistaResponse, RecomendacionCarrera } from "@/lib/api/orientacionVocacional";
 
 // Interface para mapear datos del backend
 interface StudentData {
@@ -31,11 +31,7 @@ interface StudentData {
   email: string;
   codigoHolland: string;
   totalSesiones: number;
-  recomendacionesCarreras: Array<{
-    id: number;
-    name: string;
-    razon: string;
-  }>;
+  recomendacionesCarreras: RecomendacionCarrera[];
 }
 
 const DashboardEspecialist = () => {
@@ -518,6 +514,11 @@ const DashboardEspecialist = () => {
                                         <p className="font-semibold text-teal-900 text-sm mb-1">
                                           {index + 1}. {carrera.name}
                                         </p>
+                                        {((carrera as any).faculty ?? (carrera as any).facultad ?? (carrera as any).area) && (
+                                          <p className="text-xs text-teal-600 font-medium mb-1">
+                                            {[(carrera as any).faculty ?? (carrera as any).facultad, (carrera as any).area].filter(Boolean).join(" · ")}
+                                          </p>
+                                        )}
                                         <p className="text-xs text-teal-700 leading-relaxed">
                                           {carrera.razon}
                                         </p>

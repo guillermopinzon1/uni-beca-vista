@@ -94,71 +94,55 @@ const SeleccionarTest = () => {
   };
 
   return (
-    <div className="w-full">
-      <div className="container mx-auto px-4 py-8">
+    <div className="w-full pb-24">
+      <div className="container mx-auto px-4 py-4 md:py-6">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10">
-            <BrainCircuit className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <div className="text-center mb-5 md:mb-6">
+            <BrainCircuit className="w-12 h-12 md:w-14 md:h-14 text-orange-500 mx-auto mb-2 md:mb-3" />
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
               Selecciona el Tipo de Test
             </h2>
-            <p className="text-gray-500 text-lg">
+            <p className="text-gray-500 text-sm md:text-base">
               Elige el test que mejor se adapte a tus necesidades
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-5 mb-6">
             {/* Test Holland RIASEC */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Card 
+              <Card
                 className={`cursor-pointer transition-all border-2 ${
-                  tipoTest === 'Holland_RIASEC' 
-                    ? 'border-orange-500 bg-orange-50 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300'
+                  tipoTest === "Holland_RIASEC"
+                    ? "border-orange-500 bg-orange-50 shadow-lg"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() => setTipoTest('Holland_RIASEC')}
+                onClick={() => setTipoTest("Holland_RIASEC")}
               >
-                <CardContent className="p-8">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                <CardContent className="p-5 md:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
                         Test Holland RIASEC
                       </h3>
-                      <p className="text-gray-600 mb-4">
+                      <p className="text-gray-600 text-sm mb-2">
                         Evalúa 6 dimensiones de personalidad vocacional:
                       </p>
-                      <ul className="space-y-2 text-sm text-gray-600">
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Realista (R)
+                      <ul className="space-y-0.5 text-xs text-gray-600">
+                        <li className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
+                          Realista (R), Investigador (I), Artístico (A)
                         </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Investigador (I)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Artístico (A)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Social (S)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Emprendedor (E)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Convencional (C)
+                        <li className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
+                          Social (S), Emprendedor (E), Convencional (C)
                         </li>
                       </ul>
                     </div>
-                    {tipoTest === 'Holland_RIASEC' && (
-                      <CheckCircle2 className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                    {tipoTest === "Holland_RIASEC" && (
+                      <CheckCircle2 className="h-5 w-5 text-orange-500 flex-shrink-0" />
                     )}
                   </div>
                 </CardContent>
@@ -170,63 +154,66 @@ const SeleccionarTest = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Card 
+              <Card
                 className={`cursor-pointer transition-all border-2 ${
-                  tipoTest === 'Kuder' 
-                    ? 'border-orange-500 bg-orange-50 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300'
+                  tipoTest === "Kuder"
+                    ? "border-orange-500 bg-orange-50 shadow-lg"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() => setTipoTest('Kuder')}
+                onClick={() => setTipoTest("Kuder")}
               >
-                <CardContent className="p-8">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                <CardContent className="p-5 md:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
                         Test Kuder
                       </h3>
-                      <p className="text-gray-600 mb-4">
+                      <p className="text-gray-600 text-sm mb-2">
                         Evalúa 10 áreas de interés profesional:
                       </p>
-                      <ul className="space-y-2 text-sm text-gray-600">
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                      <ul className="space-y-0.5 text-xs text-gray-600">
+                        <li className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
                           Mecánico, Científico, Computacional
                         </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                        <li className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
                           Artístico, Literario, Musical
                         </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                        <li className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
                           Social, Administrativo, Al aire libre
                         </li>
                       </ul>
                     </div>
-                    {tipoTest === 'Kuder' && (
-                      <CheckCircle2 className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                    {tipoTest === "Kuder" && (
+                      <CheckCircle2 className="h-5 w-5 text-orange-500 flex-shrink-0" />
                     )}
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
+        </div>
+      </div>
 
-          <div className="text-center">
-            <Button
-              onClick={handleIniciarTest}
-              disabled={!tipoTest || cargando}
-              className="bg-[#F37021] hover:bg-orange-600 text-white rounded-md px-10 h-12 font-bold transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {cargando ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Iniciando...
-                </>
-              ) : (
-                "Comenzar Test"
-              )}
-            </Button>
-          </div>
+      {/* Botón Comenzar Test fijo abajo: siempre visible */}
+      <div className="sticky bottom-0 left-0 right-0 z-10 py-4 bg-background/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+        <div className="max-w-4xl mx-auto px-4 flex justify-center">
+          <Button
+            onClick={handleIniciarTest}
+            disabled={!tipoTest || cargando}
+            className="bg-[#F37021] hover:bg-orange-600 text-white rounded-lg px-8 h-12 font-bold text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            {cargando ? (
+              <>
+                <span className="animate-spin mr-2">⏳</span>
+                Iniciando...
+              </>
+            ) : (
+              "Comenzar Test"
+            )}
+          </Button>
         </div>
       </div>
     </div>

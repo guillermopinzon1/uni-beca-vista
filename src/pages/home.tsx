@@ -82,7 +82,7 @@ const Home = () => {
             className="z-10"
           >
             <span className="inline-block py-1 px-4 rounded-full bg-orange-100 text-orange-600 text-xs font-bold uppercase tracking-[0.2em] mb-6">
-              Servicios Estudiantiles
+              Dirección de Bienestar y Desarrollo Estudiantil
             </span>
             <h1 className="text-6xl md:text-7xl font-black text-slate-900 leading-[1.1] mb-8">
               Tu éxito <span className="text-orange-500">Unimetano</span> comienza aquí.
@@ -166,7 +166,7 @@ const Home = () => {
             <div className="w-10 h-1 bg-orange-500" />
           </div>
           <p className="text-slate-400 text-sm font-medium">
-            © 2025 Universidad Metropolitana | Sistema Integral de Servicios Estudiantiles
+            © 2025 Universidad Metropolitana | Dirección de Bienestar y Desarrollo Estudiantil
           </p>
         </div>
       </footer>

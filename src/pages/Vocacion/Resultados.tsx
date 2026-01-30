@@ -212,6 +212,7 @@ const Resultados = () => {
   // Normalizar nombres de propiedades (por si el backend usa snake_case)
   const perfilDominante = resultado.perfilDominante || (resultado as any).perfil_dominante || 'No disponible';
   const perfilSecundario = resultado.perfilSecundario || (resultado as any).perfil_secundario;
+  const recomendacionesCarreras = resultado.recomendacionesCarreras ?? (resultado as any).recomendaciones_carreras ?? [];
   const codigoHolland = resultado.codigoHolland || (resultado as any).codigo_holland || 'N/A';
   const nivelConfianza = resultado.nivelConfianza || (resultado as any).nivel_confianza || 0;
 
@@ -278,7 +279,7 @@ const Resultados = () => {
           )}
 
           {/* Recomendaciones de Carreras */}
-          {resultado.recomendacionesCarreras && resultado.recomendacionesCarreras.length > 0 && (
+          {recomendacionesCarreras.length > 0 && (
             <Card className="border-none shadow-sm rounded-xl">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -286,15 +287,23 @@ const Resultados = () => {
                   Carreras Recomendadas
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {resultado.recomendacionesCarreras.map((carrera, index) => (
+                  {recomendacionesCarreras.map((carrera: any, index: number) => {
+                    const facultad = carrera.faculty ?? carrera.facultad ?? "";
+                    const area = carrera.area ?? carrera.área ?? "";
+                    const facultadArea = [facultad, area].filter(Boolean).join(" · ") || "—";
+                    return (
                     <div 
-                      key={index}
+                      key={carrera.id ?? index}
                       className="p-6 rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all bg-white"
                     >
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{carrera.name}</h4>
+                      <p className="text-orange-600 text-sm font-medium mb-2">
+                        {facultadArea}
+                      </p>
                       <p className="text-gray-600 text-sm">{carrera.razon}</p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

@@ -4,6 +4,16 @@ import { API_BASE } from './config';
 
 export type TipoTest = 'Holland_RIASEC' | 'Kuder';
 
+/** Elemento enriquecido de recomendaciones_carreras (completar test, resultados por sesión, mi perfil vocacional, etc.) */
+export interface RecomendacionCarrera {
+  id: number;
+  name: string;
+  razon: string;
+  faculty?: string;
+  facultad?: string; // snake_case desde el back
+  area: string;
+}
+
 export interface Pregunta {
   id: string;
   codigo: string;
@@ -62,11 +72,7 @@ export interface GuardarRespuestasRonda2Response {
       perfilDominante: string;
       perfilSecundario: string;
       nivelConfianza: number;
-      recomendacionesCarreras: Array<{
-        id: number;
-        name: string;
-        razon: string;
-      }>;
+      recomendacionesCarreras: RecomendacionCarrera[];
       perfilVocacional: {
         fortalezas: string[];
         debilidades: string[];
@@ -108,11 +114,7 @@ export interface ResultadosResponse {
       perfilDominante: string;
       perfilSecundario: string;
       nivelConfianza: number;
-      recomendacionesCarreras: Array<{
-        id: number;
-        name: string;
-        razon: string;
-      }>;
+      recomendacionesCarreras: RecomendacionCarrera[];
       perfilVocacional: {
         fortalezas: string[];
         debilidades: string[];
@@ -173,11 +175,7 @@ export interface HistorialEspecialistaResponse {
     };
     perfilDominante: string;
     codigoHolland: string;
-    recomendacionesCarreras: Array<{
-      id: number;
-      name: string;
-      razon: string;
-    }>;
+    recomendacionesCarreras: RecomendacionCarrera[];
     totalSesiones: number;
     ultimaFechaTest: string;
   }>;

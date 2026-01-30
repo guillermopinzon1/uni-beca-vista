@@ -308,140 +308,7 @@ const DashboardAspirante = () => {
 
   const renderContent = () => {
     if (activeModule === "orientacion") {
-      return (
-        <div className="space-y-6">
-          <div className="text-center mb-8">
-            <Compass className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Selecciona el Tipo de Test
-            </h2>
-            <p className="text-gray-500 text-lg">
-              Elige el test que mejor se adapte a tus necesidades
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* Test Holland RIASEC */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Card 
-                className={`cursor-pointer transition-all border-2 ${
-                  tipoTest === 'Holland_RIASEC' 
-                    ? 'border-orange-500 bg-orange-50 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => setTipoTest('Holland_RIASEC')}
-              >
-                <CardContent className="p-8">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                        Test Holland RIASEC
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        Evalúa 6 dimensiones de personalidad vocacional:
-                      </p>
-                      <ul className="space-y-2 text-sm text-gray-600">
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Realista (R)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Investigador (I)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Artístico (A)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Social (S)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Emprendedor (E)
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500   rounded-full"></span>
-                          Convencional (C)
-                        </li>
-                      </ul>
-                    </div>
-                    {tipoTest === 'Holland_RIASEC' && (
-                      <CheckCircle2 className="h-6 w-6 text-orange-500 flex-shrink-0" />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Test Kuder */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Card 
-                className={`cursor-pointer transition-all border-2 ${
-                  tipoTest === 'Kuder' 
-                    ? 'border-orange-500 bg-orange-50 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => setTipoTest('Kuder')}
-              >
-                <CardContent className="p-8">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                        Test Kuder
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        Evalúa 10 áreas de interés profesional:
-                      </p>
-                      <ul className="space-y-2 text-sm text-gray-600">
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Mecánico, Científico, Computacional
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Artístico, Literario, Musical
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                          Social, Administrativo, Al aire libre
-                        </li>
-                      </ul>
-                    </div>
-                    {tipoTest === 'Kuder' && (
-                      <CheckCircle2 className="h-6 w-6 text-orange-500 flex-shrink-0" />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-
-          <div className="text-center">
-            <Button
-              onClick={handleIniciarTest}
-              disabled={!tipoTest || cargandoTest}
-              className="bg-[#F37021] hover:bg-orange-600 text-white rounded-md px-10 h-12 font-bold transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {cargandoTest ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Iniciando...
-                </>
-              ) : (
-                "Comenzar Test"
-              )}
-            </Button>
-          </div>
-        </div>
-      );
+      return <Navigate to="/orientacion/seleccionar-test" replace />;
     }
 
     if (activeModule === "tests") {
@@ -971,70 +838,6 @@ const DashboardAspirante = () => {
             Cerrar Sesión
           </Button>
         </div>
-        
-        {/* Navegación del flujo de Orientación Vocacional */}
-        {(activeModule === "orientacion" || location.pathname.includes('/orientacion/')) && (
-          <div className="mt-4 border-t border-orange/20 pt-4">
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <Button
-                variant={currentStep === 'seleccionar' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => {
-                  setActiveModule('orientacion');
-                  navigate('/orientacion/seleccionar-test');
-                }}
-                className={currentStep === 'seleccionar' ? 'bg-primary text-white' : ''}
-              >
-                <ListChecks className="h-4 w-4 mr-2" />
-                Seleccionar Test
-              </Button>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-              <Button
-                variant={currentStep === 'ronda1' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => navigate('/orientacion/ronda-1')}
-                className={currentStep === 'ronda1' ? 'bg-primary text-white' : ''}
-                disabled={!localStorage.getItem('sesionId')}
-              >
-                Ronda 1
-              </Button>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-              <Button
-                variant={currentStep === 'ronda2' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => navigate('/orientacion/ronda-2')}
-                className={currentStep === 'ronda2' ? 'bg-primary text-white' : ''}
-                disabled={!localStorage.getItem('sesionId')}
-              >
-                Ronda 2
-              </Button>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-              <Button
-                variant={currentStep === 'resultados' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => {
-                  const sesionId = localStorage.getItem('sesionId');
-                  if (sesionId) {
-                    navigate(`/orientacion/resultados/${sesionId}`);
-                  }
-                }}
-                className={currentStep === 'resultados' ? 'bg-primary text-white' : ''}
-                disabled={!localStorage.getItem('sesionId')}
-              >
-                Resultados
-              </Button>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
-              <Button
-                variant={currentStep === 'historial' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => navigate('/orientacion/historial')}
-                className={currentStep === 'historial' ? 'bg-primary text-white' : ''}
-              >
-                Historial
-              </Button>
-            </div>
-          </div>
-        )}
       </header>
 
       <div className="flex">
@@ -1049,7 +852,14 @@ const DashboardAspirante = () => {
                 onMouseLeave={() => setHoveredItem(null)}
               >
                 <button
-                  onClick={() => setActiveModule(item.module)}
+                  onClick={() => {
+                    setActiveModule(item.module);
+                    if (item.module === "orientacion") {
+                      navigate("/orientacion/seleccionar-test");
+                    } else if (item.module !== "orientacion" && location.pathname.includes("/orientacion/")) {
+                      navigate("/dashboard-aspirante");
+                    }
+                  }}
                   className={`w-12 h-12 flex items-center justify-center rounded-lg border border-orange/20 transition-all duration-200 ${
                     activeModule === item.module
                       ? "bg-orange/10 border-orange/40"
@@ -1075,9 +885,83 @@ const DashboardAspirante = () => {
         <main className="flex-1 px-6 py-8">
           <div className="max-w-6xl mx-auto">
             <div className="pt-0">
-              {/* Si hay una ruta hija (Outlet), renderizarla, sino mostrar el contenido del módulo activo */}
+              {/* Orientación: barra de progreso dentro de la página + contenido */}
               {location.pathname.includes('/orientacion/') ? (
-                <Outlet />
+                <>
+                  {/* Barra de progreso del test (dentro del contenido, no baja el sidebar) */}
+                  {(() => {
+                    const stepsFlow: { id: string; label: string; getPath: () => string }[] = [
+                      { id: 'seleccionar', label: 'Inicio', getPath: () => '/orientacion/seleccionar-test' },
+                      { id: 'ronda1', label: 'Ronda 1', getPath: () => '/orientacion/ronda-1' },
+                      { id: 'ronda2', label: 'Ronda 2', getPath: () => '/orientacion/ronda-2' },
+                      { id: 'resultados', label: 'Resultados', getPath: () => `/orientacion/resultados/${localStorage.getItem('sesionId') || ''}` },
+                    ];
+                    const currentIndex = stepsFlow.findIndex(s => s.id === currentStep);
+                    const stepIndex = currentIndex >= 0 ? currentIndex : (currentStep === 'historial' ? stepsFlow.length : 0);
+                    return (
+                      <div className="mb-6 rounded-xl border border-slate-200/80 bg-slate-50/50 px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-1 items-center gap-0">
+                            {stepsFlow.map((step, i) => {
+                              const completed = i < stepIndex;
+                              const current = i === stepIndex;
+                              const canNavigate = i <= stepIndex;
+                              const onHistorial = currentStep === 'historial';
+                              const hasSesion = !!localStorage.getItem('sesionId');
+                              const clickable = !onHistorial && (
+                                (canNavigate && step.id !== 'resultados') ||
+                                (canNavigate && step.id === 'resultados' && hasSesion)
+                              );
+                              return (
+                                <div key={step.id} className="flex flex-1 items-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!clickable) return;
+                                      if (step.id === 'resultados' && hasSesion) navigate(step.getPath());
+                                      else { setActiveModule('orientacion'); navigate(step.getPath()); }
+                                    }}
+                                    disabled={!clickable}
+                                    className={`flex flex-col items-center gap-1.5 flex-1 min-w-0 ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
+                                  >
+                                    <span
+                                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+                                        completed
+                                          ? 'bg-primary text-primary-foreground'
+                                          : current
+                                            ? 'bg-primary text-primary-foreground ring-2 ring-primary/40 ring-offset-2 ring-offset-slate-50'
+                                            : 'bg-slate-200 text-slate-400'
+                                      }`}
+                                    >
+                                      {completed ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+                                    </span>
+                                    <span className={`text-xs font-medium truncate max-w-full ${current ? 'text-primary' : completed ? 'text-slate-600' : 'text-slate-400'}`}>
+                                      {step.label}
+                                    </span>
+                                  </button>
+                                  {i < stepsFlow.length - 1 && (
+                                    <div className={`flex-1 h-0.5 min-w-4 mx-1 rounded-full transition-colors ${completed ? 'bg-primary/60' : 'bg-slate-200'}`} aria-hidden />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => navigate('/orientacion/historial')}
+                            className={`shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                              currentStep === 'historial' ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-200/80 hover:text-slate-700'
+                            }`}
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                            Historial
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <Outlet />
+                </>
               ) : (
                 renderContent()
               )}

@@ -266,7 +266,7 @@ const Ronda1 = () => {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full pb-24">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
           {/* Barra de progreso */}
@@ -345,31 +345,35 @@ const Ronda1 = () => {
                 </div>
               )}
 
-              {pregunta?.opcionesRespuesta && pregunta.opcionesRespuesta.length > 0 && (
-                <div className="mt-10 flex justify-end">
-                  <Button 
-                    onClick={() => respuestaSeleccionada && responderPregunta(pregunta.id, respuestaSeleccionada)}
-                    disabled={!respuestaSeleccionada || cargando}
-                    className="bg-gray-900 hover:bg-black text-white px-8 h-12 rounded-md font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {cargando ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Procesando...
-                      </>
-                    ) : preguntaActual === preguntas.length - 1 ? (
-                      "Finalizar Ronda 1"
-                    ) : (
-                      <>
-                        Siguiente
-                        <ChevronRight className="h-4 w-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
+
+          {/* Botón Avanzar fijo abajo: siempre visible al hacer scroll */}
+          {pregunta?.opcionesRespuesta && pregunta.opcionesRespuesta.length > 0 && (
+            <div className="sticky bottom-0 left-0 right-0 z-10 mt-6 -mb-8 py-4 bg-background/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+              <div className="max-w-3xl mx-auto px-4 flex justify-end">
+                <Button
+                  onClick={() => respuestaSeleccionada && responderPregunta(pregunta.id, respuestaSeleccionada)}
+                  disabled={!respuestaSeleccionada || cargando}
+                  className="bg-gray-900 hover:bg-black text-white px-8 h-12 rounded-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
+                  {cargando ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Procesando...
+                    </>
+                  ) : preguntaActual === preguntas.length - 1 ? (
+                    "Finalizar Ronda 1"
+                  ) : (
+                    <>
+                      Siguiente
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

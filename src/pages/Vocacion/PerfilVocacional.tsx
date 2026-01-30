@@ -210,10 +210,15 @@ const PerfilVocacional = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   {resultado.recomendacionesCarreras.map((carrera, index) => (
                     <div 
-                      key={index}
+                      key={carrera.id ?? index}
                       className="p-6 rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all bg-white"
                     >
                       <h4 className="text-xl font-bold text-gray-900 mb-2">{carrera.name}</h4>
+                      {((carrera as any).faculty ?? (carrera as any).facultad ?? (carrera as any).area) && (
+                        <p className="text-orange-600 text-sm font-medium mb-2">
+                          {[(carrera as any).faculty ?? (carrera as any).facultad, (carrera as any).area].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                       <p className="text-gray-600 text-sm">{carrera.razon}</p>
                     </div>
                   ))}
