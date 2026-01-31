@@ -49,20 +49,38 @@ const SeleccionarTest = () => {
     setCargando(true);
 
     try {
+      if (tipoTest === 'ICO') {
+        // Flujo ICO: POST iniciar-test-ico (sin body) → GET preguntas → guardar y ir a test-ico
+        const { iniciarTestIco, obtenerPreguntasIco } = await import('@/lib/api/orientacionVocacional');
+        const resInicio = await iniciarTestIco(accessToken);
+        const sesionId = resInicio.data.sesionId;
+        localStorage.setItem('sesionId', sesionId);
+        localStorage.setItem('tipoTest', 'ICO');
+        localStorage.setItem('estadoSesion', resInicio.data.estado);
+
+        const resPreguntas = await obtenerPreguntasIco(accessToken, sesionId);
+        const preguntas = resPreguntas.data?.preguntas ?? [];
+        localStorage.setItem('preguntasIco', JSON.stringify(preguntas));
+
+        toast({
+          title: "Test iniciado",
+          description: "Has comenzado el test ICO",
+        });
+        navigate('/orientacion/test-ico');
+        return;
+      }
+
+      // Holland RIASEC: iniciar-test con tipoTest → preguntas en respuesta → ronda-1
       const respuesta = await iniciarTest(accessToken, tipoTest);
-      
-      // Guardar datos en localStorage
       localStorage.setItem('sesionId', respuesta.data.sesionId);
       localStorage.setItem('tipoTest', respuesta.data.tipoTest);
       localStorage.setItem('estadoSesion', respuesta.data.estado);
       localStorage.setItem('preguntasRonda1', JSON.stringify(respuesta.data.preguntas));
-      
+
       toast({
         title: "Test iniciado",
-        description: `Has comenzado el test ${tipoTest === 'Holland_RIASEC' ? 'Holland RIASEC' : 'Kuder'}`,
+        description: "Has comenzado el test Holland RIASEC",
       });
-
-      // Redirigir a Ronda 1
       navigate('/orientacion/ronda-1');
       
     } catch (error: any) {
@@ -149,44 +167,44 @@ const SeleccionarTest = () => {
               </Card>
             </motion.div>
 
-            {/* Test Kuder */}
+            {/* Test ICO */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <Card
                 className={`cursor-pointer transition-all border-2 ${
-                  tipoTest === "Kuder"
+                  tipoTest === "ICO"
                     ? "border-orange-500 bg-orange-50 shadow-lg"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() => setTipoTest("Kuder")}
+                onClick={() => setTipoTest("ICO")}
               >
                 <CardContent className="p-5 md:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">
-                        Test Kuder
+                        Test ICO
                       </h3>
                       <p className="text-gray-600 text-sm mb-2">
-                        Evalúa 10 áreas de interés profesional:
+                        Una sola ronda: preguntas Sí/No, puntuaciones RIASEC y recomendaciones con IA.
                       </p>
                       <ul className="space-y-0.5 text-xs text-gray-600">
                         <li className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Mecánico, Científico, Computacional
+                          Preguntas directas por dimensión
                         </li>
                         <li className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Artístico, Literario, Musical
+                          Código Holland y perfil dominante/secundario
                         </li>
                         <li className="flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Social, Administrativo, Al aire libre
+                          Carreras recomendadas y análisis LLM
                         </li>
                       </ul>
                     </div>
-                    {tipoTest === "Kuder" && (
+                    {tipoTest === "ICO" && (
                       <CheckCircle2 className="h-5 w-5 text-orange-500 flex-shrink-0" />
                     )}
                   </div>

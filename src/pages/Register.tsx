@@ -65,13 +65,18 @@ const Register = () => {
         throw new Error("Las contraseñas no coinciden");
       }
 
+      const telefonoTrim = (formData.telefono || "").trim();
+      if (telefonoTrim.length < 7) {
+        throw new Error("El teléfono debe tener al menos 7 caracteres (incluye código de país, ej: +58 412 1234567)");
+      }
+
       const registerData: any = {
         email: formData.email,
         password: formData.password,
         nombre: formData.name,
         apellido: formData.lastName,
         cedula: formData.cedula,
-        telefono: formData.telefono,
+        telefono: telefonoTrim,
         role: selectedType === "student" ? "estudiante" : (selectedType || "estudiante")
       };
 
@@ -94,9 +99,16 @@ const Register = () => {
         setShowSuccessMessage(true);
       }
     } catch (err: any) {
+      let description = err?.message || "No se pudo completar el registro";
+      try {
+        const parsed = typeof err?.message === "string" && err.message.startsWith("{") ? JSON.parse(err.message) : null;
+        if (parsed?.details?.validationErrors?.length) {
+          description = parsed.details.validationErrors.map((e: { field: string; message: string }) => e.message).join(". ");
+        }
+      } catch (_) {}
       toast({
         title: "Error en el registro",
-        description: err?.message || "No se pudo completar el registro",
+        description,
         variant: "destructive",
       });
     } finally {
@@ -197,6 +209,21 @@ const Register = () => {
                     </Select>
                     <Input placeholder="12345678" value={formData.cedulaNumero} onChange={(e) => handleCedulaChange(formData.cedulaTipo, e.target.value)} required className="h-11 rounded-lg flex-1" />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-gray-500 tracking-wider ml-1">Teléfono</Label>
+                  <Input
+                    name="telefono"
+                    type="tel"
+                    required
+                    minLength={7}
+                    value={formData.telefono}
+                    onChange={handleChange}
+                    className="h-11 rounded-lg border-gray-200"
+                    placeholder="Ej: +58 412 1234567"
+                  />
+                  <p className="text-xs text-gray-500 ml-1">Mínimo 7 caracteres (incl. código de país)</p>
                 </div>
 
                 {selectedType === "especialista" && (

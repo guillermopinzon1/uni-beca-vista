@@ -16,7 +16,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
-import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria } from "@/lib/api/orientacionVocacional";
+import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria, obtenerHistorial, obtenerPerfilVocacional, HistorialResponse, PerfilVocacionalResponse } from "@/lib/api/orientacionVocacional";
+import { format } from "date-fns";
 
 const profileBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
@@ -47,6 +48,11 @@ const DashboardAspirante = () => {
   // Estado para Orientación Vocacional
   const [tipoTest, setTipoTest] = useState<TipoTest | null>(null);
   const [cargandoTest, setCargandoTest] = useState(false);
+
+  // Datos del perfil (historial y perfil vocacional) para Mi Perfil
+  const [historialPerfil, setHistorialPerfil] = useState<HistorialResponse["data"]>([]);
+  const [perfilVocacionalData, setPerfilVocacionalData] = useState<PerfilVocacionalResponse["data"] | null>(null);
+  const [cargandoPerfil, setCargandoPerfil] = useState(false);
   
   // Detectar la ruta actual para mostrar navegación
   const [currentStep, setCurrentStep] = useState<string>("seleccionar");
@@ -59,6 +65,12 @@ const DashboardAspirante = () => {
       setActiveModule('orientacion');
     } else if (path.includes('/orientacion/ronda-2')) {
       setCurrentStep('ronda2');
+      setActiveModule('orientacion');
+    } else if (path.includes('/orientacion/test-ico')) {
+      setCurrentStep('testIco');
+      setActiveModule('orientacion');
+    } else if (path.includes('/orientacion/resultados-ico')) {
+      setCurrentStep('resultadosIco');
       setActiveModule('orientacion');
     } else if (path.includes('/orientacion/resultados')) {
       setCurrentStep('resultados');
@@ -73,6 +85,37 @@ const DashboardAspirante = () => {
       setCurrentStep('seleccionar');
     }
   }, [location.pathname, activeModule]);
+
+  // Cargar historial y perfil vocacional cuando se entra a Mi Perfil
+  const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+  useEffect(() => {
+    if (activeModule !== "perfil" || !accessToken) return;
+    setCargandoPerfil(true);
+    Promise.all([
+      obtenerHistorial(accessToken).catch(() => ({ success: true, data: [] } as HistorialResponse)),
+      obtenerPerfilVocacional(accessToken).catch(() => null),
+    ])
+      .then(([histRes, perfilRes]) => {
+        // Extraer array del historial (misma lógica que Historial.tsx: data puede ser array u objeto anidado)
+        let historialData: any[] = [];
+        const data = (histRes as HistorialResponse).data;
+        if (Array.isArray(data)) {
+          historialData = data;
+        } else if (data && typeof data === "object") {
+          const dataObj = data as Record<string, unknown>;
+          if (Array.isArray(dataObj.sesiones)) historialData = dataObj.sesiones;
+          else if (Array.isArray(dataObj.historial)) historialData = dataObj.historial;
+          else if (Array.isArray(dataObj.data)) historialData = dataObj.data;
+          else {
+            const firstKey = Object.keys(dataObj).find((k) => Array.isArray(dataObj[k]));
+            if (firstKey) historialData = (dataObj[firstKey] as any[]) || [];
+          }
+        }
+        setHistorialPerfil(historialData);
+        setPerfilVocacionalData(perfilRes?.data ?? null);
+      })
+      .finally(() => setCargandoPerfil(false));
+  }, [activeModule, accessToken]);
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -262,21 +305,27 @@ const DashboardAspirante = () => {
     setCargandoTest(true);
 
     try {
-      const respuesta = await iniciarTest(accessToken, tipoTest);
-      
-      // Guardar datos en localStorage
-      localStorage.setItem('sesionId', respuesta.data.sesionId);
-      localStorage.setItem('tipoTest', respuesta.data.tipoTest);
-      localStorage.setItem('estadoSesion', respuesta.data.estado);
-      localStorage.setItem('preguntasRonda1', JSON.stringify(respuesta.data.preguntas));
-      
-      toast({
-        title: "Test iniciado",
-        description: `Has comenzado el test ${tipoTest === 'Holland_RIASEC' ? 'Holland RIASEC' : 'Kuder'}`,
-      });
-
-      // Redirigir a Ronda 1
-      navigate('/orientacion/ronda-1');
+      if (tipoTest === 'ICO') {
+        const { iniciarTestIco, obtenerPreguntasIco } = await import('@/lib/api/orientacionVocacional');
+        const resInicio = await iniciarTestIco(accessToken);
+        const sesionId = resInicio.data.sesionId;
+        localStorage.setItem('sesionId', sesionId);
+        localStorage.setItem('tipoTest', 'ICO');
+        localStorage.setItem('estadoSesion', resInicio.data.estado);
+        const resPreguntas = await obtenerPreguntasIco(accessToken, sesionId);
+        const preguntas = resPreguntas.data?.preguntas ?? [];
+        localStorage.setItem('preguntasIco', JSON.stringify(preguntas));
+        toast({ title: "Test iniciado", description: "Has comenzado el test ICO" });
+        navigate('/orientacion/test-ico');
+      } else {
+        const respuesta = await iniciarTest(accessToken, tipoTest);
+        localStorage.setItem('sesionId', respuesta.data.sesionId);
+        localStorage.setItem('tipoTest', respuesta.data.tipoTest);
+        localStorage.setItem('estadoSesion', respuesta.data.estado);
+        localStorage.setItem('preguntasRonda1', JSON.stringify(respuesta.data.preguntas));
+        toast({ title: "Test iniciado", description: "Has comenzado el test Holland RIASEC" });
+        navigate('/orientacion/ronda-1');
+      }
       
     } catch (error: any) {
       console.error('Error al iniciar test:', error);
@@ -569,12 +618,20 @@ const DashboardAspirante = () => {
                   
                   <div className="w-full grid grid-cols-2 gap-3 sm:gap-4 py-4 sm:py-6 border-t border-slate-200">
                     <div className="text-center">
-                      <div className="text-xl sm:text-2xl font-bold text-primary mb-1">3</div>
-                      <div className="text-xs text-slate-500 uppercase">Tests Realizados</div>
+                      <div className="text-xl sm:text-2xl font-bold text-primary mb-1">
+                        {cargandoPerfil ? "—" : historialPerfil.filter((s: any) => {
+                          const e = (s.estado ?? s.estado)?.toLowerCase?.() ?? "";
+                          const t = s.tipoTest ?? s.tipo_test;
+                          return t === "ICO" ? (e === "finalizada" || e === "completada") : (e === "finalizada" || e === "ronda_2_completada");
+                        }).length}
+                      </div>
+                      <div className="text-xs text-slate-500 uppercase">Tests Completados</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl sm:text-2xl font-bold text-primary mb-1">12</div>
-                      <div className="text-xs text-slate-500 uppercase">Carreras Guardadas</div>
+                      <div className="text-xl sm:text-2xl font-bold text-primary mb-1">
+                        {cargandoPerfil ? "—" : (perfilVocacionalData?.resultadoActual?.resultado?.recomendacionesCarreras?.length ?? "—")}
+                      </div>
+                      <div className="text-xs text-slate-500 uppercase">Recomendaciones</div>
                     </div>
                   </div>
 
@@ -588,17 +645,35 @@ const DashboardAspirante = () => {
                 <CardHeader className="pb-3 sm:pb-4">
                   <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                     <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                    Resumen de Intereses
+                    Resumen Vocacional
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className="flex flex-wrap gap-2">
-                    {["Tecnología", "Diseño", "Innovación", "Psicología", "Arte Digital"].map((tag) => (
-                      <Badge key={tag} className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 px-2.5 py-1 text-xs sm:text-sm">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  {cargandoPerfil ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
+                    </div>
+                  ) : perfilVocacionalData?.resultadoActual?.resultado ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-xs sm:text-sm">
+                          {(perfilVocacionalData.resultadoActual.resultado as any).perfilDominante ?? (perfilVocacionalData.resultadoActual.resultado as any).perfil_dominante ?? "—"}
+                        </Badge>
+                        <Badge className="bg-orange-100 text-orange-700 border border-orange-200 px-2.5 py-1 text-xs sm:text-sm">
+                          Código: {(perfilVocacionalData.resultadoActual.resultado as any).codigoHolland ?? (perfilVocacionalData.resultadoActual.resultado as any).codigo_holland ?? "—"}
+                        </Badge>
+                      </div>
+                      {(perfilVocacionalData.resultadoActual.resultado as any).perfilSecundario && (
+                        <p className="text-xs text-slate-600">
+                          Secundario: {(perfilVocacionalData.resultadoActual.resultado as any).perfilSecundario ?? (perfilVocacionalData.resultadoActual.resultado as any).perfil_secundario}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      Completa un test de orientación para ver tu perfil dominante y código Holland.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -693,55 +768,72 @@ const DashboardAspirante = () => {
                   </TabsList>
                   
                   <TabsContent value="tests" className="space-y-3 sm:space-y-4">
-                    <div className="border-2 border-purple-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:border-purple-300 hover:shadow-lg transition-all cursor-pointer group bg-gradient-to-br from-white to-purple-50/30">
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
-                            <div className="flex gap-3 sm:gap-4 w-full sm:w-auto">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
-                                    <BrainCircuit className="w-5 h-5 sm:w-6 sm:h-6" />
+                    {(() => {
+                      const completados = historialPerfil.filter((s: any) => {
+                        const e = (s.estado ?? s.estado)?.toLowerCase?.() ?? "";
+                        const t = s.tipoTest ?? s.tipo_test;
+                        return t === "ICO" ? (e === "finalizada" || e === "completada") : (e === "finalizada" || e === "ronda_2_completada");
+                      });
+                      if (cargandoPerfil) {
+                        return (
+                          <div className="flex items-center justify-center py-12 text-slate-500">
+                            <Loader2 className="w-8 h-8 animate-spin mr-2" /> Cargando...
+                          </div>
+                        );
+                      }
+                      if (completados.length === 0) {
+                        return (
+                          <div className="border-2 border-dashed border-slate-200 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
+                            <BrainCircuit className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                            <h3 className="font-bold text-slate-700 mb-1">No hay tests completados</h3>
+                            <p className="text-sm text-slate-500 mb-4">Completa un test de orientación para ver tus resultados aquí.</p>
+                            <Button onClick={() => { setActiveModule("orientacion"); navigate("/orientacion/seleccionar-test"); }} className="bg-primary hover:bg-primary/90 text-white">
+                              Ir a Orientación Vocacional
+                            </Button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <>
+                          {completados.map((sesion: any, index: number) => {
+                            const tipoTestVal = sesion.tipoTest ?? sesion.tipo_test;
+                            const fechaVal = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
+                            const perfilVal = sesion.perfilDominante ?? sesion.perfil_dominante;
+                            const idVal = sesion.id ?? sesion.sesion_id;
+                            const esIco = tipoTestVal === "ICO";
+                            const nombreTest = esIco ? "Test ICO" : "Test Holland RIASEC";
+                            const verResultados = () => {
+                              if (esIco) navigate("/orientacion/resultados-ico", { state: { sesionId: idVal } });
+                              else navigate(`/orientacion/resultados/${idVal}`);
+                            };
+                            return (
+                              <div
+                                key={idVal || `sesion-${index}`}
+                                className="border rounded-xl p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="font-bold text-slate-900">{nombreTest}</h3>
+                                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 mt-0.5">
+                                    {fechaVal && <span>{format(new Date(fechaVal), "dd/MM/yyyy")}</span>}
+                                    {perfilVal && <span className="font-medium text-slate-800">{perfilVal}</span>}
+                                  </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-base sm:text-lg text-slate-900 mb-1">Test de Aptitud Vocacional</h3>
-                                    <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      Realizado el 10 Dic 2025
-                                    </p>
-                                </div>
-                            </div>
-                            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-sm flex-shrink-0">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Completado
-                            </Badge>
-                        </div>
-                        <div className="mt-3 sm:mt-4 pl-0 sm:pl-14 sm:pl-16 border-l-0 sm:border-l-4 border-purple-300 pl-2 sm:pl-4">
-                            <p className="text-xs sm:text-sm text-slate-600 mb-1 sm:mb-2 font-medium">
-                              Resultado Principal: <span className="text-purple-600 font-bold">Perfil Creativo-Tecnológico</span>
-                            </p>
-                            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                              Se recomienda explorar carreras relacionadas con Diseño Gráfico, Ingeniería de Sistemas y Arquitectura.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="border-2 border-blue-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer group bg-gradient-to-br from-white to-blue-50/30">
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
-                            <div className="flex gap-3 sm:gap-4 w-full sm:w-auto">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
-                                    <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-base sm:text-lg text-slate-900 mb-1">Evaluación de Intereses (Holland)</h3>
-                                    <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      Realizado el 15 Nov 2025
-                                    </p>
-                                </div>
-                            </div>
-                            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-sm flex-shrink-0">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Completado
-                            </Badge>
-                        </div>
-                    </div>
+                                <Button variant="outline" size="sm" onClick={verResultados} className="shrink-0">
+                                  Ver Resultados <ChevronRight className="w-3 h-3 ml-1" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                          <Button
+                            variant="outline"
+                            className="w-full rounded-xl border-dashed"
+                            onClick={() => { setActiveModule("orientacion"); navigate("/orientacion/seleccionar-test"); }}
+                          >
+                            <Plus className="w-4 h-4 mr-2" /> Realizar otro test
+                          </Button>
+                        </>
+                      );
+                    })()}
                   </TabsContent>
 
                   <TabsContent value="history">
@@ -885,17 +977,29 @@ const DashboardAspirante = () => {
         <main className="flex-1 px-6 py-8">
           <div className="max-w-6xl mx-auto">
             <div className="pt-0">
-              {/* Orientación: barra de progreso dentro de la página + contenido */}
+              {/* Orientación: barra de progreso solo cuando ya estás en un test (RIASEC o ICO), no en selección */}
               {location.pathname.includes('/orientacion/') ? (
                 <>
-                  {/* Barra de progreso del test (dentro del contenido, no baja el sidebar) */}
+                  {/* Barra de progreso: ocultar en pantalla de seleccionar test; mostrar la que corresponda según ruta */}
                   {(() => {
-                    const stepsFlow: { id: string; label: string; getPath: () => string }[] = [
-                      { id: 'seleccionar', label: 'Inicio', getPath: () => '/orientacion/seleccionar-test' },
-                      { id: 'ronda1', label: 'Ronda 1', getPath: () => '/orientacion/ronda-1' },
-                      { id: 'ronda2', label: 'Ronda 2', getPath: () => '/orientacion/ronda-2' },
-                      { id: 'resultados', label: 'Resultados', getPath: () => `/orientacion/resultados/${localStorage.getItem('sesionId') || ''}` },
-                    ];
+                    const path = location.pathname;
+                    const enSeleccionar = path.includes('seleccionar-test');
+                    const enFlujoIco = path.includes('test-ico') || path.includes('resultados-ico');
+                    const enFlujoHolland = path.includes('ronda-1') || path.includes('ronda-2') || path.includes('/orientacion/resultados/');
+                    if (enSeleccionar && !enFlujoIco && !enFlujoHolland) return null;
+
+                    const stepsFlow: { id: string; label: string; getPath: () => string }[] = enFlujoIco
+                      ? [
+                          { id: 'seleccionar', label: 'Inicio', getPath: () => '/orientacion/seleccionar-test' },
+                          { id: 'testIco', label: 'Test ICO', getPath: () => '/orientacion/test-ico' },
+                          { id: 'resultadosIco', label: 'Resultados', getPath: () => '/orientacion/resultados-ico' },
+                        ]
+                      : [
+                          { id: 'seleccionar', label: 'Inicio', getPath: () => '/orientacion/seleccionar-test' },
+                          { id: 'ronda1', label: 'Ronda 1', getPath: () => '/orientacion/ronda-1' },
+                          { id: 'ronda2', label: 'Ronda 2', getPath: () => '/orientacion/ronda-2' },
+                          { id: 'resultados', label: 'Resultados', getPath: () => `/orientacion/resultados/${localStorage.getItem('sesionId') || ''}` },
+                        ];
                     const currentIndex = stepsFlow.findIndex(s => s.id === currentStep);
                     const stepIndex = currentIndex >= 0 ? currentIndex : (currentStep === 'historial' ? stepsFlow.length : 0);
                     return (
@@ -908,9 +1012,10 @@ const DashboardAspirante = () => {
                               const canNavigate = i <= stepIndex;
                               const onHistorial = currentStep === 'historial';
                               const hasSesion = !!localStorage.getItem('sesionId');
+                              const isResultadosStep = step.id === 'resultados' || step.id === 'resultadosIco';
                               const clickable = !onHistorial && (
-                                (canNavigate && step.id !== 'resultados') ||
-                                (canNavigate && step.id === 'resultados' && hasSesion)
+                                (canNavigate && !isResultadosStep) ||
+                                (canNavigate && isResultadosStep && hasSesion)
                               );
                               return (
                                 <div key={step.id} className="flex flex-1 items-center">
@@ -918,7 +1023,7 @@ const DashboardAspirante = () => {
                                     type="button"
                                     onClick={() => {
                                       if (!clickable) return;
-                                      if (step.id === 'resultados' && hasSesion) navigate(step.getPath());
+                                      if (isResultadosStep && hasSesion) navigate(step.getPath());
                                       else { setActiveModule('orientacion'); navigate(step.getPath()); }
                                     }}
                                     disabled={!clickable}

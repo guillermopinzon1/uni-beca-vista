@@ -49,15 +49,18 @@ const Historial = () => {
       // Asegurarse de que data sea un array
       let historialData: any[] = [];
       
-      if (Array.isArray(respuesta.data)) {
-        historialData = respuesta.data;
-      } else if (respuesta.data && Array.isArray(respuesta.data.data)) {
-        historialData = respuesta.data.data;
-      } else if (respuesta.data && typeof respuesta.data === 'object') {
-        // Si data es un objeto, intentar extraer un array
-        const keys = Object.keys(respuesta.data);
-        if (keys.length > 0 && Array.isArray(respuesta.data[keys[0]])) {
-          historialData = respuesta.data[keys[0]];
+      const data = (respuesta as HistorialResponse).data;
+      if (Array.isArray(data)) {
+        historialData = data;
+      } else if (data && typeof data === 'object') {
+        const dataObj = data as Record<string, unknown>;
+        if (Array.isArray(dataObj.data)) {
+          historialData = dataObj.data;
+        } else {
+          const keys = Object.keys(dataObj);
+          if (keys.length > 0 && Array.isArray(dataObj[keys[0]])) {
+            historialData = dataObj[keys[0]] as any[];
+          }
         }
       }
       
@@ -101,12 +104,27 @@ const Historial = () => {
     navigate("/");
   };
 
-  const verResultados = (sesionId: string) => {
-    navigate(`/orientacion/resultados/${sesionId}`);
+  const verResultados = (sesionId: string, tipoTest?: string) => {
+    if (tipoTest === 'ICO') {
+      navigate('/orientacion/resultados-ico', { state: { sesionId } });
+    } else {
+      navigate(`/orientacion/resultados/${sesionId}`);
+    }
   };
 
-  const getEstadoIcon = (estado: string) => {
-    switch (estado.toLowerCase()) {
+  const isSesionCompletada = (estado: string, tipoTest?: string) => {
+    const e = estado.toLowerCase();
+    if (tipoTest === 'ICO') return e === 'finalizada' || e === 'completada';
+    return e === 'finalizada' || e === 'ronda_2_completada';
+  };
+
+  const getEstadoIcon = (estado: string, tipoTest?: string) => {
+    const e = estado.toLowerCase();
+    if (tipoTest === 'ICO') {
+      if (e === 'finalizada' || e === 'completada') return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      return <Clock className="h-5 w-5 text-yellow-500" />;
+    }
+    switch (e) {
       case 'finalizada':
       case 'ronda_2_completada':
         return <CheckCircle2 className="h-5 w-5 text-green-500" />;
@@ -118,8 +136,13 @@ const Historial = () => {
     }
   };
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado.toLowerCase()) {
+  const getEstadoColor = (estado: string, tipoTest?: string) => {
+    const e = estado.toLowerCase();
+    if (tipoTest === 'ICO') {
+      if (e === 'finalizada' || e === 'completada') return 'bg-green-100 text-green-700 border-green-200';
+      return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    }
+    switch (e) {
       case 'finalizada':
       case 'ronda_2_completada':
         return 'bg-green-100 text-green-700 border-green-200';
@@ -131,8 +154,13 @@ const Historial = () => {
     }
   };
 
-  const getEstadoTexto = (estado: string) => {
-    switch (estado.toLowerCase()) {
+  const getEstadoTexto = (estado: string, tipoTest?: string) => {
+    const e = estado.toLowerCase();
+    if (tipoTest === 'ICO') {
+      if (e === 'finalizada' || e === 'completada') return 'Completado';
+      return 'En curso';
+    }
+    switch (e) {
       case 'finalizada':
       case 'ronda_2_completada':
         return 'Completado';
@@ -146,8 +174,13 @@ const Historial = () => {
   };
 
   const getTipoTestTexto = (tipoTest: string) => {
-    return tipoTest === 'Holland_RIASEC' ? 'Holland RIASEC' : 'Kuder';
+    return tipoTest === 'Holland_RIASEC' ? 'Holland RIASEC' : 'ICO';
   };
+
+  // Solo mostrar tests completados
+  const historialCompletados = historial.filter((s: any) =>
+    isSesionCompletada(s.estado ?? s.estado, s.tipoTest ?? s.tipo_test)
+  );
 
   if (cargando) {
     return (
@@ -168,9 +201,9 @@ const Historial = () => {
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Historial de Tests</h2>
               <p className="text-gray-600">
-                {historial.length === 0 
-                  ? "No has realizado ningún test aún" 
-                  : `${historial.length} test${historial.length > 1 ? 's' : ''} realizado${historial.length > 1 ? 's' : ''}`
+                {historialCompletados.length === 0 
+                  ? "No hay tests completados" 
+                  : `${historialCompletados.length} test${historialCompletados.length > 1 ? 's' : ''} completado${historialCompletados.length > 1 ? 's' : ''}`
                 }
               </p>
             </div>
@@ -182,93 +215,74 @@ const Historial = () => {
             </Button>
           </div>
 
-          {historial.length === 0 ? (
+          {historialCompletados.length === 0 ? (
             <Card className="border-none shadow-sm rounded-xl">
               <CardContent className="p-12 text-center">
                 <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  No hay tests realizados
+                  No hay tests completados
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Completa tu primer test de orientación vocacional para ver tus resultados aquí.
+                  Completa un test de orientación vocacional para ver tus resultados aquí.
                 </p>
                 <Button
                   onClick={() => navigate('/orientacion/seleccionar-test')}
                   className="bg-[#F37021] hover:bg-orange-600 text-white"
                 >
-                  Realizar Primer Test
+                  Realizar Test
                 </Button>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
-              {historial.map((sesion) => (
-                <Card
-                  key={sesion.id}
-                  className={`border-none shadow-sm rounded-xl hover:shadow-md transition-all ${
-                    sesion.estado.toLowerCase() === 'finalizada' || sesion.estado.toLowerCase() === 'ronda_2_completada'
-                      ? 'cursor-pointer' 
-                      : ''
-                  }`}
-                  onClick={() => {
-                    if (sesion.estado.toLowerCase() === 'finalizada' || sesion.estado.toLowerCase() === 'ronda_2_completada') {
-                      verResultados(sesion.id);
-                    }
-                  }}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-xl font-bold text-gray-900">
-                            {getTipoTestTexto(sesion.tipoTest)}
+              {historialCompletados.map((sesion: any) => {
+                const tipoTest = sesion.tipoTest ?? sesion.tipo_test;
+                const fecha = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
+                const perfil = sesion.perfilDominante ?? sesion.perfil_dominante;
+                const id = sesion.id ?? sesion.sesion_id;
+                return (
+                  <Card
+                    key={id}
+                    className="border-none shadow-sm rounded-xl hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => verResultados(id, tipoTest)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            {getTipoTestTexto(tipoTest)}
                           </h3>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 ${getEstadoColor(sesion.estado)}`}>
-                            {getEstadoIcon(sesion.estado)}
-                            {getEstadoTexto(sesion.estado)}
-                          </span>
-                        </div>
-                        <div className="space-y-2 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            <span>
-                              Iniciado: {format(new Date(sesion.fechaInicio), "dd/MM/yyyy 'a las' HH:mm")}
-                            </span>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                            {fecha && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5 shrink-0" />
+                                {format(new Date(fecha), "dd/MM/yyyy")}
+                              </span>
+                            )}
+                            {perfil && (
+                              <span className="flex items-center gap-1 font-medium text-gray-900">
+                                <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+                                {perfil}
+                              </span>
+                            )}
                           </div>
-                          {sesion.fechaFin && (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4" />
-                              <span>
-                                Completado: {format(new Date(sesion.fechaFin), "dd/MM/yyyy 'a las' HH:mm")}
-                              </span>
-                            </div>
-                          )}
-                          {sesion.perfilDominante && (
-                            <div className="flex items-center gap-2">
-                              <GraduationCap className="h-4 w-4" />
-                              <span className="font-medium text-gray-900">
-                                Perfil: {sesion.perfilDominante}
-                              </span>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                      {(sesion.estado.toLowerCase() === 'finalizada' || sesion.estado.toLowerCase() === 'ronda_2_completada') && (
                         <Button
                           variant="outline"
                           size="sm"
+                          className="shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            verResultados(sesion.id);
+                            verResultados(id, tipoTest);
                           }}
                         >
                           Ver Resultados
                         </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

@@ -56,6 +56,8 @@ import SeleccionarTest from "./pages/Vocacion/SeleccionarTest";
 import Ronda1 from "./pages/Vocacion/Ronda1";
 import Ronda2 from "./pages/Vocacion/Ronda2";
 import Resultados from "./pages/Vocacion/Resultados";
+import TestICO from "./pages/Vocacion/TestICO";
+import ResultadosICO from "./pages/Vocacion/ResultadosICO";
 import PerfilVocacional from "./pages/Vocacion/PerfilVocacional";
 import Historial from "./pages/Vocacion/Historial";
 
@@ -92,7 +94,9 @@ const App = () => (
                 <Route path="seleccionar-test" element={<SeleccionarTest/>}/>
                 <Route path="ronda-1" element={<Ronda1/>}/>
                 <Route path="ronda-2" element={<Ronda2/>}/>
+                <Route path="test-ico" element={<TestICO/>}/>
                 <Route path="resultados/:sesionId?" element={<Resultados/>}/>
+                <Route path="resultados-ico" element={<ResultadosICO/>}/>
                 <Route path="perfil" element={<PerfilVocacional/>}/>
                 <Route path="historial" element={<Historial/>}/>
               </Route>

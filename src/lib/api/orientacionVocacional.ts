@@ -2,7 +2,7 @@ import { API_BASE } from './config';
 
 // ==================== TIPOS E INTERFACES ====================
 
-export type TipoTest = 'Holland_RIASEC' | 'Kuder';
+export type TipoTest = 'Holland_RIASEC' | 'ICO';
 
 /** Elemento enriquecido de recomendaciones_carreras (completar test, resultados por sesión, mi perfil vocacional, etc.) */
 export interface RecomendacionCarrera {
@@ -179,6 +179,85 @@ export interface HistorialEspecialistaResponse {
     totalSesiones: number;
     ultimaFechaTest: string;
   }>;
+}
+
+// ==================== TIPOS Y RESPUESTAS TEST ICO ====================
+
+/** Respuesta al iniciar sesión ICO (una sola ronda) */
+export interface IniciarTestIcoResponse {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  data: {
+    sesionId: string;
+    tipoTest: 'ICO';
+    estado: string;
+    fechaInicio: string;
+  };
+}
+
+/** Preguntas del test ICO (GET sesion-ico/:sesionId/preguntas) */
+export interface PreguntasIcoResponse {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  data: {
+    preguntas: Pregunta[];
+  };
+}
+
+/** Elemento de respuestas para guardar-respuestas-ico (snake_case en body) */
+export interface RespuestaIcoBody {
+  pregunta_id: string;
+  respuesta: boolean; // true = Sí, false = No
+  tiempo_respuesta?: number;
+  nivel_seguridad?: 'seguro' | 'no_seguro';
+}
+
+/** Respuesta al enviar respuestas ICO (incluye puntuaciones + análisis LLM) */
+export interface GuardarRespuestasIcoResponse {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  data: {
+    resultadoId: string;
+    puntuaciones: Record<string, number>;
+    codigoHolland: string;
+    perfilDominante: string;
+    perfilSecundario: string;
+    analisisLlm?: {
+      perfilVocacional?: {
+        resumen?: string;
+        fortalezas?: string[];
+        areasExplorar?: string[];
+      };
+      carrerasRecomendadas?: Array<{ nombre?: string; name?: string; razon: string; facultad?: string; area?: string }>;
+      sugerenciasAcompanamiento?: string[];
+    };
+    /** Cada ítem: nombre, name, razon, facultad, area. Título = nombre + facultad; cuerpo = razon. */
+    recomendacionesCarreras?: Array<{ nombre?: string; name?: string; razon: string; facultad?: string; area?: string }>;
+  };
+}
+
+/** Resultado ICO guardado (GET resultados-ico/:sesionId) - snake_case desde back */
+export interface ResultadosIcoResponse {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  data: {
+    id: string;
+    sesion_id: string;
+    usuario_id: string;
+    tipo_test: string;
+    puntuaciones_finales?: Record<string, number>;
+    codigo_holland?: string;
+    perfil_dominante?: string;
+    perfil_secundario?: string;
+    analisis_llm?: GuardarRespuestasIcoResponse['data']['analisisLlm'];
+    recomendaciones_carreras?: Array<{ nombre?: string; name?: string; razon: string; facultad?: string; area?: string }>;
+    perfil_vocacional?: any;
+    fecha_generacion?: string;
+  };
 }
 
 // ==================== FUNCIONES API ====================
@@ -358,6 +437,128 @@ export async function obtenerResultados(
   return payload as ResultadosResponse;
 }
 
+// ==================== API TEST ICO (una sola ronda) ====================
+
+/**
+ * Iniciar sesión del test ICO (sin body).
+ */
+export async function iniciarTestIco(accessToken: string): Promise<IniciarTestIcoResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/iniciar-test-ico`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error al iniciar test ICO (${response.status})`;
+    if (response.status === 401) {
+      throw new Error('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+    }
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as IniciarTestIcoResponse;
+}
+
+/**
+ * Obtener todas las preguntas del test ICO.
+ */
+export async function obtenerPreguntasIco(
+  accessToken: string,
+  sesionId: string
+): Promise<PreguntasIcoResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/sesion-ico/${sesionId}/preguntas`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error al obtener preguntas ICO (${response.status})`;
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as PreguntasIcoResponse;
+}
+
+/**
+ * Enviar respuestas del test ICO y obtener resultado (puntuaciones + recomendaciones LLM).
+ */
+export async function guardarRespuestasIco(
+  accessToken: string,
+  sesionId: string,
+  respuestas: RespuestaIcoBody[]
+): Promise<GuardarRespuestasIcoResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/guardar-respuestas-ico`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ sesionId, respuestas }),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error al guardar respuestas ICO (${response.status})`;
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as GuardarRespuestasIcoResponse;
+}
+
+/**
+ * Obtener resultado ICO guardado (opcional, si el usuario vuelve después).
+ */
+export async function obtenerResultadosIco(
+  accessToken: string,
+  sesionId: string
+): Promise<ResultadosIcoResponse> {
+  const response = await fetch(`${API_BASE}/v1/orientacion/resultados-ico/${sesionId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await response.json() : null;
+
+  if (!response.ok) {
+    const message = payload?.message || `Error al obtener resultados ICO (${response.status})`;
+    const error = new Error(message);
+    (error as any).status = response.status;
+    (error as any).payload = payload;
+    throw error;
+  }
+
+  return payload as ResultadosIcoResponse;
+}
+
 /**
  * Obtener perfil vocacional consolidado del usuario
  */
@@ -447,21 +648,22 @@ export async function obtenerHistorial(
   }
 
   // Si solo tiene data
-  if (payload.data) {
-    console.log('✅ [Frontend] Estructura con solo data, ajustando');
-    return {
-      success: true,
-      data: Array.isArray(payload.data) ? payload.data : []
-    } as HistorialResponse;
-  }
-
-  // Si es un array directamente en el payload
-  if (Array.isArray(payload)) {
-    console.log('✅ [Frontend] Payload es un array directamente');
-    return {
-      success: true,
-      data: payload
-    } as HistorialResponse;
+  if (payload.data !== undefined) {
+    if (Array.isArray(payload.data)) {
+      console.log('✅ [Frontend] data es array');
+      return { success: true, data: payload.data } as HistorialResponse;
+    }
+    // data puede ser un objeto con el array dentro (ej: { sesiones: [...] }, { historial: [...] })
+    if (payload.data && typeof payload.data === 'object') {
+      const obj = payload.data as Record<string, unknown>;
+      if (Array.isArray(obj.sesiones)) return { success: true, data: obj.sesiones } as HistorialResponse;
+      if (Array.isArray(obj.historial)) return { success: true, data: obj.historial } as HistorialResponse;
+      if (Array.isArray(obj.data)) return { success: true, data: obj.data } as HistorialResponse;
+      const firstArrayKey = Object.keys(obj).find((k) => Array.isArray(obj[k]));
+      if (firstArrayKey && Array.isArray(obj[firstArrayKey])) {
+        return { success: true, data: obj[firstArrayKey] as any[] } as HistorialResponse;
+      }
+    }
   }
 
   console.warn('⚠️ [Frontend] Estructura inesperada, devolviendo array vacío');
