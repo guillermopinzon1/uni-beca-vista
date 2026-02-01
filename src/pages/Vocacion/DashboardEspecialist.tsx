@@ -16,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-import { obtenerHistorialEspecialista, HistorialEspecialistaResponse, RecomendacionCarrera } from "@/lib/api/orientacionVocacional";
+import { obtenerHistorialEspecialista, HistorialEspecialistaResponse } from "@/lib/api/orientacionVocacional";
+import { enviarGrupoPredefinido, obtenerEstadisticas } from "@/lib/api/campanas";
 
 // Interface para mapear datos del backend
 interface StudentData {
@@ -53,6 +54,13 @@ const DashboardEspecialist = () => {
     cuartoAno: "",
     promedio: ""
   });
+  const [estadisticasCampanas, setEstadisticasCampanas] = useState({
+    ingenieria: 0,
+    artes: 0,
+    cienciasSociales: 0,
+    total: 0
+  });
+  const [loadingCampanas, setLoadingCampanas] = useState(false);
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -324,6 +332,134 @@ const DashboardEspecialist = () => {
       title: "Éxito",
       description: `Notas guardadas. Promedio calculado: ${promedio}`,
     });
+  };
+
+  // Cargar estadísticas de campañas cuando se active el módulo
+  useEffect(() => {
+    const cargarEstadisticas = async () => {
+      if (activeModule !== "campanas") return;
+
+      const accessToken = tokens?.accessToken ||
+        JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+      if (!accessToken) return;
+
+      try {
+        const respuesta = await obtenerEstadisticas(accessToken);
+        setEstadisticasCampanas(respuesta.data);
+      } catch (error: unknown) {
+        console.error('Error al cargar estadísticas:', error);
+      }
+    };
+
+    cargarEstadisticas();
+  }, [activeModule, tokens]);
+
+  // Función para enviar campaña a un grupo predefinido
+  const handleEnviarCampanaGrupo = async (
+    grupo: 'ingenieria' | 'artes' | 'ciencias_sociales',
+    nombreGrupo: string
+  ) => {
+    const accessToken = tokens?.accessToken ||
+      JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+    if (!accessToken) {
+      toast({
+        title: "Error",
+        description: "Sesión expirada. Por favor inicia sesión nuevamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Mostrar confirmación
+    const confirmacion = window.confirm(
+      `¿Estás seguro de enviar una campaña de notificaciones al grupo "${nombreGrupo}"?`
+    );
+
+    if (!confirmacion) return;
+
+    setLoadingCampanas(true);
+
+    try {
+      // Contenido personalizado según el grupo
+      const contenidosPorGrupo = {
+        ingenieria: {
+          titulo: "Webinar: Futuro de la IA y la Ingeniería",
+          asunto: "Invitación: Webinar sobre Inteligencia Artificial",
+          contenido: `
+            <p>Hemos identificado que tu perfil vocacional muestra gran afinidad con las áreas de tecnología e ingeniería.</p>
+            <p>Te invitamos a un webinar exclusivo donde exploraremos:</p>
+            <ul>
+              <li>Las últimas tendencias en Inteligencia Artificial</li>
+              <li>Oportunidades de carrera en tecnología</li>
+              <li>Innovaciones en ingeniería de sistemas</li>
+            </ul>
+            <p><strong>Fecha:</strong> Próximo sábado, 10:00 AM</p>
+          `,
+          ctaTexto: "Registrarme al Webinar",
+          ctaUrl: "https://unimet.edu.ve/webinar-ia"
+        },
+        artes: {
+          titulo: "Taller: Diseño y Creatividad",
+          asunto: "Invitación: Taller de Diseño Creativo",
+          contenido: `
+            <p>Tu perfil vocacional destaca por su orientación creativa y artística.</p>
+            <p>Te invitamos a un taller especial de diseño donde exploraremos:</p>
+            <ul>
+              <li>Técnicas avanzadas de diseño digital</li>
+              <li>Carreras en el mundo del arte y la arquitectura</li>
+              <li>Portfolio profesional para creativos</li>
+            </ul>
+            <p><strong>Fecha:</strong> Próximo viernes, 3:00 PM</p>
+          `,
+          ctaTexto: "Inscribirme al Taller",
+          ctaUrl: "https://unimet.edu.ve/taller-diseno"
+        },
+        ciencias_sociales: {
+          titulo: "Charla: Impacto Social y Humanidades",
+          asunto: "Invitación: Charla sobre Ciencias Sociales",
+          contenido: `
+            <p>Tu perfil vocacional muestra gran interés por las áreas sociales y humanísticas.</p>
+            <p>Te invitamos a una charla especial donde discutiremos:</p>
+            <ul>
+              <li>Carreras con impacto social</li>
+              <li>Psicología y desarrollo humano</li>
+              <li>Oportunidades en derecho y comunicación social</li>
+            </ul>
+            <p><strong>Fecha:</strong> Próximo jueves, 4:00 PM</p>
+          `,
+          ctaTexto: "Confirmar Asistencia",
+          ctaUrl: "https://unimet.edu.ve/charla-social"
+        }
+      };
+
+      const datosCampana = contenidosPorGrupo[grupo];
+
+      const resultado = await enviarGrupoPredefinido(accessToken, {
+        grupo,
+        ...datosCampana
+      });
+
+      toast({
+        title: "¡Campaña enviada exitosamente!",
+        description: `Se enviaron ${resultado.data.exitosos} de ${resultado.data.total} correos al grupo "${nombreGrupo}". Tasa de éxito: ${resultado.data.tasaExito}`,
+      });
+
+      // Recargar estadísticas
+      const respuesta = await obtenerEstadisticas(accessToken);
+      setEstadisticasCampanas(respuesta.data);
+
+    } catch (error: unknown) {
+      console.error('Error al enviar campaña:', error);
+      toast({
+        title: "Error al enviar campaña",
+        description: error instanceof Error ? error.message : "No se pudo enviar la campaña de notificaciones",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCampanas(false);
+    }
   };
 
   // Filtrar estudiantes por término de búsqueda
@@ -845,12 +981,21 @@ const DashboardEspecialist = () => {
                             <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
                               <BrainCircuit className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-blue-600">128 Estudiantes</Badge>
+                            <Badge className="bg-blue-600">{estadisticasCampanas.ingenieria} Estudiantes</Badge>
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">Interesados en Ingeniería</h3>
                           <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Lógico-Matemático que mostraron interés en áreas técnicas.</p>
-                          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                            <Mail className="w-4 h-4 mr-2" /> Crear Campaña
+                          <Button
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => handleEnviarCampanaGrupo('ingenieria', 'Interesados en Ingeniería')}
+                            disabled={loadingCampanas}
+                          >
+                            {loadingCampanas ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4 mr-2" />
+                            )}
+                            {loadingCampanas ? 'Enviando...' : 'Crear Campaña'}
                           </Button>
                         </CardContent>
                       </Card>
@@ -862,12 +1007,21 @@ const DashboardEspecialist = () => {
                             <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
                               <Sparkles className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-purple-600">85 Estudiantes</Badge>
+                            <Badge className="bg-purple-600">{estadisticasCampanas.artes} Estudiantes</Badge>
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">Interesados en Artes</h3>
                           <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Creativo que buscan carreras de diseño o arquitectura.</p>
-                          <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                            <Mail className="w-4 h-4 mr-2" /> Crear Campaña
+                          <Button
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                            onClick={() => handleEnviarCampanaGrupo('artes', 'Interesados en Artes')}
+                            disabled={loadingCampanas}
+                          >
+                            {loadingCampanas ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4 mr-2" />
+                            )}
+                            {loadingCampanas ? 'Enviando...' : 'Crear Campaña'}
                           </Button>
                         </CardContent>
                       </Card>
@@ -879,12 +1033,21 @@ const DashboardEspecialist = () => {
                             <div className="p-3 bg-green-100 rounded-xl text-green-600">
                               <Users className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-green-600">210 Estudiantes</Badge>
+                            <Badge className="bg-green-600">{estadisticasCampanas.cienciasSociales} Estudiantes</Badge>
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">Ciencias Sociales</h3>
                           <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Social-Humanista interesados en derecho o psicología.</p>
-                          <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                            <Mail className="w-4 h-4 mr-2" /> Crear Campaña
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => handleEnviarCampanaGrupo('ciencias_sociales', 'Ciencias Sociales')}
+                            disabled={loadingCampanas}
+                          >
+                            {loadingCampanas ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4 mr-2" />
+                            )}
+                            {loadingCampanas ? 'Enviando...' : 'Crear Campaña'}
                           </Button>
                         </CardContent>
                       </Card>
