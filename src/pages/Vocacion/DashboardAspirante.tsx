@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2, Save, Edit2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,13 +18,16 @@ import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
 import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria, obtenerHistorial, obtenerPerfilVocacional, HistorialResponse, PerfilVocacionalResponse } from "@/lib/api/orientacionVocacional";
 import { format } from "date-fns";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { fetchUserById } from "@/lib/api/users";
 
 const profileBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
 const DashboardAspirante = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, tokens } = useAuth();
+  const { user, logout, tokens, loginSuccess } = useAuth();
   const { toast } = useToast();
   const [activeModule, setActiveModule] = useState<string>("tests");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -53,10 +56,66 @@ const DashboardAspirante = () => {
   const [historialPerfil, setHistorialPerfil] = useState<HistorialResponse["data"]>([]);
   const [perfilVocacionalData, setPerfilVocacionalData] = useState<PerfilVocacionalResponse["data"] | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(false);
-  
+
   // Detectar la ruta actual para mostrar navegación
   const [currentStep, setCurrentStep] = useState<string>("seleccionar");
-  
+
+  // Estados para editar perfil
+  const [editarPerfilOpen, setEditarPerfilOpen] = useState(false);
+  const [editandoPerfil, setEditandoPerfil] = useState(false);
+  const [perfilEditado, setPerfilEditado] = useState({
+    telefono: user?.telefono || '',
+    bio: '',
+  });
+
+  // Estados para preferencias
+  const [preferencias, setPreferencias] = useState(() => {
+    const saved = localStorage.getItem('preferencias_usuario');
+    return saved ? JSON.parse(saved) : {
+      modalidad: 'presencial',
+      duracion: '5 años',
+      areasInteres: ['Tecnología', 'Diseño', 'Innovación']
+    };
+  });
+  const [editandoPreferencias, setEditandoPreferencias] = useState(false);
+  const [nuevaArea, setNuevaArea] = useState('');
+
+  // Cargar datos actualizados del usuario al montar el componente
+  useEffect(() => {
+    const cargarDatosUsuario = async () => {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      const userId = user?.id;
+
+      if (!userId || !accessToken) return;
+
+      try {
+        const userData = await fetchUserById(accessToken, userId);
+        // Actualizar el contexto con los datos completos del usuario
+        if (userData.success && userData.data && tokens) {
+          loginSuccess({
+            id: userData.data.id,
+            email: userData.data.email,
+            nombre: userData.data.nombre,
+            apellido: userData.data.apellido || '',
+            role: userData.data.role,
+            cedula: userData.data.cedula,
+            telefono: userData.data.telefono,
+            carrera: userData.data.carrera || undefined,
+            trimestre: userData.data.semestre || undefined,
+            emailVerified: userData.data.emailVerified,
+            activo: userData.data.activo,
+          }, tokens);
+        }
+      } catch (error) {
+        console.error('Error al cargar datos del usuario:', error);
+        // No mostrar error al usuario, los datos antiguos seguirán disponibles
+      }
+    };
+
+    cargarDatosUsuario();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar una vez al montar el componente
+
   useEffect(() => {
     // Detectar el paso actual basado en la ruta
     const path = location.pathname;
@@ -113,6 +172,10 @@ const DashboardAspirante = () => {
         }
         setHistorialPerfil(historialData);
         setPerfilVocacionalData(perfilRes?.data ?? null);
+
+        // Debug: ver qué datos se reciben
+        console.log('📊 [Dashboard] Datos del perfil vocacional:', perfilRes);
+        console.log('📊 [Dashboard] Historial de tests:', historialData);
       })
       .finally(() => setCargandoPerfil(false));
   }, [activeModule, accessToken]);
@@ -277,6 +340,185 @@ const DashboardAspirante = () => {
       arr.splice(index, 1);
       return { ...prev, [key]: arr };
     });
+  };
+
+  // Función para guardar preferencias
+  const handleGuardarPreferencias = () => {
+    localStorage.setItem('preferencias_usuario', JSON.stringify(preferencias));
+    setEditandoPreferencias(false);
+    toast({
+      title: "Preferencias guardadas",
+      description: "Tus preferencias se han actualizado correctamente.",
+    });
+  };
+
+  // Función para agregar área de interés
+  const handleAgregarArea = () => {
+    if (nuevaArea.trim() && !preferencias.areasInteres.includes(nuevaArea.trim())) {
+      setPreferencias({
+        ...preferencias,
+        areasInteres: [...preferencias.areasInteres, nuevaArea.trim()]
+      });
+      setNuevaArea('');
+    }
+  };
+
+  // Función para eliminar área de interés
+  const handleEliminarArea = (area: string) => {
+    setPreferencias({
+      ...preferencias,
+      areasInteres: preferencias.areasInteres.filter(a => a !== area)
+    });
+  };
+
+  // Función para guardar edición de perfil
+  const handleGuardarPerfil = async () => {
+    setEditandoPerfil(true);
+    try {
+      // Aquí podrías hacer una llamada al backend para actualizar el perfil
+      // Por ahora solo guardamos en localStorage
+      localStorage.setItem('perfil_editado', JSON.stringify(perfilEditado));
+      toast({
+        title: "Perfil actualizado",
+        description: "Tu información de perfil se ha actualizado correctamente.",
+      });
+      setEditarPerfilOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el perfil. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setEditandoPerfil(false);
+    }
+  };
+
+  // Función para exportar informe
+  const handleExportarInforme = () => {
+    toast({
+      title: "Generando informe",
+      description: "Preparando tu informe para imprimir...",
+    });
+
+    // Crear contenido del informe
+    const informeWindow = window.open('', '_blank');
+    if (!informeWindow) {
+      toast({
+        title: "Error",
+        description: "No se pudo abrir la ventana. Verifica los bloqueadores de ventanas emergentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const testsCompletados = historialPerfil.filter((s: Record<string, unknown>) => {
+      const e = ((s.estado ?? s.estado) as string | undefined)?.toLowerCase?.() ?? "";
+      const t = s.tipoTest ?? s.tipo_test;
+      return t === "ICO" ? (e === "finalizada" || e === "completada") : (e === "finalizada" || e === "ronda_2_completada");
+    });
+
+    informeWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Informe de Orientación Vocacional - ${user?.nombre} ${user?.apellido}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
+            h1 { color: #2563eb; border-bottom: 3px solid #2563eb; padding-bottom: 10px; }
+            h2 { color: #1e40af; margin-top: 30px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .section { margin-bottom: 30px; }
+            .badge { display: inline-block; padding: 5px 10px; background: #dbeafe; color: #1e40af; border-radius: 5px; margin: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #2563eb; color: white; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; }
+            @media print {
+              body { padding: 20px; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Informe de Orientación Vocacional</h1>
+            <p><strong>${user?.nombre} ${user?.apellido}</strong></p>
+            <p>${user?.email}</p>
+            <p>Fecha: ${format(new Date(), 'dd/MM/yyyy')}</p>
+          </div>
+
+          <div class="section">
+            <h2>Resumen del Perfil</h2>
+            <p><strong>Tests Completados:</strong> ${testsCompletados.length}</p>
+            ${perfilVocacionalData?.resultadoActual?.resultado ? `
+              <p><strong>Perfil Dominante:</strong> <span class="badge">${(perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).perfilDominante ?? (perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).perfil_dominante ?? "—"}</span></p>
+              <p><strong>Código Holland:</strong> <span class="badge">${(perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).codigoHolland ?? (perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).codigo_holland ?? "—"}</span></p>
+              ${(perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).perfilSecundario ? `<p><strong>Perfil Secundario:</strong> ${(perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).perfilSecundario ?? (perfilVocacionalData.resultadoActual.resultado as Record<string, unknown>).perfil_secundario}</p>` : ''}
+            ` : '<p>No hay resultados de tests disponibles.</p>'}
+          </div>
+
+          ${testsCompletados.length > 0 ? `
+          <div class="section">
+            <h2>Historial de Tests</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Tipo de Test</th>
+                  <th>Fecha</th>
+                  <th>Perfil</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${testsCompletados.map((sesion: Record<string, unknown>) => {
+                  const tipoTestVal = sesion.tipoTest ?? sesion.tipo_test;
+                  const fechaVal = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
+                  const perfilVal = sesion.perfilDominante ?? sesion.perfil_dominante ?? '—';
+                  const nombreTest = tipoTestVal === "ICO" ? "Test ICO" : "Test Holland RIASEC";
+                  return `
+                    <tr>
+                      <td>${nombreTest}</td>
+                      <td>${fechaVal ? format(new Date(fechaVal as string), 'dd/MM/yyyy') : '—'}</td>
+                      <td>${perfilVal}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          ${perfilVocacionalData?.resultadoActual?.resultado?.recomendacionesCarreras && perfilVocacionalData.resultadoActual.resultado.recomendacionesCarreras.length > 0 ? `
+          <div class="section">
+            <h2>Carreras Recomendadas</h2>
+            <p><strong>Total de Recomendaciones:</strong> ${perfilVocacionalData.resultadoActual.resultado.recomendacionesCarreras.length}</p>
+            <ul>
+              ${perfilVocacionalData.resultadoActual.resultado.recomendacionesCarreras.slice(0, 5).map((carrera) => `
+                <li><strong>${carrera.name}</strong> - ${carrera.razon}</li>
+              `).join('')}
+            </ul>
+          </div>
+          ` : ''}
+
+          <div class="section">
+            <h2>Preferencias de Estudio</h2>
+            <p><strong>Modalidad:</strong> ${preferencias.modalidad}</p>
+            <p><strong>Duración preferida:</strong> ${preferencias.duracion}</p>
+            <p><strong>Áreas de interés:</strong> ${preferencias.areasInteres.join(', ')}</p>
+          </div>
+
+          <div class="footer">
+            <p>Universidad Metropolitana - Sistema de Orientación Vocacional</p>
+            <p>Este informe es confidencial y de uso exclusivo para orientación académica.</p>
+          </div>
+
+          <button onclick="window.print()" style="margin: 20px auto; display: block; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Imprimir / Guardar como PDF
+          </button>
+        </body>
+      </html>
+    `);
+    informeWindow.document.close();
   };
 
   const handleIniciarTest = async () => {
@@ -635,7 +877,16 @@ const DashboardAspirante = () => {
                     </div>
                   </div>
 
-                  <Button className="w-full bg-gradient-to-r from-primary to-orange-dark text-white hover:opacity-90 rounded-full shadow-md hover:shadow-lg transition-all h-10 sm:h-11">
+                  <Button
+                    onClick={() => {
+                      setPerfilEditado({
+                        telefono: user?.telefono || '',
+                        bio: localStorage.getItem('perfil_editado') ? JSON.parse(localStorage.getItem('perfil_editado') || '{}').bio : '',
+                      });
+                      setEditarPerfilOpen(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-primary to-orange-dark text-white hover:opacity-90 rounded-full shadow-md hover:shadow-lg transition-all h-10 sm:h-11"
+                  >
                     <Settings className="w-4 h-4 mr-2" /> Editar Perfil
                   </Button>
                 </CardContent>
@@ -653,27 +904,80 @@ const DashboardAspirante = () => {
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
                     </div>
-                  ) : perfilVocacionalData?.resultadoActual?.resultado ? (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-xs sm:text-sm">
-                          {(perfilVocacionalData.resultadoActual.resultado as any).perfilDominante ?? (perfilVocacionalData.resultadoActual.resultado as any).perfil_dominante ?? "—"}
-                        </Badge>
-                        <Badge className="bg-orange-100 text-orange-700 border border-orange-200 px-2.5 py-1 text-xs sm:text-sm">
-                          Código: {(perfilVocacionalData.resultadoActual.resultado as any).codigoHolland ?? (perfilVocacionalData.resultadoActual.resultado as any).codigo_holland ?? "—"}
-                        </Badge>
-                      </div>
-                      {(perfilVocacionalData.resultadoActual.resultado as any).perfilSecundario && (
-                        <p className="text-xs text-slate-600">
-                          Secundario: {(perfilVocacionalData.resultadoActual.resultado as any).perfilSecundario ?? (perfilVocacionalData.resultadoActual.resultado as any).perfil_secundario}
+                  ) : (() => {
+                    // Buscar perfil dominante en múltiples ubicaciones posibles
+                    const resultadoActual = perfilVocacionalData?.resultadoActual as Record<string, unknown>;
+                    const resultado = resultadoActual?.resultado as Record<string, unknown>;
+
+                    // Buscar en resultado directamente
+                    let perfilDominante = resultado?.perfilDominante || resultado?.perfil_dominante;
+                    let codigoHolland = resultado?.codigoHolland || resultado?.codigo_holland;
+                    let perfilSecundario = resultado?.perfilSecundario || resultado?.perfil_secundario;
+
+                    // Si no está en resultado, buscar en resultadoActual directamente
+                    if (!perfilDominante) {
+                      perfilDominante = resultadoActual?.perfilDominante || resultadoActual?.perfil_dominante;
+                    }
+                    if (!codigoHolland) {
+                      codigoHolland = resultadoActual?.codigoHolland || resultadoActual?.codigo_holland;
+                    }
+                    if (!perfilSecundario) {
+                      perfilSecundario = resultadoActual?.perfilSecundario || resultadoActual?.perfil_secundario;
+                    }
+
+                    // También buscar en el historial el test más reciente completado
+                    const ultimoTestCompletado = historialPerfil.find((s: Record<string, unknown>) => {
+                      const estado = ((s.estado ?? s.estado) as string | undefined)?.toLowerCase?.() ?? "";
+                      const tipo = s.tipoTest ?? s.tipo_test;
+                      return tipo === "ICO"
+                        ? (estado === "finalizada" || estado === "completada")
+                        : (estado === "finalizada" || estado === "ronda_2_completada");
+                    });
+
+                    const perfilDelHistorial = (ultimoTestCompletado as Record<string, unknown>)?.perfilDominante ||
+                                             (ultimoTestCompletado as Record<string, unknown>)?.perfil_dominante;
+
+                    // Usar datos del resultado o del historial
+                    const perfilMostrar = perfilDominante || perfilDelHistorial;
+                    const codigoMostrar = codigoHolland || (ultimoTestCompletado as Record<string, unknown>)?.codigoHolland ||
+                                         (ultimoTestCompletado as Record<string, unknown>)?.codigo_holland;
+
+                    // Debug: mostrar qué valores se encontraron
+                    console.log('🔍 [Resumen] perfilDominante:', perfilDominante);
+                    console.log('🔍 [Resumen] codigoHolland:', codigoHolland);
+                    console.log('🔍 [Resumen] perfilDelHistorial:', perfilDelHistorial);
+                    console.log('🔍 [Resumen] ultimoTestCompletado:', ultimoTestCompletado);
+
+                    if (perfilMostrar || codigoMostrar) {
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {perfilMostrar && (
+                              <Badge className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-xs sm:text-sm">
+                                {perfilMostrar}
+                              </Badge>
+                            )}
+                            {codigoMostrar && (
+                              <Badge className="bg-orange-100 text-orange-700 border border-orange-200 px-2.5 py-1 text-xs sm:text-sm">
+                                Código: {codigoMostrar}
+                              </Badge>
+                            )}
+                          </div>
+                          {perfilSecundario && (
+                            <p className="text-xs text-slate-600">
+                              Secundario: {perfilSecundario}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <p className="text-sm text-slate-500">
+                          Completa un test de orientación para ver tu perfil dominante y código Holland.
                         </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Completa un test de orientación para ver tu perfil dominante y código Holland.
-                    </p>
-                  )}
+                      );
+                    }
+                  })()}
                 </CardContent>
               </Card>
 
@@ -741,8 +1045,12 @@ const DashboardAspirante = () => {
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Mi Trayectoria</h1>
                         <p className="text-sm sm:text-base text-slate-500">Historial académico y resultados vocacionales</p>
                     </div>
-                    <Button variant="outline" className="rounded-full w-full sm:w-auto">
-                        <Download className="w-4 h-4 mr-2" /> 
+                    <Button
+                      variant="outline"
+                      className="rounded-full w-full sm:w-auto"
+                      onClick={handleExportarInforme}
+                    >
+                        <Download className="w-4 h-4 mr-2" />
                         <span className="hidden sm:inline">Exportar Informe</span>
                         <span className="sm:hidden">Exportar</span>
                     </Button>
@@ -837,44 +1145,270 @@ const DashboardAspirante = () => {
                   </TabsContent>
 
                   <TabsContent value="history">
-                    <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                        <div className="relative mb-4 sm:mb-6">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center">
-                            <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" />
+                    {trayectoriaLoading ? (
+                      <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+                        <p className="text-slate-600">Cargando historial académico...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {trayectoria.promedioGeneral || Object.keys(trayectoria.promediosPorAno || {}).length > 0 ? (
+                          <>
+                            <Card className="border-primary/20">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  <Award className="w-5 h-5 text-primary" />
+                                  Resumen Académico
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                {trayectoria.promedioGeneral && (
+                                  <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                                    <p className="text-sm text-slate-600 mb-1">Promedio General</p>
+                                    <p className="text-2xl font-bold text-primary">{trayectoria.promedioGeneral.toFixed(2)}</p>
+                                  </div>
+                                )}
+                                {trayectoria.gradoActual && (
+                                  <div className="p-3 bg-slate-50 rounded-lg">
+                                    <p className="text-sm text-slate-600 mb-1">Grado Actual</p>
+                                    <p className="text-lg font-semibold text-slate-900">{trayectoria.gradoActual}</p>
+                                  </div>
+                                )}
+                                {Object.keys(trayectoria.promediosPorAno || {}).length > 0 && (
+                                  <div className="pt-3 border-t">
+                                    <p className="text-sm font-medium text-slate-700 mb-2">Promedios por Año</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                      {Object.entries(trayectoria.promediosPorAno || {}).map(([ano, promedio]) => (
+                                        <div key={ano} className="p-2 bg-white border rounded-lg text-center">
+                                          <p className="text-xs text-slate-500">{ano}</p>
+                                          <p className="text-lg font-bold text-primary">{promedio.toFixed(2)}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+
+                            {(trayectoria.materiasDestacadas?.length || 0) > 0 && (
+                              <Card className="border-orange/20">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                    <BookOpen className="w-4 h-4 text-orange-dark" />
+                                    Materias Destacadas
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="flex flex-wrap gap-2">
+                                    {trayectoria.materiasDestacadas?.map((materia, i) => (
+                                      <Badge key={i} className="bg-orange-100 text-orange-800 border-orange-200">
+                                        {materia}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {(trayectoria.actividadesExtracurriculares?.length || 0) > 0 && (
+                              <Card className="border-green-200">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-green-600" />
+                                    Actividades Extracurriculares
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="flex flex-wrap gap-2">
+                                    {trayectoria.actividadesExtracurriculares?.map((actividad, i) => (
+                                      <Badge key={i} className="bg-green-100 text-green-800 border-green-200">
+                                        {actividad}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {(trayectoria.proyectosRealizados?.length || 0) > 0 && (
+                              <Card className="border-purple-200">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                    <Target className="w-4 h-4 text-purple-600" />
+                                    Proyectos Realizados
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <ul className="space-y-2">
+                                    {trayectoria.proyectosRealizados?.map((proyecto, i) => (
+                                      <li key={i} className="flex items-start gap-2 p-2 bg-purple-50 rounded-lg">
+                                        <CheckCircle className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm text-slate-700">{proyecto}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => setActiveModule("notas")}
+                            >
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Actualizar Trayectoria Académica
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4">
+                              <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Sin Historial Académico</h3>
+                            <p className="text-sm sm:text-base text-slate-600 max-w-sm mx-auto px-4 mb-4">
+                              Aún no has registrado tu trayectoria académica. Completa tus datos para enriquecer tu perfil.
+                            </p>
+                            <Button
+                              onClick={() => setActiveModule("notas")}
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Agregar Trayectoria
+                            </Button>
                           </div>
-                          <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-primary rounded-full animate-pulse" />
-                        </div>
-                        <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Sincronizando Historial</h3>
-                        <p className="text-sm sm:text-base text-slate-600 max-w-sm mx-auto px-4">
-                          Estamos conectando con el sistema de control de estudios para traer tus notas y rendimiento académico.
-                        </p>
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="preferences">
                     <div className="space-y-4">
                       <div className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl sm:rounded-2xl border-2 border-pink-100 shadow-md">
-                        <h3 className="font-bold text-lg sm:text-xl text-slate-900 mb-3 sm:mb-4 flex items-center gap-2">
-                          <Heart className="w-5 h-5 text-pink-600" />
-                          Preferencias de Estudio
-                        </h3>
-                        <div className="space-y-2.5 sm:space-y-3 text-sm sm:text-base">
-                          <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
-                            <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
-                            <span className="font-semibold text-slate-700">Modalidad:</span>
-                            <span className="text-slate-600">Presencial</span>
-                          </div>
-                          <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
-                            <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
-                            <span className="font-semibold text-slate-700">Duración preferida:</span>
-                            <span className="text-slate-600">5 años</span>
-                          </div>
-                          <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
-                            <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
-                            <span className="font-semibold text-slate-700">Áreas de interés:</span>
-                            <span className="text-slate-600">Tecnología, Diseño, Innovación</span>
-                          </div>
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                          <h3 className="font-bold text-lg sm:text-xl text-slate-900 flex items-center gap-2">
+                            <Heart className="w-5 h-5 text-pink-600" />
+                            Preferencias de Estudio
+                          </h3>
+                          <Button
+                            variant={editandoPreferencias ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setEditandoPreferencias(!editandoPreferencias)}
+                          >
+                            {editandoPreferencias ? (
+                              <>
+                                <X className="w-4 h-4 mr-1" />
+                                Cancelar
+                              </>
+                            ) : (
+                              <>
+                                <Edit2 className="w-4 h-4 mr-1" />
+                                Editar
+                              </>
+                            )}
+                          </Button>
                         </div>
+
+                        {editandoPreferencias ? (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="modalidad">Modalidad de Estudio</Label>
+                              <select
+                                id="modalidad"
+                                value={preferencias.modalidad}
+                                onChange={(e) => setPreferencias({ ...preferencias, modalidad: e.target.value })}
+                                className="w-full p-2 border rounded-lg bg-white"
+                              >
+                                <option value="presencial">Presencial</option>
+                                <option value="virtual">Virtual</option>
+                                <option value="hibrido">Híbrido</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="duracion">Duración Preferida</Label>
+                              <select
+                                id="duracion"
+                                value={preferencias.duracion}
+                                onChange={(e) => setPreferencias({ ...preferencias, duracion: e.target.value })}
+                                className="w-full p-2 border rounded-lg bg-white"
+                              >
+                                <option value="3 años">3 años</option>
+                                <option value="4 años">4 años</option>
+                                <option value="5 años">5 años</option>
+                                <option value="6 años o más">6 años o más</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Áreas de Interés</Label>
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                {preferencias.areasInteres.map((area: string, i: number) => (
+                                  <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1">
+                                    {area}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEliminarArea(area)}
+                                      className="ml-1 rounded-full hover:bg-muted p-0.5"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="Agregar nueva área de interés"
+                                  value={nuevaArea}
+                                  onChange={(e) => setNuevaArea(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAgregarArea())}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={handleAgregarArea}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <Button
+                              onClick={handleGuardarPreferencias}
+                              className="w-full bg-gradient-to-r from-primary to-orange-dark text-white"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              Guardar Preferencias
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5 sm:space-y-3 text-sm sm:text-base">
+                            <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
+                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                              <span className="font-semibold text-slate-700">Modalidad:</span>
+                              <span className="text-slate-600">{preferencias.modalidad}</span>
+                            </div>
+                            <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
+                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                              <span className="font-semibold text-slate-700">Duración preferida:</span>
+                              <span className="text-slate-600">{preferencias.duracion}</span>
+                            </div>
+                            <div className="p-2.5 sm:p-3 bg-white/70 rounded-lg">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                                <span className="font-semibold text-slate-700">Áreas de interés:</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2 ml-5">
+                                {preferencias.areasInteres.map((area: string, i: number) => (
+                                  <Badge key={i} className="bg-primary/10 text-primary">
+                                    {area}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>
@@ -1074,6 +1608,75 @@ const DashboardAspirante = () => {
           </div>
         </main>
       </div>
+
+      {/* Dialog para Editar Perfil */}
+      <Dialog open={editarPerfilOpen} onOpenChange={setEditarPerfilOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              Editar Perfil
+            </DialogTitle>
+            <DialogDescription>
+              Actualiza tu información personal. Los cambios se guardarán en tu perfil.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-telefono">Teléfono</Label>
+              <Input
+                id="edit-telefono"
+                placeholder="Ej: +58 412 123 4567"
+                value={perfilEditado.telefono}
+                onChange={(e) => setPerfilEditado({ ...perfilEditado, telefono: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-bio">Biografía / Descripción Personal</Label>
+              <Textarea
+                id="edit-bio"
+                placeholder="Cuéntanos un poco sobre ti, tus metas y aspiraciones..."
+                value={perfilEditado.bio}
+                onChange={(e) => setPerfilEditado({ ...perfilEditado, bio: e.target.value })}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Algunos campos como nombre, email y cédula solo pueden ser modificados por un administrador.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditarPerfilOpen(false)}
+              disabled={editandoPerfil}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleGuardarPerfil}
+              disabled={editandoPerfil}
+              className="bg-gradient-to-r from-primary to-orange-dark text-white"
+            >
+              {editandoPerfil ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Guardar Cambios
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
