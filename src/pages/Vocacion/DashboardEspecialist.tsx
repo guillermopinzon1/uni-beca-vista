@@ -21,6 +21,7 @@ import { enviarGrupoPredefinido, obtenerEstadisticas, segmentarEstudiantes, envi
 import type { Estudiante, FiltrosSegmentacion } from "@/lib/api/campanas";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { getUserProfile, type UserProfileResponse } from "@/lib/api/auth";
 
 // Interface para mapear datos del backend
 interface StudentData {
@@ -93,6 +94,8 @@ const DashboardEspecialist = () => {
     ctaTexto: "",
     ctaUrl: ""
   });
+  const [perfilCompleto, setPerfilCompleto] = useState<UserProfileResponse['data'] | null>(null);
+  const [loadingPerfil, setLoadingPerfil] = useState(false);
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -389,6 +392,44 @@ const DashboardEspecialist = () => {
 
     cargarEstadisticas();
   }, [activeModule, tokens]);
+
+  // Cargar perfil completo cuando se active el módulo de perfil
+  useEffect(() => {
+    const cargarPerfil = async () => {
+      if (activeModule !== "perfil") return;
+
+      const accessToken = tokens?.accessToken ||
+        JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+      if (!accessToken) {
+        toast({
+          title: "Sesión expirada",
+          description: "Por favor inicia sesión nuevamente",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
+      setLoadingPerfil(true);
+
+      try {
+        const respuesta = await getUserProfile(accessToken);
+        setPerfilCompleto(respuesta.data);
+      } catch (error: unknown) {
+        console.error('Error al cargar perfil:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Error al cargar el perfil del usuario",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingPerfil(false);
+      }
+    };
+
+    cargarPerfil();
+  }, [activeModule, tokens, navigate, toast]);
 
   // Función para abrir el modal de edición de campaña
   const handleAbrirModalCampana = (
@@ -1380,6 +1421,9 @@ Te invitamos a conocer más sobre:
     }
 
     if (activeModule === "perfil") {
+      // Usar perfilCompleto si está disponible, sino usar user del contexto
+      const datosUsuario = perfilCompleto || user;
+
       return (
         <div className="space-y-6">
           <Card className="border-orange/20">
@@ -1393,67 +1437,75 @@ Te invitamos a conocer más sobre:
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Nombre</Label>
-                  <p className="text-base font-medium text-primary">
-                    {user?.nombre || 'No disponible'}
-                  </p>
+              {loadingPerfil ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
                 </div>
+              ) : (
+                <>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Nombre</Label>
+                      <p className="text-base font-medium text-primary">
+                        {datosUsuario?.nombre || 'No disponible'}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Apellido</Label>
-                  <p className="text-base font-medium text-primary">
-                    {user?.apellido || 'No disponible'}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Apellido</Label>
+                      <p className="text-base font-medium text-primary">
+                        {datosUsuario?.apellido || 'No disponible'}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Correo Electrónico</Label>
-                  <p className="text-base font-medium text-primary">
-                    {user?.email || 'No disponible'}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Correo Electrónico</Label>
+                      <p className="text-base font-medium text-primary">
+                        {datosUsuario?.email || 'No disponible'}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Cédula</Label>
-                  <p className="text-base font-medium text-primary">
-                    {user?.cedula || 'No disponible'}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Cédula</Label>
+                      <p className="text-base font-medium text-primary">
+                        {datosUsuario?.cedula || 'No disponible'}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Teléfono</Label>
-                  <p className="text-base font-medium text-primary">
-                    {user?.telefono || 'No disponible'}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Teléfono</Label>
+                      <p className="text-base font-medium text-primary">
+                        {datosUsuario?.telefono || 'No disponible'}
+                      </p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Rol</Label>
-                  <p className="text-base font-medium text-primary capitalize">
-                    {user?.role || 'Especialista'}
-                  </p>
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Rol</Label>
+                      <p className="text-base font-medium text-primary capitalize">
+                        {datosUsuario?.role || 'Especialista'}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Estado de la cuenta:</span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    user?.activo 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {user?.activo ? 'Activa' : 'Pendiente de aprobación'}
-                  </span>
-                </div>
-                {!user?.emailVerified && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    ⚠️ Tu correo electrónico aún no ha sido verificado
-                  </p>
-                )}
-              </div>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Estado de la cuenta:</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        datosUsuario?.activo
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {datosUsuario?.activo ? 'Activa' : 'Pendiente de aprobación'}
+                      </span>
+                    </div>
+                    {!datosUsuario?.emailVerified && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        ⚠️ Tu correo electrónico aún no ha sido verificado
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
