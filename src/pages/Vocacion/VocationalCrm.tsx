@@ -1,12 +1,98 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Calendar, Bell, MessageSquare, Mail, GraduationCap } from "lucide-react";
+import { Calendar, Bell, MessageSquare, Mail, GraduationCap, Loader2, Megaphone, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { obtenerMisNotificaciones, type Notificacion } from "@/lib/api/notificaciones";
+import { toast } from "sonner";
 
 const vocationalBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
+// Función auxiliar para obtener el ícono según el tipo de notificación
+const getIconForType = (tipo: string) => {
+  switch (tipo) {
+    case 'evento':
+      return <Calendar className="w-6 h-6 text-blue-500" />;
+    case 'anuncio':
+      return <Megaphone className="w-6 h-6 text-purple-500" />;
+    case 'recordatorio':
+      return <AlertCircle className="w-6 h-6 text-orange-500" />;
+    case 'campana':
+      return <Mail className="w-6 h-6 text-green-500" />;
+    case 'mensaje':
+      return <MessageSquare className="w-6 h-6 text-pink-500" />;
+    default:
+      return <Bell className="w-6 h-6 text-slate-500" />;
+  }
+};
+
+// Función auxiliar para obtener el color de fondo según el tipo
+const getBgColorForType = (tipo: string) => {
+  switch (tipo) {
+    case 'evento':
+      return 'bg-blue-50';
+    case 'anuncio':
+      return 'bg-purple-50';
+    case 'recordatorio':
+      return 'bg-orange-50';
+    case 'campana':
+      return 'bg-green-50';
+    case 'mensaje':
+      return 'bg-pink-50';
+    default:
+      return 'bg-slate-50';
+  }
+};
+
+// Función auxiliar para formatear fecha relativa
+const formatearFechaRelativa = (fecha: string) => {
+  const ahora = new Date();
+  const fechaNotif = new Date(fecha);
+  const diffMs = ahora.getTime() - fechaNotif.getTime();
+  const diffMinutos = Math.floor(diffMs / (1000 * 60));
+  const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutos < 60) {
+    return diffMinutos <= 1 ? 'Hace 1 minuto' : `Hace ${diffMinutos} minutos`;
+  } else if (diffHoras < 24) {
+    return diffHoras === 1 ? 'Hace 1 hora' : `Hace ${diffHoras} horas`;
+  } else if (diffDias === 1) {
+    return 'Ayer';
+  } else if (diffDias < 7) {
+    return `Hace ${diffDias} días`;
+  } else {
+    return fechaNotif.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  }
+};
+
 const VocationalCrm = () => {
+  const { tokens } = useAuth();
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargarNotificaciones = async () => {
+      if (!tokens?.accessToken) {
+        setCargando(false);
+        return;
+      }
+
+      try {
+        const respuesta = await obtenerMisNotificaciones(tokens.accessToken, 20);
+        setNotificaciones(respuesta.data.notificaciones);
+      } catch (error) {
+        console.error('Error al cargar notificaciones:', error);
+        toast.error('No se pudieron cargar las notificaciones');
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarNotificaciones();
+  }, [tokens]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -42,72 +128,65 @@ const VocationalCrm = () => {
               <h2 className="text-xl font-bold text-slate-900 flex items-center">
                 <Bell className="w-5 h-5 mr-2 text-pink-500" />
                 Tus Notificaciones
+                {notificaciones.length > 0 && (
+                  <Badge className="ml-2 bg-pink-100 text-pink-700">
+                    {notificaciones.filter(n => !n.leida).length}
+                  </Badge>
+                )}
               </h2>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex gap-4"
-              >
-                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center shrink-0">
-                  <Calendar className="w-6 h-6 text-blue-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-bold text-slate-900">Feria de Carreras 2025</h3>
-                    <span className="text-xs text-slate-400">Hace 2 horas</span>
-                  </div>
-                  <p className="text-slate-600 text-sm mb-3">
-                    Basado en tus intereses en Ingeniería, te invitamos a la charla de apertura de la Facultad de Ingeniería.
-                  </p>
-                  <Button variant="outline" size="sm" className="rounded-full text-blue-600 border-blue-200 hover:bg-blue-50">
-                    Ver Agenda
-                  </Button>
-                </div>
-              </motion.div>
 
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex gap-4"
-              >
-                <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center shrink-0">
-                  <Star className="w-6 h-6 text-purple-500" />
+              {cargando ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-bold text-slate-900">Nuevos Cursos Electivos</h3>
-                    <span className="text-xs text-slate-400">Ayer</span>
-                  </div>
-                  <p className="text-slate-600 text-sm mb-3">
-                    Se han abierto cupos para "Introducción a la IA", compatible con tu perfil tecnológico.
-                  </p>
-                  <Button variant="outline" size="sm" className="rounded-full text-purple-600 border-purple-200 hover:bg-purple-50">
-                    Más Información
-                  </Button>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex gap-4"
-              >
-                <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center shrink-0">
-                  <MessageSquare className="w-6 h-6 text-orange-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-bold text-slate-900">Recordatorio de Cita</h3>
-                    <span className="text-xs text-slate-400">Hace 2 días</span>
-                  </div>
-                  <p className="text-slate-600 text-sm mb-3">
-                    Recuerda completar tu perfil antes de tu cita con el orientador vocacional.
+              ) : notificaciones.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 shadow-sm border border-slate-100 text-center">
+                  <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <h3 className="font-bold text-slate-900 mb-2">No tienes notificaciones</h3>
+                  <p className="text-slate-500 text-sm">
+                    Las notificaciones sobre eventos y anuncios aparecerán aquí.
                   </p>
                 </div>
-              </motion.div>
+              ) : (
+                notificaciones.map((notif, index) => (
+                  <motion.div
+                    key={notif.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`bg-white rounded-2xl p-6 shadow-sm border flex gap-4 ${
+                      notif.leida ? 'border-slate-100' : 'border-pink-200 bg-pink-50/30'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 ${getBgColorForType(notif.tipo)} rounded-full flex items-center justify-center shrink-0`}>
+                      {getIconForType(notif.tipo)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="font-bold text-slate-900">{notif.titulo}</h3>
+                        <span className="text-xs text-slate-400">
+                          {formatearFechaRelativa(notif.fecha_creacion)}
+                        </span>
+                      </div>
+                      <div
+                        className="text-slate-600 text-sm mb-3 prose prose-sm max-w-none
+                          prose-p:my-1 prose-ul:my-1 prose-li:my-0"
+                        dangerouslySetInnerHTML={{ __html: notif.contenido }}
+                      />
+                      {notif.metadata?.url && notif.metadata?.cta && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => window.open(notif.metadata?.url, '_blank')}
+                        >
+                          {notif.metadata.cta}
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
 
             {/* Sidebar Events */}

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2 } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
@@ -17,7 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
 import { obtenerHistorialEspecialista, HistorialEspecialistaResponse } from "@/lib/api/orientacionVocacional";
-import { enviarGrupoPredefinido, obtenerEstadisticas } from "@/lib/api/campanas";
+import { enviarGrupoPredefinido, obtenerEstadisticas, segmentarEstudiantes, enviarCampana } from "@/lib/api/campanas";
+import type { Estudiante, FiltrosSegmentacion } from "@/lib/api/campanas";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // Interface para mapear datos del backend
 interface StudentData {
@@ -61,6 +64,35 @@ const DashboardEspecialist = () => {
     total: 0
   });
   const [loadingCampanas, setLoadingCampanas] = useState(false);
+  const [modalCampanaAbierto, setModalCampanaAbierto] = useState(false);
+  const [campanaSeleccionada, setCampanaSeleccionada] = useState<{
+    grupo: 'ingenieria' | 'artes' | 'ciencias_sociales';
+    nombreGrupo: string;
+    titulo: string;
+    asunto: string;
+    contenido: string;
+    ctaTexto: string;
+    ctaUrl: string;
+  } | null>(null);
+
+  // Estados para segmentación personalizada
+  const [filtrosSegmentacion, setFiltrosSegmentacion] = useState<FiltrosSegmentacion>({});
+  const [resultadoSegmentacion, setResultadoSegmentacion] = useState<Estudiante[] | null>(null);
+  const [loadingSegmentacion, setLoadingSegmentacion] = useState(false);
+  const [modalCampanaPersonalizada, setModalCampanaPersonalizada] = useState(false);
+  const [campanaPersonalizada, setCampanaPersonalizada] = useState<{
+    titulo: string;
+    asunto: string;
+    contenido: string;
+    ctaTexto: string;
+    ctaUrl: string;
+  }>({
+    titulo: "",
+    asunto: "",
+    contenido: "",
+    ctaTexto: "",
+    ctaUrl: ""
+  });
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -345,21 +377,85 @@ const DashboardEspecialist = () => {
       if (!accessToken) return;
 
       try {
+        console.log('📊 Cargando estadísticas de campañas...');
         const respuesta = await obtenerEstadisticas(accessToken);
+        console.log('📊 Respuesta del backend:', respuesta);
+        console.log('📊 Datos de estadísticas:', respuesta.data);
         setEstadisticasCampanas(respuesta.data);
       } catch (error: unknown) {
-        console.error('Error al cargar estadísticas:', error);
+        console.error('❌ Error al cargar estadísticas:', error);
       }
     };
 
     cargarEstadisticas();
   }, [activeModule, tokens]);
 
-  // Función para enviar campaña a un grupo predefinido
-  const handleEnviarCampanaGrupo = async (
+  // Función para abrir el modal de edición de campaña
+  const handleAbrirModalCampana = (
     grupo: 'ingenieria' | 'artes' | 'ciencias_sociales',
     nombreGrupo: string
   ) => {
+    // Contenido predeterminado según el grupo
+    const contenidosPorGrupo = {
+      ingenieria: {
+        titulo: "Webinar: Futuro de la IA y la Ingeniería",
+        asunto: "Invitación: Webinar sobre Inteligencia Artificial",
+        contenido: `Hemos identificado que tu perfil vocacional muestra gran afinidad con las áreas de tecnología e ingeniería.
+
+Te invitamos a un webinar exclusivo donde exploraremos:
+• Las últimas tendencias en Inteligencia Artificial
+• Oportunidades de carrera en tecnología
+• Innovaciones en ingeniería de sistemas
+
+Fecha: Próximo sábado, 10:00 AM`,
+        ctaTexto: "Registrarme al Webinar",
+        ctaUrl: "https://unimet.edu.ve/webinar-ia"
+      },
+      artes: {
+        titulo: "Taller: Diseño y Creatividad",
+        asunto: "Invitación: Taller de Diseño Creativo",
+        contenido: `Tu perfil vocacional destaca por su orientación creativa y artística.
+
+Te invitamos a un taller especial de diseño donde exploraremos:
+• Técnicas avanzadas de diseño digital
+• Carreras en el mundo del arte y la arquitectura
+• Portfolio profesional para creativos
+
+Fecha: Próximo viernes, 3:00 PM`,
+        ctaTexto: "Inscribirme al Taller",
+        ctaUrl: "https://unimet.edu.ve/taller-diseno"
+      },
+      ciencias_sociales: {
+        titulo: "Charla: Impacto Social y Humanidades",
+        asunto: "Invitación: Charla sobre Ciencias Sociales",
+        contenido: `Tu perfil vocacional muestra gran interés por las áreas sociales y humanísticas.
+
+Te invitamos a una charla especial donde discutiremos:
+• Carreras con impacto social
+• Psicología y desarrollo humano
+• Oportunidades en derecho y comunicación social
+
+Fecha: Próximo jueves, 4:00 PM`,
+        ctaTexto: "Confirmar Asistencia",
+        ctaUrl: "https://unimet.edu.ve/charla-social"
+      }
+    };
+
+    const datosPredeterminados = contenidosPorGrupo[grupo];
+
+    setCampanaSeleccionada({
+      grupo,
+      nombreGrupo,
+      ...datosPredeterminados
+    });
+
+    setModalCampanaAbierto(true);
+  };
+
+  // Función para enviar campaña personalizada (grupos predefinidos)
+  const handleEnviarCampanaPersonalizada = async () => {
+    if (!campanaSeleccionada) return;
+
     const accessToken = tokens?.accessToken ||
       JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
 
@@ -372,83 +468,176 @@ const DashboardEspecialist = () => {
       return;
     }
 
-    // Mostrar confirmación
-    const confirmacion = window.confirm(
-      `¿Estás seguro de enviar una campaña de notificaciones al grupo "${nombreGrupo}"?`
-    );
-
-    if (!confirmacion) return;
-
     setLoadingCampanas(true);
 
     try {
-      // Contenido personalizado según el grupo
-      const contenidosPorGrupo = {
-        ingenieria: {
-          titulo: "Webinar: Futuro de la IA y la Ingeniería",
-          asunto: "Invitación: Webinar sobre Inteligencia Artificial",
-          contenido: `
-            <p>Hemos identificado que tu perfil vocacional muestra gran afinidad con las áreas de tecnología e ingeniería.</p>
-            <p>Te invitamos a un webinar exclusivo donde exploraremos:</p>
-            <ul>
-              <li>Las últimas tendencias en Inteligencia Artificial</li>
-              <li>Oportunidades de carrera en tecnología</li>
-              <li>Innovaciones en ingeniería de sistemas</li>
-            </ul>
-            <p><strong>Fecha:</strong> Próximo sábado, 10:00 AM</p>
-          `,
-          ctaTexto: "Registrarme al Webinar",
-          ctaUrl: "https://unimet.edu.ve/webinar-ia"
-        },
-        artes: {
-          titulo: "Taller: Diseño y Creatividad",
-          asunto: "Invitación: Taller de Diseño Creativo",
-          contenido: `
-            <p>Tu perfil vocacional destaca por su orientación creativa y artística.</p>
-            <p>Te invitamos a un taller especial de diseño donde exploraremos:</p>
-            <ul>
-              <li>Técnicas avanzadas de diseño digital</li>
-              <li>Carreras en el mundo del arte y la arquitectura</li>
-              <li>Portfolio profesional para creativos</li>
-            </ul>
-            <p><strong>Fecha:</strong> Próximo viernes, 3:00 PM</p>
-          `,
-          ctaTexto: "Inscribirme al Taller",
-          ctaUrl: "https://unimet.edu.ve/taller-diseno"
-        },
-        ciencias_sociales: {
-          titulo: "Charla: Impacto Social y Humanidades",
-          asunto: "Invitación: Charla sobre Ciencias Sociales",
-          contenido: `
-            <p>Tu perfil vocacional muestra gran interés por las áreas sociales y humanísticas.</p>
-            <p>Te invitamos a una charla especial donde discutiremos:</p>
-            <ul>
-              <li>Carreras con impacto social</li>
-              <li>Psicología y desarrollo humano</li>
-              <li>Oportunidades en derecho y comunicación social</li>
-            </ul>
-            <p><strong>Fecha:</strong> Próximo jueves, 4:00 PM</p>
-          `,
-          ctaTexto: "Confirmar Asistencia",
-          ctaUrl: "https://unimet.edu.ve/charla-social"
-        }
-      };
-
-      const datosCampana = contenidosPorGrupo[grupo];
+      // Convertir el contenido de texto plano a HTML
+      const contenidoHTML = campanaSeleccionada.contenido
+        .split('\n')
+        .map(line => {
+          if (line.trim().startsWith('•')) {
+            return `<li>${line.trim().substring(1).trim()}</li>`;
+          }
+          return line.trim() ? `<p>${line.trim()}</p>` : '';
+        })
+        .join('\n')
+        .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
 
       const resultado = await enviarGrupoPredefinido(accessToken, {
-        grupo,
-        ...datosCampana
+        grupo: campanaSeleccionada.grupo,
+        titulo: campanaSeleccionada.titulo,
+        asunto: campanaSeleccionada.asunto,
+        contenido: contenidoHTML,
+        ctaTexto: campanaSeleccionada.ctaTexto,
+        ctaUrl: campanaSeleccionada.ctaUrl
       });
 
       toast({
         title: "¡Campaña enviada exitosamente!",
-        description: `Se enviaron ${resultado.data.exitosos} de ${resultado.data.total} correos al grupo "${nombreGrupo}". Tasa de éxito: ${resultado.data.tasaExito}`,
+        description: `Se enviaron ${resultado.data.exitosos} de ${resultado.data.total} correos al grupo "${campanaSeleccionada.nombreGrupo}". Tasa de éxito: ${resultado.data.tasaExito}`,
       });
 
-      // Recargar estadísticas
+      // Cerrar modal y recargar estadísticas
+      setModalCampanaAbierto(false);
+      setCampanaSeleccionada(null);
+
       const respuesta = await obtenerEstadisticas(accessToken);
       setEstadisticasCampanas(respuesta.data);
+
+    } catch (error: unknown) {
+      console.error('Error al enviar campaña:', error);
+      toast({
+        title: "Error al enviar campaña",
+        description: error instanceof Error ? error.message : "No se pudo enviar la campaña de notificaciones",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCampanas(false);
+    }
+  };
+
+  // Función para buscar grupo objetivo con filtros personalizados
+  const handleBuscarGrupoObjetivo = async () => {
+    const accessToken = tokens?.accessToken ||
+      JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+    if (!accessToken) {
+      toast({
+        title: "Error",
+        description: "Sesión expirada. Por favor inicia sesión nuevamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingSegmentacion(true);
+
+    try {
+      const resultado = await segmentarEstudiantes(accessToken, filtrosSegmentacion);
+
+      setResultadoSegmentacion(resultado.data.estudiantes);
+
+      toast({
+        title: "Búsqueda completada",
+        description: `Se encontraron ${resultado.data.total} estudiante${resultado.data.total !== 1 ? 's' : ''} que coinciden con los filtros.`,
+      });
+    } catch (error: unknown) {
+      console.error('Error al segmentar estudiantes:', error);
+      toast({
+        title: "Error al buscar estudiantes",
+        description: error instanceof Error ? error.message : "No se pudo realizar la búsqueda",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSegmentacion(false);
+    }
+  };
+
+  // Función para abrir modal de campaña con grupo segmentado
+  const handleCrearCampanaSegmentada = () => {
+    if (!resultadoSegmentacion || resultadoSegmentacion.length === 0) {
+      toast({
+        title: "No hay estudiantes seleccionados",
+        description: "Primero debes buscar un grupo objetivo",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCampanaPersonalizada({
+      titulo: "Invitación Personalizada",
+      asunto: "Te invitamos a un evento especial",
+      contenido: `Hemos identificado que tu perfil vocacional podría beneficiarse de esta oportunidad.
+
+Te invitamos a conocer más sobre:
+• Opciones académicas disponibles
+• Oportunidades de desarrollo profesional
+• Recursos de apoyo y orientación
+
+¡Esperamos verte pronto!`,
+      ctaTexto: "Conocer más",
+      ctaUrl: "https://unimet.edu.ve"
+    });
+
+    setModalCampanaPersonalizada(true);
+  };
+
+  // Función para enviar campaña al grupo segmentado
+  const handleEnviarCampanaSegmentada = async () => {
+    if (!resultadoSegmentacion || resultadoSegmentacion.length === 0) return;
+
+    const accessToken = tokens?.accessToken ||
+      JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+    if (!accessToken) {
+      toast({
+        title: "Error",
+        description: "Sesión expirada. Por favor inicia sesión nuevamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingCampanas(true);
+
+    try {
+      // Convertir el contenido de texto plano a HTML
+      const contenidoHTML = campanaPersonalizada.contenido
+        .split('\n')
+        .map(line => {
+          if (line.trim().startsWith('•')) {
+            return `<li>${line.trim().substring(1).trim()}</li>`;
+          }
+          return line.trim() ? `<p>${line.trim()}</p>` : '';
+        })
+        .join('\n')
+        .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+      const destinatarios = resultadoSegmentacion.map(est => est.id);
+
+      const resultado = await enviarCampana(accessToken, {
+        destinatarios,
+        asunto: campanaPersonalizada.asunto,
+        contenido: contenidoHTML,
+        titulo: campanaPersonalizada.titulo,
+        ctaTexto: campanaPersonalizada.ctaTexto,
+        ctaUrl: campanaPersonalizada.ctaUrl,
+        usarTemplate: true
+      });
+
+      toast({
+        title: "¡Campaña enviada exitosamente!",
+        description: `Se enviaron ${resultado.data.exitosos} de ${resultado.data.total} correos. Tasa de éxito: ${resultado.data.tasaExito}`,
+      });
+
+      // Cerrar modal y limpiar resultados
+      setModalCampanaPersonalizada(false);
+      setResultadoSegmentacion(null);
+      setFiltrosSegmentacion({
+        carreraInteres: undefined,
+        nivelRiesgo: undefined,
+        estadoProceso: undefined,
+      });
 
     } catch (error: unknown) {
       console.error('Error al enviar campaña:', error);
@@ -965,8 +1154,19 @@ const DashboardEspecialist = () => {
     }
 
     if (activeModule === "campanas") {
+      const totalEstudiantes = estadisticasCampanas.ingenieria + estadisticasCampanas.artes + estadisticasCampanas.cienciasSociales;
+
       return (
         <div className="space-y-6">
+                {totalEstudiantes === 0 && (
+                  <Alert className="bg-yellow-50 border-yellow-200">
+                    <Info className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-yellow-800">
+                      No se encontraron estudiantes clasificados en los grupos de campañas. Asegúrate de que haya estudiantes con tests de orientación vocacional completados y con recomendaciones de carreras.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <Card className="rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-2xl text-slate-900">Gestor de Campañas Masivas</CardTitle>
@@ -981,21 +1181,19 @@ const DashboardEspecialist = () => {
                             <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
                               <BrainCircuit className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-blue-600">{estadisticasCampanas.ingenieria} Estudiantes</Badge>
+                            <Badge className="bg-blue-600">
+                              {estadisticasCampanas.ingenieria} {estadisticasCampanas.ingenieria === 1 ? 'Estudiante' : 'Estudiantes'}
+                            </Badge>
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">Interesados en Ingeniería</h3>
                           <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Lógico-Matemático que mostraron interés en áreas técnicas.</p>
                           <Button
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => handleEnviarCampanaGrupo('ingenieria', 'Interesados en Ingeniería')}
-                            disabled={loadingCampanas}
+                            onClick={() => handleAbrirModalCampana('ingenieria', 'Interesados en Ingeniería')}
+                            disabled={loadingCampanas || estadisticasCampanas.ingenieria === 0}
                           >
-                            {loadingCampanas ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Mail className="w-4 h-4 mr-2" />
-                            )}
-                            {loadingCampanas ? 'Enviando...' : 'Crear Campaña'}
+                            <Mail className="w-4 h-4 mr-2" />
+                            Crear Campaña
                           </Button>
                         </CardContent>
                       </Card>
@@ -1007,21 +1205,19 @@ const DashboardEspecialist = () => {
                             <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
                               <Sparkles className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-purple-600">{estadisticasCampanas.artes} Estudiantes</Badge>
+                            <Badge className="bg-purple-600">
+                              {estadisticasCampanas.artes} {estadisticasCampanas.artes === 1 ? 'Estudiante' : 'Estudiantes'}
+                            </Badge>
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">Interesados en Artes</h3>
                           <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Creativo que buscan carreras de diseño o arquitectura.</p>
                           <Button
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={() => handleEnviarCampanaGrupo('artes', 'Interesados en Artes')}
-                            disabled={loadingCampanas}
+                            onClick={() => handleAbrirModalCampana('artes', 'Interesados en Artes')}
+                            disabled={loadingCampanas || estadisticasCampanas.artes === 0}
                           >
-                            {loadingCampanas ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Mail className="w-4 h-4 mr-2" />
-                            )}
-                            {loadingCampanas ? 'Enviando...' : 'Crear Campaña'}
+                            <Mail className="w-4 h-4 mr-2" />
+                            Crear Campaña
                           </Button>
                         </CardContent>
                       </Card>
@@ -1033,21 +1229,19 @@ const DashboardEspecialist = () => {
                             <div className="p-3 bg-green-100 rounded-xl text-green-600">
                               <Users className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-green-600">{estadisticasCampanas.cienciasSociales} Estudiantes</Badge>
+                            <Badge className="bg-green-600">
+                              {estadisticasCampanas.cienciasSociales} {estadisticasCampanas.cienciasSociales === 1 ? 'Estudiante' : 'Estudiantes'}
+                            </Badge>
                           </div>
                           <h3 className="font-bold text-slate-900 mb-2">Ciencias Sociales</h3>
                           <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Social-Humanista interesados en derecho o psicología.</p>
                           <Button
                             className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => handleEnviarCampanaGrupo('ciencias_sociales', 'Ciencias Sociales')}
-                            disabled={loadingCampanas}
+                            onClick={() => handleAbrirModalCampana('ciencias_sociales', 'Ciencias Sociales')}
+                            disabled={loadingCampanas || estadisticasCampanas.cienciasSociales === 0}
                           >
-                            {loadingCampanas ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Mail className="w-4 h-4 mr-2" />
-                            )}
-                            {loadingCampanas ? 'Enviando...' : 'Crear Campaña'}
+                            <Mail className="w-4 h-4 mr-2" />
+                            Crear Campaña
                           </Button>
                         </CardContent>
                       </Card>
@@ -1061,36 +1255,123 @@ const DashboardEspecialist = () => {
                       <div className="grid md:grid-cols-3 gap-4 mb-4">
                         <div>
                           <label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Carrera de Interés</label>
-                          <select className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm">
-                            <option>Todas las carreras</option>
-                            <option>Ingeniería de Sistemas</option>
-                            <option>Derecho</option>
-                            <option>Medicina</option>
+                          <select
+                            className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
+                            value={filtrosSegmentacion.carreraInteres || ''}
+                            onChange={(e) => setFiltrosSegmentacion({ ...filtrosSegmentacion, carreraInteres: e.target.value || undefined })}
+                          >
+                            <option value="">Todas las carreras</option>
+                            <option value="ingeniería">Ingeniería</option>
+                            <option value="sistemas">Sistemas</option>
+                            <option value="derecho">Derecho</option>
+                            <option value="psicología">Psicología</option>
+                            <option value="medicina">Medicina</option>
+                            <option value="arquitectura">Arquitectura</option>
+                            <option value="diseño">Diseño</option>
                           </select>
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Nivel de Riesgo</label>
-                          <select className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm">
-                            <option>Todos los niveles</option>
-                            <option>Riesgo Alto</option>
-                            <option>Riesgo Medio</option>
-                            <option>Sin Riesgo</option>
+                          <select
+                            className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
+                            value={filtrosSegmentacion.nivelRiesgo || ''}
+                            onChange={(e) => setFiltrosSegmentacion({
+                              ...filtrosSegmentacion,
+                              nivelRiesgo: e.target.value ? (e.target.value as 'Alto' | 'Medio' | 'Bajo') : undefined
+                            })}
+                          >
+                            <option value="">Todos los niveles</option>
+                            <option value="Alto">Riesgo Alto</option>
+                            <option value="Medio">Riesgo Medio</option>
+                            <option value="Bajo">Riesgo Bajo</option>
                           </select>
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Estado del Proceso</label>
-                          <select className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm">
-                            <option>Cualquier estado</option>
-                            <option>Test Completado</option>
-                            <option>Pendiente de Cita</option>
+                          <select
+                            className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
+                            value={filtrosSegmentacion.estadoProceso || ''}
+                            onChange={(e) => setFiltrosSegmentacion({ ...filtrosSegmentacion, estadoProceso: e.target.value || undefined })}
+                          >
+                            <option value="">Cualquier estado</option>
+                            <option value="completado">Test Completado</option>
+                            <option value="proceso">En Proceso</option>
+                            <option value="seguimiento">En Seguimiento</option>
+                            <option value="asesoria">Requiere Asesoría</option>
                           </select>
                         </div>
                       </div>
-                      <div className="flex justify-end">
-                        <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-                          <Search className="w-4 h-4 mr-2" /> Buscar Grupo Objetivo
-                        </Button>
+
+                      <div className="flex justify-between items-center">
+                        {resultadoSegmentacion && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-white">
+                              {resultadoSegmentacion.length} estudiante{resultadoSegmentacion.length !== 1 ? 's' : ''} encontrado{resultadoSegmentacion.length !== 1 ? 's' : ''}
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setResultadoSegmentacion(null)}
+                              className="text-slate-500 hover:text-slate-700"
+                            >
+                              <X className="w-3 h-3 mr-1" /> Limpiar
+                            </Button>
+                          </div>
+                        )}
+                        <div className={`flex gap-2 ${resultadoSegmentacion ? 'ml-auto' : 'w-full justify-end'}`}>
+                          <Button
+                            className="bg-teal-600 hover:bg-teal-700 text-white"
+                            onClick={handleBuscarGrupoObjetivo}
+                            disabled={loadingSegmentacion}
+                          >
+                            {loadingSegmentacion ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Buscando...
+                              </>
+                            ) : (
+                              <>
+                                <Search className="w-4 h-4 mr-2" /> Buscar Grupo Objetivo
+                              </>
+                            )}
+                          </Button>
+                          {resultadoSegmentacion && resultadoSegmentacion.length > 0 && (
+                            <Button
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={handleCrearCampanaSegmentada}
+                            >
+                              <Mail className="w-4 h-4 mr-2" /> Crear Campaña
+                            </Button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Lista de estudiantes encontrados */}
+                      {resultadoSegmentacion && resultadoSegmentacion.length > 0 && (
+                        <div className="mt-4 bg-white rounded-lg border border-slate-200 p-4">
+                          <h4 className="font-semibold text-slate-900 mb-3 text-sm">Estudiantes seleccionados:</h4>
+                          <div className="max-h-60 overflow-y-auto space-y-2">
+                            {resultadoSegmentacion.map((estudiante) => (
+                              <div key={estudiante.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-md text-sm">
+                                <div>
+                                  <p className="font-medium text-slate-900">{estudiante.nombre}</p>
+                                  <p className="text-xs text-slate-500">{estudiante.email}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {estudiante.perfilDominante}
+                                  </Badge>
+                                  {estudiante.carrerasInteres && estudiante.carrerasInteres.length > 0 && (
+                                    <span className="text-xs text-slate-500">
+                                      {estudiante.carrerasInteres[0]}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1183,9 +1464,238 @@ const DashboardEspecialist = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-orange/20 px-6 py-4 sticky top-0 z-10">
+    <>
+      {/* Modal de edición de campaña para grupos predefinidos */}
+      <Dialog open={modalCampanaAbierto} onOpenChange={setModalCampanaAbierto}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              Personalizar Campaña: {campanaSeleccionada?.nombreGrupo}
+            </DialogTitle>
+            <DialogDescription>
+              Edita el contenido de la campaña antes de enviarla a {campanaSeleccionada?.nombreGrupo === 'Interesados en Ingeniería' ? estadisticasCampanas.ingenieria : campanaSeleccionada?.nombreGrupo === 'Interesados en Artes' ? estadisticasCampanas.artes : estadisticasCampanas.cienciasSociales} estudiante(s).
+            </DialogDescription>
+          </DialogHeader>
+
+          {campanaSeleccionada && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="titulo" className="text-sm font-semibold">
+                  Título de la campaña
+                </Label>
+                <Input
+                  id="titulo"
+                  value={campanaSeleccionada.titulo}
+                  onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, titulo: e.target.value })}
+                  placeholder="Título que aparecerá en el correo"
+                  className="bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="asunto" className="text-sm font-semibold">
+                  Asunto del correo
+                </Label>
+                <Input
+                  id="asunto"
+                  value={campanaSeleccionada.asunto}
+                  onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, asunto: e.target.value })}
+                  placeholder="Asunto que verán los destinatarios"
+                  className="bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contenido" className="text-sm font-semibold">
+                  Contenido del mensaje
+                </Label>
+                <Textarea
+                  id="contenido"
+                  value={campanaSeleccionada.contenido}
+                  onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: e.target.value })}
+                  placeholder="Escribe el contenido del correo..."
+                  className="min-h-[200px] bg-slate-50"
+                />
+                <p className="text-xs text-slate-500">
+                  Usa • para crear listas con viñetas
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ctaTexto" className="text-sm font-semibold">
+                    Texto del botón
+                  </Label>
+                  <Input
+                    id="ctaTexto"
+                    value={campanaSeleccionada.ctaTexto}
+                    onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, ctaTexto: e.target.value })}
+                    placeholder="Ej: Registrarme"
+                    className="bg-slate-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ctaUrl" className="text-sm font-semibold">
+                    URL del botón
+                  </Label>
+                  <Input
+                    id="ctaUrl"
+                    value={campanaSeleccionada.ctaUrl}
+                    onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, ctaUrl: e.target.value })}
+                    placeholder="https://..."
+                    className="bg-slate-50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setModalCampanaAbierto(false)}
+                  disabled={loadingCampanas}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleEnviarCampanaPersonalizada}
+                  disabled={loadingCampanas}
+                  className="bg-teal-600 hover:bg-teal-700"
+                >
+                  {loadingCampanas ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Enviar Campaña
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de campaña para grupo segmentado */}
+      <Dialog open={modalCampanaPersonalizada} onOpenChange={setModalCampanaPersonalizada}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              Crear Campaña Personalizada
+            </DialogTitle>
+            <DialogDescription>
+              Campaña para {resultadoSegmentacion?.length || 0} estudiante(s) del grupo segmentado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="titulo-segmentado" className="text-sm font-semibold">
+                Título de la campaña
+              </Label>
+              <Input
+                id="titulo-segmentado"
+                value={campanaPersonalizada.titulo}
+                onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, titulo: e.target.value })}
+                placeholder="Título que aparecerá en el correo"
+                className="bg-slate-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="asunto-segmentado" className="text-sm font-semibold">
+                Asunto del correo
+              </Label>
+              <Input
+                id="asunto-segmentado"
+                value={campanaPersonalizada.asunto}
+                onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, asunto: e.target.value })}
+                placeholder="Asunto que verán los destinatarios"
+                className="bg-slate-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contenido-segmentado" className="text-sm font-semibold">
+                Contenido del mensaje
+              </Label>
+              <Textarea
+                id="contenido-segmentado"
+                value={campanaPersonalizada.contenido}
+                onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: e.target.value })}
+                placeholder="Escribe el contenido del correo..."
+                className="min-h-[200px] bg-slate-50"
+              />
+              <p className="text-xs text-slate-500">
+                Usa • para crear listas con viñetas
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ctaTexto-segmentado" className="text-sm font-semibold">
+                  Texto del botón
+                </Label>
+                <Input
+                  id="ctaTexto-segmentado"
+                  value={campanaPersonalizada.ctaTexto}
+                  onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, ctaTexto: e.target.value })}
+                  placeholder="Ej: Registrarme"
+                  className="bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ctaUrl-segmentado" className="text-sm font-semibold">
+                  URL del botón
+                </Label>
+                <Input
+                  id="ctaUrl-segmentado"
+                  value={campanaPersonalizada.ctaUrl}
+                  onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, ctaUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="bg-slate-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setModalCampanaPersonalizada(false)}
+                disabled={loadingCampanas}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEnviarCampanaSegmentada}
+                disabled={loadingCampanas}
+                className="bg-teal-600 hover:bg-teal-700"
+              >
+                {loadingCampanas ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Enviar Campaña
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="bg-card border-b border-orange/20 px-6 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button
@@ -1267,6 +1777,7 @@ const DashboardEspecialist = () => {
         </main>
       </div>
     </div>
+    </>
   );
 };
 
