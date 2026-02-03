@@ -423,13 +423,21 @@ const DashboardEspecialist = () => {
       if (!accessToken) return;
 
       try {
-        console.log('📊 Cargando estadísticas de campañas...');
         const respuesta = await obtenerEstadisticas(accessToken);
-        console.log('📊 Respuesta del backend:', respuesta);
-        console.log('📊 Datos de estadísticas:', respuesta.data);
-        setEstadisticasCampanas(respuesta.data);
+        const d = respuesta.data as Record<string, unknown>;
+        setEstadisticasCampanas({
+          ingenieria: Number(d?.ingenieria ?? 0),
+          artes: Number(d?.artes ?? 0),
+          cienciasSociales: Number(d?.cienciasSociales ?? d?.ciencias_sociales ?? 0),
+          total: Number(d?.total ?? 0),
+        });
       } catch (error: unknown) {
-        console.error('❌ Error al cargar estadísticas:', error);
+        console.error('Error al cargar estadísticas de campañas:', error);
+        toast({
+          title: "Error al cargar campañas",
+          description: error instanceof Error ? error.message : "No se pudieron cargar las estadísticas",
+          variant: "destructive",
+        });
       }
     };
 
@@ -586,7 +594,13 @@ Fecha: Próximo jueves, 4:00 PM`,
       setCampanaSeleccionada(null);
 
       const respuesta = await obtenerEstadisticas(accessToken);
-      setEstadisticasCampanas(respuesta.data);
+      const d = respuesta.data as Record<string, unknown>;
+      setEstadisticasCampanas({
+        ingenieria: Number(d?.ingenieria ?? 0),
+        artes: Number(d?.artes ?? 0),
+        cienciasSociales: Number(d?.cienciasSociales ?? d?.ciencias_sociales ?? 0),
+        total: Number(d?.total ?? 0),
+      });
 
     } catch (error: unknown) {
       console.error('Error al enviar campaña:', error);
