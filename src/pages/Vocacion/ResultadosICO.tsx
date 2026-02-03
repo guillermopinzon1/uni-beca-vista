@@ -306,13 +306,6 @@ const ResultadosICO = () => {
             >
               Ver Historial
             </Button>
-            <Button
-              onClick={() => navigate("/orientacion/seleccionar-test")}
-              variant="outline"
-              className="px-8 h-12 font-bold"
-            >
-              Iniciar otro test
-            </Button>
           </div>
         </div>
       </main>

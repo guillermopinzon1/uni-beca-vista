@@ -160,6 +160,7 @@ export interface HistorialResponse {
     fechaInicio: string;
     fechaFin?: string;
     perfilDominante?: string;
+    tieneResultado?: boolean;
   }>;
 }
 
@@ -285,13 +286,11 @@ export async function iniciarTest(
 
   if (!response.ok) {
     let message = payload?.message || `Error al iniciar el test (${response.status})`;
-    
     if (response.status === 401) {
       message = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
     } else if (response.status === 403) {
-      message = 'No tienes permisos para realizar este test. Contacta al administrador.';
+      message = payload?.message || 'Ya completaste el test Holland. Solo puedes realizar un test Holland.';
     }
-    
     const error = new Error(message);
     (error as any).status = response.status;
     (error as any).payload = payload;
@@ -456,9 +455,11 @@ export async function iniciarTestIco(accessToken: string): Promise<IniciarTestIc
   const payload = contentType.includes('application/json') ? await response.json() : null;
 
   if (!response.ok) {
-    const message = payload?.message || `Error al iniciar test ICO (${response.status})`;
+    let message = payload?.message || `Error al iniciar test ICO (${response.status})`;
     if (response.status === 401) {
-      throw new Error('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+      message = 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.';
+    } else if (response.status === 403) {
+      message = payload?.message || 'Ya completaste el test ICO. Solo puedes realizar un test ICO.';
     }
     const error = new Error(message);
     (error as any).status = response.status;
@@ -641,29 +642,23 @@ export async function obtenerHistorial(
     } as HistorialResponse;
   }
 
-  // Si tiene la estructura { success, data }
-  if (payload.success !== undefined && payload.data !== undefined) {
-    console.log('✅ [Frontend] Estructura correcta con success y data');
-    return payload as HistorialResponse;
+  // Normalizar data a array (backend puede enviar data como array o como { historial: [...] } / { sesiones: [...] })
+  function toHistorialArray(d: unknown): unknown[] {
+    if (Array.isArray(d)) return d;
+    if (d && typeof d === 'object') {
+      const obj = d as Record<string, unknown>;
+      if (Array.isArray(obj.historial)) return obj.historial;
+      if (Array.isArray(obj.sesiones)) return obj.sesiones;
+      if (Array.isArray(obj.data)) return obj.data;
+      const firstArrayKey = Object.keys(obj).find((k) => Array.isArray(obj[k]));
+      if (firstArrayKey && Array.isArray(obj[firstArrayKey])) return obj[firstArrayKey] as unknown[];
+    }
+    return [];
   }
 
-  // Si solo tiene data
   if (payload.data !== undefined) {
-    if (Array.isArray(payload.data)) {
-      console.log('✅ [Frontend] data es array');
-      return { success: true, data: payload.data } as HistorialResponse;
-    }
-    // data puede ser un objeto con el array dentro (ej: { sesiones: [...] }, { historial: [...] })
-    if (payload.data && typeof payload.data === 'object') {
-      const obj = payload.data as Record<string, unknown>;
-      if (Array.isArray(obj.sesiones)) return { success: true, data: obj.sesiones } as HistorialResponse;
-      if (Array.isArray(obj.historial)) return { success: true, data: obj.historial } as HistorialResponse;
-      if (Array.isArray(obj.data)) return { success: true, data: obj.data } as HistorialResponse;
-      const firstArrayKey = Object.keys(obj).find((k) => Array.isArray(obj[k]));
-      if (firstArrayKey && Array.isArray(obj[firstArrayKey])) {
-        return { success: true, data: obj[firstArrayKey] as any[] } as HistorialResponse;
-      }
-    }
+    const arr = toHistorialArray(payload.data);
+    return { success: true, data: arr } as HistorialResponse;
   }
 
   console.warn('⚠️ [Frontend] Estructura inesperada, devolviendo array vacío');
@@ -711,6 +706,27 @@ export async function obtenerHistorialEspecialista(
 
 // ==================== TRAYECTORIA ACADÉMICA (BACHILLERATO) ====================
 
+/** Materia con nota (por año/lapso) */
+export interface MateriaNota {
+  materia: string;
+  nota: number;
+}
+
+/** Materia con nota (por área, para graduados) */
+export interface MateriaNotaArea {
+  nombre: string;
+  nota: number;
+}
+
+/** Área con materias (para graduados) */
+export interface MateriasPorAreaItem {
+  area: string;
+  materias: MateriaNotaArea[];
+}
+
+/** materiasPorAnoLapso: año "1".."5" → lapso "1"|"2"|"3"|"anual" → MateriaNota[] */
+export type MateriasPorAnoLapsoType = Record<string, Record<string, MateriaNota[]>>;
+
 /** Body para crear/actualizar trayectoria (camelCase, enviar al back) */
 export interface TrayectoriaBody {
   promediosPorAno?: Record<string, number>;
@@ -719,6 +735,8 @@ export interface TrayectoriaBody {
   materiasDestacadas?: string[];
   actividadesExtracurriculares?: string[];
   proyectosRealizados?: string[];
+  materiasPorAnoLapso?: MateriasPorAnoLapsoType;
+  materiasPorArea?: MateriasPorAreaItem[];
 }
 
 /** Respuesta del back (puede venir en snake_case) */
@@ -726,6 +744,7 @@ export interface TrayectoriaResponse {
   success: boolean;
   message?: string;
   data?: {
+    id?: string;
     promedio_general_acumulado?: number;
     promedioGeneral?: number;
     grado_actual?: string;
@@ -738,6 +757,10 @@ export interface TrayectoriaResponse {
     actividadesExtracurriculares?: string[];
     proyectos_realizados?: string[];
     proyectosRealizados?: string[];
+    materias_por_ano_lapso?: MateriasPorAnoLapsoType;
+    materiasPorAnoLapso?: MateriasPorAnoLapsoType;
+    materias_por_area?: MateriasPorAreaItem[];
+    materiasPorArea?: MateriasPorAreaItem[];
   };
 }
 
@@ -751,14 +774,16 @@ export function normalizarTrayectoria(data: TrayectoriaResponse['data']): Trayec
     materiasDestacadas: data.materiasDestacadas ?? data.materias_destacadas ?? undefined,
     actividadesExtracurriculares: data.actividadesExtracurriculares ?? data.actividades_extracurriculares ?? undefined,
     proyectosRealizados: data.proyectosRealizados ?? data.proyectos_realizados ?? undefined,
+    materiasPorAnoLapso: data.materiasPorAnoLapso ?? data.materias_por_ano_lapso ?? undefined,
+    materiasPorArea: data.materiasPorArea ?? data.materias_por_area ?? undefined,
   };
 }
 
 /**
- * Obtener mi trayectoria académica (bachillerato)
+ * Obtener trayectoria académica (bachillerato)
  */
 export async function obtenerMiTrayectoria(accessToken: string): Promise<TrayectoriaResponse> {
-  const response = await fetch(`${API_BASE}/v1/orientacion/mi-trayectoria`, {
+  const response = await fetch(`${API_BASE}/v1/orientacion/trayectoria-academica`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -792,7 +817,7 @@ export async function actualizarMiTrayectoria(
   accessToken: string,
   body: TrayectoriaBody
 ): Promise<TrayectoriaResponse> {
-  const response = await fetch(`${API_BASE}/v1/orientacion/mi-trayectoria`, {
+  const response = await fetch(`${API_BASE}/v1/orientacion/trayectoria-academica`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${accessToken}`,

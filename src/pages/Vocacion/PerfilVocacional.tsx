@@ -287,12 +287,6 @@ const PerfilVocacional = () => {
             >
               Ver Historial
             </Button>
-            <Button
-              onClick={() => navigate('/orientacion/seleccionar-test')}
-              className="bg-[#F37021] hover:bg-orange-600 text-white px-8 h-12 font-bold"
-            >
-              Realizar Nuevo Test
-            </Button>
           </div>
         </div>
       </main>

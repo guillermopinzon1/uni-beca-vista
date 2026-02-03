@@ -12,11 +12,12 @@ import ConsultaLLM from "@/components/OrientacionVocacional/ConsultaLLM";
 import RecomendacionesCarrera from "@/components/OrientacionVocacional/RecomendacionesCarrera";
 import ChatOrientacion from "@/components/OrientacionVocacional/ChatOrientacion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
-import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria, obtenerHistorial, obtenerPerfilVocacional, HistorialResponse, PerfilVocacionalResponse } from "@/lib/api/orientacionVocacional";
+import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria, obtenerHistorial, obtenerPerfilVocacional, HistorialResponse, PerfilVocacionalResponse, MateriasPorAnoLapsoType, MateriaNota, MateriasPorAreaItem } from "@/lib/api/orientacionVocacional";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,8 @@ const DashboardAspirante = () => {
     materiasDestacadas: [],
     actividadesExtracurriculares: [],
     proyectosRealizados: [],
+    materiasPorAnoLapso: {},
+    materiasPorArea: [],
   });
   const [trayectoriaLoading, setTrayectoriaLoading] = useState(false);
   const [trayectoriaSaving, setTrayectoriaSaving] = useState(false);
@@ -47,6 +50,11 @@ const DashboardAspirante = () => {
   const [nuevaMateria, setNuevaMateria] = useState("");
   const [nuevaActividad, setNuevaActividad] = useState("");
   const [nuevoProyecto, setNuevoProyecto] = useState("");
+  // Materias por año/lapso: key "ano-lapso" (ej. "1-1")
+  const [newMateriaLapsoInputs, setNewMateriaLapsoInputs] = useState<Record<string, { materia: string; nota: string }>>({});
+  // Materias por área: nuevo nombre de área y por cada área índice, inputs para nueva materia
+  const [nuevaAreaNombre, setNuevaAreaNombre] = useState("");
+  const [newMateriaAreaInputs, setNewMateriaAreaInputs] = useState<Record<number, { nombre: string; nota: string }>>({});
   
   // Estado para Orientación Vocacional
   const [tipoTest, setTipoTest] = useState<TipoTest | null>(null);
@@ -224,9 +232,9 @@ const DashboardAspirante = () => {
 
   const sidebarItems = [
     {
-      title: "Tests Vocacionales",
-      icon: BrainCircuit,
-      module: "tests"
+      title: "Trayectoria académica",
+      icon: Upload,
+      module: "notas"
     },
     {
       title: "Orientación Vocacional",
@@ -234,9 +242,9 @@ const DashboardAspirante = () => {
       module: "orientacion"
     },
     {
-      title: "Trayectoria académica",
-      icon: Upload,
-      module: "notas"
+      title: "Chatbot vocacional",
+      icon: BrainCircuit,
+      module: "tests"
     },
     {
       title: "Mi Perfil",
@@ -263,6 +271,8 @@ const DashboardAspirante = () => {
             materiasDestacadas: normalizada.materiasDestacadas ?? [],
             actividadesExtracurriculares: normalizada.actividadesExtracurriculares ?? [],
             proyectosRealizados: normalizada.proyectosRealizados ?? [],
+            materiasPorAnoLapso: normalizada.materiasPorAnoLapso ?? {},
+            materiasPorArea: normalizada.materiasPorArea ?? [],
           });
         }
       })
@@ -282,12 +292,6 @@ const DashboardAspirante = () => {
     setTrayectoriaSaving(true);
     try {
       const body: TrayectoriaBody = {
-        promediosPorAno: Object.keys(trayectoria.promediosPorAno || {}).length
-          ? trayectoria.promediosPorAno
-          : undefined,
-        promedioGeneral: trayectoria.promedioGeneral != null && trayectoria.promedioGeneral !== undefined
-          ? Number(trayectoria.promedioGeneral)
-          : undefined,
         gradoActual: trayectoria.gradoActual?.trim() || undefined,
         materiasDestacadas: (trayectoria.materiasDestacadas?.length && trayectoria.materiasDestacadas.length > 0)
           ? trayectoria.materiasDestacadas
@@ -297,6 +301,12 @@ const DashboardAspirante = () => {
           : undefined,
         proyectosRealizados: (trayectoria.proyectosRealizados?.length && trayectoria.proyectosRealizados.length > 0)
           ? trayectoria.proyectosRealizados
+          : undefined,
+        materiasPorAnoLapso: Object.keys(trayectoria.materiasPorAnoLapso || {}).length
+          ? trayectoria.materiasPorAnoLapso
+          : undefined,
+        materiasPorArea: (trayectoria.materiasPorArea?.length && trayectoria.materiasPorArea.length > 0)
+          ? trayectoria.materiasPorArea
           : undefined,
       };
       await actualizarMiTrayectoria(accessToken, body);
@@ -312,16 +322,23 @@ const DashboardAspirante = () => {
     }
   };
 
-  const aniosDefault = ["1er año", "2do año", "3er año", "4to año", "5to año"] as const;
-  const setPromedioPorAno = (ano: string, value: string) => {
-    const num = value === "" ? undefined : parseFloat(value);
-    const isValid = num != null && !Number.isNaN(num);
-    setTrayectoria((prev) => {
-      const next = { ...(prev.promediosPorAno || {}) };
-      if (isValid) next[ano] = num;
-      else delete next[ano];
-      return { ...prev, promediosPorAno: next };
-    });
+  /** Opciones de grado actual; el valor se guarda en trayectoria.gradoActual. */
+  const GRADO_OPCIONES = ["1er año", "2do año", "3er año", "4to año", "5to año"] as const;
+  /** Valor interno del Select para "sin selección" (Radix no permite value=""). */
+  const GRADO_NINGUNO = "__ninguno__";
+  /** Devuelve 1–5 según el grado actual; 0 si no hay grado seleccionado. */
+  const getMaxAnoFromGrado = (grado: string): number => {
+    const g = (grado || "").trim();
+    if (!g || g === GRADO_NINGUNO) return 0;
+    const i = GRADO_OPCIONES.indexOf(g as typeof GRADO_OPCIONES[number]);
+    if (i >= 0) return i + 1;
+    const lower = g.toLowerCase();
+    if (/5to|quinto/.test(lower)) return 5;
+    if (/4to|cuarto/.test(lower)) return 4;
+    if (/3er|tercero/.test(lower)) return 3;
+    if (/2do|segundo/.test(lower)) return 2;
+    if (/1er|1ro|primero/.test(lower)) return 1;
+    return 0;
   };
   const addToList = (key: 'materiasDestacadas' | 'actividadesExtracurriculares' | 'proyectosRealizados', value: string) => {
     const v = value?.trim();
@@ -521,6 +538,96 @@ const DashboardAspirante = () => {
     informeWindow.document.close();
   };
 
+  // Materias por año/lapso: año "1".."5", lapso "1"|"2"|"3"
+  const getMateriasLapso = (ano: string, lapso: string): MateriaNota[] =>
+    (trayectoria.materiasPorAnoLapso?.[ano]?.[lapso] ?? []) as MateriaNota[];
+  const addMateriaLapso = (ano: string, lapso: string, materia: string, nota: number) => {
+    if (!materia?.trim()) return;
+    setTrayectoria((prev) => {
+      const porAno = { ...(prev.materiasPorAnoLapso || {}) };
+      if (!porAno[ano]) porAno[ano] = {};
+      const lapsos = { ...(porAno[ano] || {}) };
+      const list = [...(lapsos[lapso] || []), { materia: materia.trim(), nota }];
+      lapsos[lapso] = list;
+      porAno[ano] = lapsos;
+      return { ...prev, materiasPorAnoLapso: porAno };
+    });
+  };
+  const removeMateriaLapso = (ano: string, lapso: string, index: number) => {
+    setTrayectoria((prev) => {
+      const porAno = { ...(prev.materiasPorAnoLapso || {}) };
+      const lapsos = { ...(porAno[ano] || {}) };
+      const list = [...(lapsos[lapso] || [])];
+      list.splice(index, 1);
+      lapsos[lapso] = list;
+      porAno[ano] = lapsos;
+      return { ...prev, materiasPorAnoLapso: porAno };
+    });
+  };
+  const setNewMateriaLapso = (ano: string, lapso: string, field: "materia" | "nota", value: string) => {
+    const key = `${ano}-${lapso}`;
+    setNewMateriaLapsoInputs((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] || { materia: "", nota: "" }), [field]: value },
+    }));
+  };
+  const getNewMateriaLapso = (ano: string, lapso: string) =>
+    newMateriaLapsoInputs[`${ano}-${lapso}`] || { materia: "", nota: "" };
+
+  // Materias por área (graduados)
+  const addArea = () => {
+    const nombre = nuevaAreaNombre?.trim();
+    if (!nombre) return;
+    setTrayectoria((prev) => ({
+      ...prev,
+      materiasPorArea: [...(prev.materiasPorArea || []), { area: nombre, materias: [] }],
+    }));
+    setNuevaAreaNombre("");
+  };
+  const removeArea = (areaIndex: number) => {
+    setTrayectoria((prev) => {
+      const arr = [...(prev.materiasPorArea || [])];
+      arr.splice(areaIndex, 1);
+      return { ...prev, materiasPorArea: arr };
+    });
+    setNewMateriaAreaInputs((prev) => {
+      const next = { ...prev };
+      delete next[areaIndex];
+      return next;
+    });
+  };
+  const addMateriaToArea = (areaIndex: number, nombre: string, nota: number) => {
+    if (!nombre?.trim()) return;
+    setTrayectoria((prev) => {
+      const areas = [...(prev.materiasPorArea || [])];
+      if (!areas[areaIndex]) return prev;
+      areas[areaIndex] = {
+        ...areas[areaIndex],
+        materias: [...(areas[areaIndex].materias || []), { nombre: nombre.trim(), nota }],
+      };
+      return { ...prev, materiasPorArea: areas };
+    });
+    setNewMateriaAreaInputs((prev) => ({ ...prev, [areaIndex]: { nombre: "", nota: "" } }));
+  };
+  const removeMateriaFromArea = (areaIndex: number, matIndex: number) => {
+    setTrayectoria((prev) => {
+      const areas = [...(prev.materiasPorArea || [])];
+      if (!areas[areaIndex]) return prev;
+      const materias = [...(areas[areaIndex].materias || [])];
+      materias.splice(matIndex, 1);
+      areas[areaIndex] = { ...areas[areaIndex], materias };
+      return { ...prev, materiasPorArea: areas };
+    });
+  };
+  const setNewMateriaArea = (areaIndex: number, field: "nombre" | "nota", value: string) => {
+    setNewMateriaAreaInputs((prev) => ({
+      ...prev,
+      [areaIndex]: { ...(prev[areaIndex] || { nombre: "", nota: "" }), [field]: value },
+    }));
+  };
+  const getNewMateriaArea = (areaIndex: number) =>
+    newMateriaAreaInputs[areaIndex] || { nombre: "", nota: "" };
+
   const handleIniciarTest = async () => {
     if (!tipoTest) {
       toast({
@@ -581,8 +688,8 @@ const DashboardAspirante = () => {
         navigate("/login");
       } else if (error.status === 403) {
         toast({
-          title: "Sin permisos",
-          description: error.message || "No tienes permisos para realizar este test. Contacta al administrador.",
+          title: "Test ya realizado",
+          description: error.message || "Ya completaste este test. Solo puedes realizar uno por tipo.",
           variant: "destructive",
         });
       } else {
@@ -638,7 +745,7 @@ const DashboardAspirante = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Upload className="h-6 w-6" />
-                Trayectoria académica (Bachillerato)
+                Perfil Académico (Bachillerato)
               </CardTitle>
               <CardDescription>
                 Completa tus datos de bachillerato para enriquecer tu perfil vocacional. Todos los campos son opcionales.
@@ -654,64 +761,29 @@ const DashboardAspirante = () => {
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      Estos datos se usan en tu perfil de orientación vocacional. Escala de notas sugerida: 0–20.
+                      Estos datos se usan en tu perfil de orientación vocacional.
                     </AlertDescription>
                   </Alert>
 
-                  {/* Promedios por año */}
                   <div className="space-y-2">
-                    <Label className="text-base font-medium">Promedios por año / periodo</Label>
+                    <Label htmlFor="gradoActual">Grado actual</Label>
                     <p className="text-sm text-muted-foreground">
-                      Ej: &quot;1er año&quot;: 14, &quot;2do año&quot;: 15, etc.
+                      Selecciona tu grado. A partir de aquí se mostrarán solo los años y lapsos donde puedes cargar materias y notas.
                     </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                      {aniosDefault.map((ano) => (
-                        <div key={ano} className="space-y-1">
-                          <Label htmlFor={`prom-${ano}`} className="text-xs">{ano}</Label>
-                          <Input
-                            id={`prom-${ano}`}
-                            type="number"
-                            min={0}
-                            max={20}
-                            step={0.01}
-                            placeholder="—"
-                            value={trayectoria.promediosPorAno?.[ano] ?? ""}
-                            onChange={(e) => setPromedioPorAno(ano, e.target.value)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="promedioGeneral">Promedio general (0–20)</Label>
-                      <Input
-                        id="promedioGeneral"
-                        type="number"
-                        min={0}
-                        max={20}
-                        step={0.01}
-                        placeholder="Ej: 16.00"
-                        value={trayectoria.promedioGeneral ?? ""}
-                        onChange={(e) =>
-                          setTrayectoria((prev) => ({
-                            ...prev,
-                            promedioGeneral: e.target.value === "" ? undefined : parseFloat(e.target.value),
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gradoActual">Grado actual (máx. 50 caracteres)</Label>
-                      <Input
-                        id="gradoActual"
-                        maxLength={50}
-                        placeholder="Ej: 5to año, 3er año bachillerato"
-                        value={trayectoria.gradoActual ?? ""}
-                        onChange={(e) => setTrayectoria((prev) => ({ ...prev, gradoActual: e.target.value }))}
-                      />
-                    </div>
+                    <Select
+                      value={trayectoria.gradoActual?.trim() && GRADO_OPCIONES.includes(trayectoria.gradoActual?.trim() as (typeof GRADO_OPCIONES)[number]) ? trayectoria.gradoActual?.trim() : GRADO_NINGUNO}
+                      onValueChange={(value) => setTrayectoria((prev) => ({ ...prev, gradoActual: value === GRADO_NINGUNO ? "" : value }))}
+                    >
+                      <SelectTrigger id="gradoActual">
+                        <SelectValue placeholder="Selecciona tu grado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={GRADO_NINGUNO}>Selecciona tu grado</SelectItem>
+                        {GRADO_OPCIONES.map((g) => (
+                          <SelectItem key={g} value={g}>{g}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Materias destacadas */}
@@ -790,6 +862,153 @@ const DashboardAspirante = () => {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
+                  </div>
+
+                  {/* Materias por año y lapso (solo si hay grado actual; años hasta ese grado) */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Materias y notas por año y lapso</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Agrega materias con su nota (0–20) por cada año y lapso. Se muestran solo los años hasta el grado que seleccionaste.
+                    </p>
+                    {getMaxAnoFromGrado(trayectoria.gradoActual ?? "") === 0 ? (
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          Selecciona tu grado actual arriba para ver los años y lapsos donde cargar materias y notas.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                    (["1", "2", "3", "4", "5"] as const)
+                      .filter((ano) => Number(ano) <= getMaxAnoFromGrado(trayectoria.gradoActual ?? ""))
+                      .map((ano) => (
+                      <Card key={ano} className="border-orange/10 p-4">
+                        <h4 className="font-medium mb-3">{["1er año", "2do año", "3er año", "4to año", "5to año"][Number(ano) - 1]}</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {(["1", "2", "3"] as const).map((lapso) => {
+                            const list = getMateriasLapso(ano, lapso);
+                            const input = getNewMateriaLapso(ano, lapso);
+                            return (
+                              <div key={lapso} className="space-y-2 rounded border p-3 bg-muted/30">
+                                <span className="text-xs font-medium text-muted-foreground">Lapso {lapso}</span>
+                                <ul className="space-y-1 min-h-[2rem]">
+                                  {list.map((m, i) => (
+                                    <li key={i} className="flex items-center justify-between text-sm">
+                                      <span>{m.materia}: {m.nota}</span>
+                                      <button type="button" onClick={() => removeMateriaLapso(ano, lapso, i)} className="rounded hover:bg-muted p-1">
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                                <div className="flex gap-1 flex-wrap items-center">
+                                  <Input
+                                    placeholder="Materia"
+                                    className="flex-1 min-w-[80px]"
+                                    value={input.materia}
+                                    onChange={(e) => setNewMateriaLapso(ano, lapso, "materia", e.target.value)}
+                                  />
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={20}
+                                    step={0.01}
+                                    placeholder="Nota"
+                                    className="w-16"
+                                    value={input.nota}
+                                    onChange={(e) => setNewMateriaLapso(ano, lapso, "nota", e.target.value)}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => {
+                                      const n = input.nota === "" ? 0 : parseFloat(input.nota);
+                                      if (!Number.isNaN(n) && n >= 0 && n <= 20) {
+                                        addMateriaLapso(ano, lapso, input.materia, n);
+                                        setNewMateriaLapsoInputs((p) => ({ ...p, [`${ano}-${lapso}`]: { materia: "", nota: "" } }));
+                                      }
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </Card>
+                    )))}
+                  </div>
+
+                  {/* Materias por área (graduados) */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Materias por área de formación (graduados)</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Si ya egresaste, puedes agregar materias como Computación, Inglés Conversacional, Teatro, Informática.
+                    </p>
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        placeholder="Nombre del área (ej. Matemática)"
+                        value={nuevaAreaNombre}
+                        onChange={(e) => setNuevaAreaNombre(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addArea())}
+                      />
+                      <Button type="button" variant="outline" onClick={addArea}>
+                        <Plus className="h-4 w-4 mr-1" /> Agregar área
+                      </Button>
+                    </div>
+                    {(trayectoria.materiasPorArea || []).map((item, areaIndex) => (
+                      <Card key={areaIndex} className="border-orange/10 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium">{item.area}</h4>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => removeArea(areaIndex)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <ul className="space-y-1 mb-3">
+                          {(item.materias || []).map((m, matIndex) => (
+                            <li key={matIndex} className="flex items-center justify-between text-sm">
+                              <span>{m.nombre}: {m.nota}</span>
+                              <button type="button" onClick={() => removeMateriaFromArea(areaIndex, matIndex)} className="rounded hover:bg-muted p-1">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="flex gap-1 flex-wrap items-center">
+                          <Input
+                            placeholder="Nombre materia"
+                            className="flex-1 min-w-[100px]"
+                            value={getNewMateriaArea(areaIndex).nombre}
+                            onChange={(e) => setNewMateriaArea(areaIndex, "nombre", e.target.value)}
+                          />
+                          <Input
+                            type="number"
+                            min={0}
+                            max={20}
+                            step={0.01}
+                            placeholder="Nota"
+                            className="w-16"
+                            value={getNewMateriaArea(areaIndex).nota}
+                            onChange={(e) => setNewMateriaArea(areaIndex, "nota", e.target.value)}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const inp = getNewMateriaArea(areaIndex);
+                              const n = inp.nota === "" ? 0 : parseFloat(inp.nota);
+                              if (!Number.isNaN(n) && n >= 0 && n <= 20) {
+                                addMateriaToArea(areaIndex, inp.nombre, n);
+                              }
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
 
                   <Button
@@ -952,20 +1171,20 @@ const DashboardAspirante = () => {
                       return (
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
-                            {perfilMostrar && (
+                            {perfilMostrar != null && perfilMostrar !== "" && (
                               <Badge className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-xs sm:text-sm">
-                                {perfilMostrar}
+                                {String(perfilMostrar)}
                               </Badge>
                             )}
-                            {codigoMostrar && (
+                            {codigoMostrar != null && codigoMostrar !== "" && (
                               <Badge className="bg-orange-100 text-orange-700 border border-orange-200 px-2.5 py-1 text-xs sm:text-sm">
-                                Código: {codigoMostrar}
+                                Código: {String(codigoMostrar)}
                               </Badge>
                             )}
                           </div>
-                          {perfilSecundario && (
+                          {perfilSecundario != null && perfilSecundario !== "" && (
                             <p className="text-xs text-slate-600">
-                              Secundario: {perfilSecundario}
+                              Secundario: {String(perfilSecundario)}
                             </p>
                           )}
                         </div>
@@ -1132,13 +1351,7 @@ const DashboardAspirante = () => {
                               </div>
                             );
                           })}
-                          <Button
-                            variant="outline"
-                            className="w-full rounded-xl border-dashed"
-                            onClick={() => { setActiveModule("orientacion"); navigate("/orientacion/seleccionar-test"); }}
-                          >
-                            <Plus className="w-4 h-4 mr-2" /> Realizar otro test
-                          </Button>
+                      
                         </>
                       );
                     })()}
@@ -1517,11 +1730,11 @@ const DashboardAspirante = () => {
                   {/* Barra de progreso: ocultar en pantalla de seleccionar test; mostrar la que corresponda según ruta */}
                   {(() => {
                     const path = location.pathname;
-                    const enSeleccionar = path.includes('seleccionar-test');
-                    const enFlujoIco = path.includes('test-ico') || path.includes('resultados-ico');
-                    const enFlujoHolland = path.includes('ronda-1') || path.includes('ronda-2') || path.includes('/orientacion/resultados/');
-                    if (enSeleccionar && !enFlujoIco && !enFlujoHolland) return null;
+                    const enFlujoTest = path.includes('ronda-1') || path.includes('ronda-2') || path.includes('test-ico');
+                    if (!enFlujoTest) return null;
 
+                    const enFlujoIco = path.includes('test-ico');
+                    const enFlujoHolland = path.includes('ronda-1') || path.includes('ronda-2');
                     const stepsFlow: { id: string; label: string; getPath: () => string }[] = enFlujoIco
                       ? [
                           { id: 'seleccionar', label: 'Inicio', getPath: () => '/orientacion/seleccionar-test' },
