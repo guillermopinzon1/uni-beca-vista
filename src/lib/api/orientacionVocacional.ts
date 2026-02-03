@@ -164,22 +164,37 @@ export interface HistorialResponse {
   }>;
 }
 
+/** Ítem del historial para especialista: puede incluir desglose por tipo de test (Holland e ICO) */
+export interface HistorialEspecialistaItem {
+  estudiante: {
+    id: string;
+    nombre: string;
+    email: string;
+  };
+  perfilDominante: string;
+  codigoHolland: string;
+  recomendacionesCarreras: RecomendacionCarrera[];
+  /** Total de tests completados (Holland + ICO) */
+  totalSesiones: number;
+  /** Fecha del último test completado (cualquier tipo) */
+  ultimaFechaTest: string;
+  /** Opcional: cantidad de tests Holland RIASEC completados (backend puede enviar total_sesiones_holland / sesionesHolland) */
+  sesionesHolland?: number;
+  /** Opcional: cantidad de tests ICO completados (backend puede enviar total_sesiones_ico / sesionesIco) */
+  sesionesIco?: number;
+  /** Opcional: fecha último test Holland (ultima_fecha_holland / ultimaFechaHolland) */
+  ultimaFechaHolland?: string;
+  /** Opcional: fecha último test ICO (ultima_fecha_ico / ultimaFechaIco) */
+  ultimaFechaIco?: string;
+  /** Opcional: tipo del último test completado ('Holland_RIASEC' | 'ICO') para mostrar en UI */
+  ultimoTipoTest?: TipoTest;
+}
+
 export interface HistorialEspecialistaResponse {
   success: boolean;
   message: string;
   timestamp?: string;
-  data: Array<{
-    estudiante: {
-      id: string;
-      nombre: string;
-      email: string;
-    };
-    perfilDominante: string;
-    codigoHolland: string;
-    recomendacionesCarreras: RecomendacionCarrera[];
-    totalSesiones: number;
-    ultimaFechaTest: string;
-  }>;
+  data: HistorialEspecialistaItem[];
 }
 
 // ==================== TIPOS Y RESPUESTAS TEST ICO ====================

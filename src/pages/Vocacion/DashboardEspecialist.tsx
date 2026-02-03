@@ -16,14 +16,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-import { obtenerHistorialEspecialista, HistorialEspecialistaResponse } from "@/lib/api/orientacionVocacional";
+import { obtenerHistorialEspecialista, HistorialEspecialistaResponse, type RecomendacionCarrera } from "@/lib/api/orientacionVocacional";
 import { enviarGrupoPredefinido, obtenerEstadisticas, segmentarEstudiantes, enviarCampana } from "@/lib/api/campanas";
 import type { Estudiante, FiltrosSegmentacion } from "@/lib/api/campanas";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { getUserProfile, type UserProfileResponse } from "@/lib/api/auth";
 
-// Interface para mapear datos del backend
+// Interface para mapear datos del backend (soporta Holland e ICO)
 interface StudentData {
   id: string;
   name: string;
@@ -35,8 +35,15 @@ interface StudentData {
   avatar: string;
   email: string;
   codigoHolland: string;
+  /** Total de tests completados (Holland + ICO) */
   totalSesiones: number;
   recomendacionesCarreras: RecomendacionCarrera[];
+  /** Tests Holland RIASEC completados (si el backend lo envía) */
+  sesionesHolland?: number;
+  /** Tests ICO completados (si el backend lo envía) */
+  sesionesIco?: number;
+  /** Etiqueta para mostrar tipo del último test: "Holland", "ICO" o null */
+  ultimoTipoTestLabel?: string | null;
 }
 
 const DashboardEspecialist = () => {
@@ -162,22 +169,24 @@ const DashboardEspecialist = () => {
   };
 
   // Función para determinar el nivel de riesgo basado en el perfil
-  const getRiskLevel = (perfilDominante: string, totalSesiones: number): "Alto" | "Medio" | "Bajo" => {
-    // Si tiene múltiples sesiones, es menos riesgoso
+  const getRiskLevel = (perfilDominante: string | undefined, totalSesiones: number): "Alto" | "Medio" | "Bajo" => {
+    const perfil = (perfilDominante ?? "").trim();
     if (totalSesiones > 2) return "Bajo";
-    // Si el perfil es muy específico, es menos riesgoso
-    if (perfilDominante && perfilDominante.length > 10) return "Bajo";
-    // Si tiene pocas sesiones y perfil disperso, es más riesgoso
-    if (totalSesiones === 1) return "Alto";
+    if (perfil.length > 10) return "Bajo";
+    if (totalSesiones === 1 && perfil.length < 3) return "Alto";
     return "Medio";
   };
 
   // Función para determinar el estado basado en los datos
   const getStatus = (totalSesiones: number, ultimaFechaTest: string): string => {
+    if (!ultimaFechaTest || ultimaFechaTest === "null" || ultimaFechaTest === "undefined") {
+      return totalSesiones >= 2 ? "Orientación Completada" : "En Proceso";
+    }
+    const lastDate = new Date(ultimaFechaTest);
+    if (Number.isNaN(lastDate.getTime())) return "En Proceso";
     const daysSinceLastTest = Math.floor(
-      (new Date().getTime() - new Date(ultimaFechaTest).getTime()) / (1000 * 60 * 60 * 24)
+      (new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
     );
-    
     if (daysSinceLastTest > 30) return "Requiere Asesoría";
     if (daysSinceLastTest > 14) return "En Seguimiento";
     if (totalSesiones >= 2) return "Orientación Completada";
@@ -208,32 +217,66 @@ const DashboardEspecialist = () => {
 
       try {
         const respuesta = await obtenerHistorialEspecialista(accessToken);
+        // Aceptar data como array; backend puede devolver snake_case
+        const rawData = Array.isArray(respuesta?.data) ? respuesta.data : [];
         
-        // Guardar datos crudos para el módulo de admissions
+        // Guardar datos crudos para el módulo de admissions (normalizar keys)
         if (isLoadingAdmissions) {
-          setAdmissionsData(respuesta.data);
+          setAdmissionsData(rawData.map((item: any) => ({
+            estudiante: item.estudiante ?? {},
+            perfilDominante: item.perfilDominante ?? item.perfil_dominante ?? "",
+            codigoHolland: item.codigoHolland ?? item.codigo_holland ?? "",
+            recomendacionesCarreras: item.recomendacionesCarreras ?? item.recomendaciones_carreras ?? [],
+            totalSesiones: item.totalSesiones ?? item.total_sesiones ?? 0,
+            ultimaFechaTest: item.ultimaFechaTest ?? item.ultima_fecha_test ?? "",
+          })));
         }
         
         // Mapear datos del backend a la estructura del componente para estudiantes
         if (isLoadingEstudiantes) {
-          const estudiantesMapeados: StudentData[] = respuesta.data.map((item) => {
-            const careerInterest = item.recomendacionesCarreras.length > 0 
-              ? item.recomendacionesCarreras[0].name 
-              : "Indeciso";
-            
+          const estudiantesMapeados: StudentData[] = rawData.map((item: any) => {
+            const estudiante = item.estudiante ?? {};
+            const id = estudiante.id ?? estudiante.user_id ?? "";
+            const nombre = ((estudiante.nombre ?? estudiante.name ?? "").trim() || estudiante.email) ?? "Estudiante";
+            const email = (estudiante.email ?? "").trim();
+            const recs = item.recomendacionesCarreras ?? item.recomendaciones_carreras ?? [];
+            const recsNormalized: RecomendacionCarrera[] = Array.isArray(recs)
+              ? recs.map((c: any, idx: number) => ({
+                  id: c.id ?? idx,
+                  name: (c.name ?? c.nombre ?? "Carrera recomendada").trim(),
+                  razon: (c.razon ?? c.razón ?? "").trim(),
+                  faculty: c.faculty ?? c.facultad,
+                  facultad: c.facultad ?? c.faculty,
+                  area: (c.area ?? "").trim(),
+                }))
+              : [];
+            const careerInterest = recsNormalized.length > 0 ? recsNormalized[0].name : "Indeciso";
+            const perfilDominante = (item.perfilDominante ?? item.perfil_dominante ?? "").trim();
+            const codigoHolland = (item.codigoHolland ?? item.codigo_holland ?? "N/A").trim();
+            const totalSesiones = Number(item.totalSesiones ?? item.total_sesiones ?? 0) || 0;
+            const ultimaFechaTest = item.ultimaFechaTest ?? item.ultima_fecha_test ?? "";
+            const sesionesHolland = Number(item.sesionesHolland ?? item.sesiones_holland ?? item.total_sesiones_holland ?? 0) || 0;
+            const sesionesIco = Number(item.sesionesIco ?? item.sesiones_ico ?? item.total_sesiones_ico ?? 0) || 0;
+            const ultimoTipoTest = (item.ultimoTipoTest ?? item.ultimo_tipo_test ?? item.tipo_ultimo_test ?? "").toString().toUpperCase();
+            const ultimoTipoTestLabel =
+              ultimoTipoTest === "ICO" ? "ICO" : ultimoTipoTest.includes("HOLLAND") || ultimoTipoTest === "HOLLAND_RIASEC" ? "Holland" : null;
+
             return {
-              id: item.estudiante.id,
-              name: item.estudiante.nombre,
-              email: item.estudiante.email,
+              id: String(id),
+              name: nombre,
+              email: email,
               career_interest: careerInterest,
-              status: getStatus(item.totalSesiones, item.ultimaFechaTest),
-              last_test: formatDate(item.ultimaFechaTest),
-              result: `Perfil ${item.perfilDominante}`,
-              risk_level: getRiskLevel(item.perfilDominante, item.totalSesiones),
-              avatar: getInitials(item.estudiante.nombre),
-              codigoHolland: item.codigoHolland,
-              totalSesiones: item.totalSesiones,
-              recomendacionesCarreras: item.recomendacionesCarreras
+              status: getStatus(totalSesiones, ultimaFechaTest),
+              last_test: formatDate(ultimaFechaTest) || "—",
+              result: perfilDominante ? `Perfil ${perfilDominante}` : "Sin perfil",
+              risk_level: getRiskLevel(perfilDominante, totalSesiones),
+              avatar: getInitials(nombre),
+              codigoHolland: codigoHolland || "N/A",
+              totalSesiones,
+              recomendacionesCarreras: recsNormalized,
+              sesionesHolland: sesionesHolland > 0 ? sesionesHolland : undefined,
+              sesionesIco: sesionesIco > 0 ? sesionesIco : undefined,
+              ultimoTipoTestLabel: ultimoTipoTestLabel ?? undefined,
             };
           });
 
@@ -703,6 +746,12 @@ Te invitamos a conocer más sobre:
     if (activeModule === "estudiantes") {
       return (
         <div className="space-y-6">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">Gestión de Estudiantes</h2>
+                <p className="text-sm text-slate-600">
+                  Lista de aspirantes que han realizado tests de orientación vocacional (Holland RIASEC e ICO). Las sesiones se actualizan con ambos tipos de test. Selecciona un estudiante para ver su perfil Holland, recomendaciones de carreras y estado de seguimiento.
+                </p>
+              </div>
               <div className="flex flex-col lg:flex-row gap-8">
                 {/* Student List Sidebar */}
                 <div className="w-full lg:w-1/3 space-y-4">
@@ -711,25 +760,33 @@ Te invitamos a conocer más sobre:
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                         <Input 
-                          placeholder="Buscar estudiante..." 
+                          placeholder="Buscar por nombre, email o carrera..." 
                           className="pl-9 bg-slate-50 border-slate-200"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                         />
                       </div>
-                      <Button variant="outline" size="icon" className="border-slate-200">
+                      <Button variant="outline" size="icon" className="border-slate-200" title="Filtrar">
                         <Filter className="h-4 w-4 text-slate-500" />
                       </Button>
                     </div>
 
                     {loading ? (
-                      <div className="flex items-center justify-center py-12">
+                      <div className="flex flex-col items-center justify-center py-12 gap-3">
                         <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+                        <p className="text-sm text-slate-500">Cargando estudiantes...</p>
                       </div>
                     ) : filteredStudents.length === 0 ? (
-                      <div className="text-center py-12 text-slate-400">
-                        <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                        <p>No se encontraron estudiantes</p>
+                      <div className="text-center py-12 px-4 text-slate-500">
+                        <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <p className="font-medium text-slate-600 mb-1">
+                          {students.length === 0 ? "Aún no hay estudiantes" : "No hay coincidencias"}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {students.length === 0
+                            ? "Los aspirantes que completen tests de orientación aparecerán aquí."
+                            : "Prueba con otro término de búsqueda."}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
@@ -758,7 +815,12 @@ Te invitamos a conocer más sobre:
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center text-xs text-slate-400 pl-12">
-                            <span>Test: {student.last_test}</span>
+                            <span>
+                              Último: {student.last_test}
+                              {student.ultimoTipoTestLabel && (
+                                <span className="ml-1 text-slate-500">({student.ultimoTipoTestLabel})</span>
+                              )}
+                            </span>
                             <ChevronRight className={`w-4 h-4 ${selectedStudent?.id === student.id ? 'text-teal-500' : 'text-slate-300'}`} />
                           </div>
                         </div>
@@ -812,13 +874,32 @@ Te invitamos a conocer más sobre:
                             <div className="text-center">
                               <p className="text-xs text-slate-500 uppercase font-bold">Última Actividad</p>
                               <p className="text-sm font-semibold text-slate-900 mt-1">{selectedStudent.last_test}</p>
+                              {selectedStudent.ultimoTipoTestLabel && (
+                                <p className="text-xs text-slate-500 mt-0.5">Test {selectedStudent.ultimoTipoTestLabel}</p>
+                              )}
                             </div>
                           </div>
                           <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <p className="text-xs text-slate-500 uppercase font-bold mb-2">Código Holland</p>
                             <Badge variant="outline" className="text-sm font-mono">{selectedStudent.codigoHolland}</Badge>
-                            <p className="text-xs text-slate-500 mt-3 mb-1">Total de Sesiones</p>
-                            <p className="text-sm font-semibold text-slate-900">{selectedStudent.totalSesiones} sesión(es)</p>
+                            <p className="text-xs text-slate-500 mt-3 mb-1">Tests completados (Holland + ICO)</p>
+                            <p className="text-sm font-semibold text-slate-900">
+                              {selectedStudent.totalSesiones} test{selectedStudent.totalSesiones !== 1 ? "s" : ""}
+                              {(selectedStudent.sesionesHolland != null || selectedStudent.sesionesIco != null) && (
+                                <span className="text-slate-600 font-normal ml-1">
+                                  ({[
+                                    selectedStudent.sesionesHolland != null && selectedStudent.sesionesHolland > 0
+                                      ? `${selectedStudent.sesionesHolland} Holland`
+                                      : null,
+                                    selectedStudent.sesionesIco != null && selectedStudent.sesionesIco > 0
+                                      ? `${selectedStudent.sesionesIco} ICO`
+                                      : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")})
+                                </span>
+                              )}
+                            </p>
                           </div>
                         </CardContent>
                       </Card>

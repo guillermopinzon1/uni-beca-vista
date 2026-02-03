@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { obtenerResultados, ResultadosResponse } from "@/lib/api/orientacionVocacional";
+import { prepararDatosDimensiones } from "@/lib/riasec";
 
 const Resultados = () => {
   const navigate = useNavigate();
@@ -136,12 +137,9 @@ const Resultados = () => {
     navigate("/");
   };
 
-  const datosGrafico = resultados?.puntuacionesFinales 
-    ? Object.entries(resultados.puntuacionesFinales).map(([dimension, puntuacion]) => ({
-        dimension,
-        puntuacion: Math.round(puntuacion),
-      }))
-    : [];
+  const datosGrafico = prepararDatosDimensiones(
+    resultados?.puntuacionesFinales as Record<string, number> | undefined
+  );
 
   if (cargando) {
     return (
@@ -239,41 +237,79 @@ const Resultados = () => {
                 <p className="text-orange-50 text-lg">
                   Código Holland: <span className="font-bold text-2xl">{codigoHolland}</span>
                 </p>
-                <p className="text-orange-50 text-lg">
-                  Nivel de confianza: <span className="font-bold">{Math.round(nivelConfianza)}%</span>
-                </p>
+            
               </div>
             </CardContent>
           </Card>
 
-          {/* Gráfico de Puntuaciones */}
+          {/* Gráfico de Puntuaciones por Dimensión RIASEC */}
           {datosGrafico.length > 0 && (
             <Card className="border-none shadow-sm rounded-xl">
               <CardContent className="p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <TrendingUp className="h-6 w-6 text-orange-500" />
-                  Puntuaciones por Dimensión
+                  Puntuaciones por Dimensión (RIASEC)
                 </h3>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={datosGrafico}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="dimension" 
-                      angle={-45}
+                <p className="text-slate-600 text-sm mb-6">
+                  Cada barra representa tu puntuación en una dimensión del modelo Holland. Pasa el cursor sobre una barra o revisa la tabla para ver qué significa cada una.
+                </p>
+                <ResponsiveContainer width="100%" height={380}>
+                  <BarChart data={datosGrafico} margin={{ top: 10, right: 20, left: 10, bottom: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="nombreCompleto"
+                      angle={-35}
                       textAnchor="end"
-                      height={100}
+                      height={80}
+                      tick={{ fontSize: 13, fill: "#475569" }}
+                      interval={0}
+                    />
+                    <YAxis
+                      domain={[0, (dataMax: number) => Math.max(100, Math.ceil((dataMax || 0) * 1.1))]}
                       tick={{ fontSize: 12 }}
+                      label={{ value: "Puntuación", angle: -90, position: "insideLeft", style: { fontSize: 12 } }}
                     />
-                    <YAxis 
-                      domain={[0, 100]}
-                      tick={{ fontSize: 12 }}
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const p = payload[0].payload as { nombreCompleto: string; puntuacion: number; descripcion: string };
+                        return (
+                          <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-4 max-w-xs">
+                            <p className="font-bold text-slate-900 mb-1">{p.nombreCompleto}</p>
+                            <p className="text-orange-600 font-semibold mb-2">Puntuación: {p.puntuacion}</p>
+                            <p className="text-slate-600 text-sm">{p.descripcion}</p>
+                          </div>
+                        );
+                      }}
                     />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value}`, 'Puntuación']}
-                    />
-                    <Bar dataKey="puntuacion" fill="#F37021" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="puntuacion" fill="#F37021" radius={[8, 8, 0, 0]} name="Puntuación" />
                   </BarChart>
                 </ResponsiveContainer>
+                {/* Tabla detalle dimensiones */}
+                <div className="mt-6 rounded-lg border border-slate-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Dimensión</th>
+                        <th className="text-center py-3 px-4 font-semibold text-slate-700 w-24">Puntuación</th>
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Qué significa</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {datosGrafico.map((d, i) => (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="py-3 px-4 font-medium text-slate-900">{d.nombreCompleto}</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="inline-flex items-center justify-center min-w-[2.5rem] py-1 px-2 rounded-md bg-orange-100 text-orange-800 font-semibold">
+                              {d.puntuacion}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-600">{d.descripcion}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           )}
