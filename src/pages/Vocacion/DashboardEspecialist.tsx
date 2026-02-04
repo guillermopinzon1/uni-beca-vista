@@ -22,6 +22,7 @@ import type { Estudiante, FiltrosSegmentacion } from "@/lib/api/campanas";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { getUserProfile, type UserProfileResponse } from "@/lib/api/auth";
+import { agendarCita } from "@/lib/api/citas";
 
 // Interface para mapear datos del backend (soporta Holland e ICO)
 interface StudentData {
@@ -103,6 +104,17 @@ const DashboardEspecialist = () => {
   });
   const [perfilCompleto, setPerfilCompleto] = useState<UserProfileResponse['data'] | null>(null);
   const [loadingPerfil, setLoadingPerfil] = useState(false);
+
+  // Estados para el modal de agendar cita
+  const [modalCitaAbierto, setModalCitaAbierto] = useState(false);
+  const [datosCita, setDatosCita] = useState({
+    fecha: "",
+    hora: "",
+    modalidad: "presencial",
+    motivo: "",
+    notas: ""
+  });
+  const [loadingCita, setLoadingCita] = useState(false);
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -749,6 +761,76 @@ Te invitamos a conocer más sobre:
     }
   };
 
+  // Función para abrir el modal de agendar cita
+  const handleAbrirModalCita = () => {
+    if (!selectedStudent) return;
+
+    // Resetear el formulario
+    setDatosCita({
+      fecha: "",
+      hora: "",
+      modalidad: "presencial",
+      motivo: "",
+      notas: ""
+    });
+
+    setModalCitaAbierto(true);
+  };
+
+  // Función para agendar la cita
+  const handleAgendarCita = async () => {
+    if (!selectedStudent || !tokens?.accessToken) return;
+
+    // Validar campos requeridos
+    if (!datosCita.fecha || !datosCita.hora || !datosCita.motivo) {
+      toast({
+        title: "Campos incompletos",
+        description: "Por favor completa la fecha, hora y motivo de la cita",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingCita(true);
+
+    try {
+      // Llamar al API para guardar la cita
+      const resultado = await agendarCita(tokens.accessToken, {
+        estudiante_id: selectedStudent.id,
+        fecha: datosCita.fecha,
+        hora: datosCita.hora,
+        modalidad: datosCita.modalidad as 'presencial' | 'virtual' | 'telefonica',
+        motivo: datosCita.motivo,
+        notas: datosCita.notas
+      });
+
+      toast({
+        title: "¡Cita agendada exitosamente!",
+        description: `Cita con ${selectedStudent.name} programada para el ${datosCita.fecha} a las ${datosCita.hora}`,
+      });
+
+      // Cerrar modal y resetear
+      setModalCitaAbierto(false);
+      setDatosCita({
+        fecha: "",
+        hora: "",
+        modalidad: "presencial",
+        motivo: "",
+        notas: ""
+      });
+
+    } catch (error: unknown) {
+      console.error('Error al agendar cita:', error);
+      toast({
+        title: "Error al agendar cita",
+        description: error instanceof Error ? error.message : "No se pudo agendar la cita",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCita(false);
+    }
+  };
+
   // Filtrar estudiantes por término de búsqueda
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -867,10 +949,19 @@ Te invitamos a conocer más sobre:
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="rounded-full">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full"
+                              onClick={() => window.location.href = `mailto:${selectedStudent.email}`}
+                            >
                               <Mail className="w-4 h-4 mr-2" /> Contactar
                             </Button>
-                            <Button size="sm" className="bg-teal-600 hover:bg-teal-700 rounded-full">
+                            <Button
+                              size="sm"
+                              className="bg-teal-600 hover:bg-teal-700 rounded-full"
+                              onClick={handleAbrirModalCita}
+                            >
                               <Calendar className="w-4 h-4 mr-2" /> Agendar Cita
                             </Button>
                           </div>
@@ -1836,6 +1927,137 @@ Te invitamos a conocer más sobre:
                 )}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de agendar cita */}
+      <Dialog open={modalCitaAbierto} onOpenChange={setModalCitaAbierto}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              Agendar Cita con {selectedStudent?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Programa una reunión de orientación con el estudiante
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Fecha y Hora */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fecha-cita" className="text-sm font-semibold">
+                  Fecha <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="fecha-cita"
+                  type="date"
+                  value={datosCita.fecha}
+                  onChange={(e) => setDatosCita({ ...datosCita, fecha: e.target.value })}
+                  className="bg-slate-50"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hora-cita" className="text-sm font-semibold">
+                  Hora <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="hora-cita"
+                  type="time"
+                  value={datosCita.hora}
+                  onChange={(e) => setDatosCita({ ...datosCita, hora: e.target.value })}
+                  className="bg-slate-50"
+                />
+              </div>
+            </div>
+
+            {/* Modalidad */}
+            <div className="space-y-2">
+              <Label htmlFor="modalidad-cita" className="text-sm font-semibold">
+                Modalidad
+              </Label>
+              <select
+                id="modalidad-cita"
+                value={datosCita.modalidad}
+                onChange={(e) => setDatosCita({ ...datosCita, modalidad: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="presencial">Presencial</option>
+                <option value="virtual">Virtual</option>
+                <option value="telefonica">Telefónica</option>
+              </select>
+            </div>
+
+            {/* Motivo */}
+            <div className="space-y-2">
+              <Label htmlFor="motivo-cita" className="text-sm font-semibold">
+                Motivo de la cita <span className="text-red-500">*</span>
+              </Label>
+              <select
+                id="motivo-cita"
+                value={datosCita.motivo}
+                onChange={(e) => setDatosCita({ ...datosCita, motivo: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="">Selecciona un motivo...</option>
+                <option value="orientacion_vocacional">Orientación Vocacional</option>
+                <option value="revision_resultados">Revisión de Resultados de Test</option>
+                <option value="opciones_beca">Información sobre Becas</option>
+                <option value="plan_estudios">Plan de Estudios</option>
+                <option value="seguimiento">Seguimiento General</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+
+            {/* Notas adicionales */}
+            <div className="space-y-2">
+              <Label htmlFor="notas-cita" className="text-sm font-semibold">
+                Notas adicionales
+              </Label>
+              <Textarea
+                id="notas-cita"
+                value={datosCita.notas}
+                onChange={(e) => setDatosCita({ ...datosCita, notas: e.target.value })}
+                placeholder="Agrega cualquier información relevante para la cita..."
+                className="min-h-[100px] bg-slate-50"
+              />
+            </div>
+
+            {/* Información del estudiante */}
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-teal-900 mb-1">Contacto del estudiante:</p>
+              <p className="text-sm text-teal-800">{selectedStudent?.email}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setModalCitaAbierto(false)}
+              disabled={loadingCita}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAgendarCita}
+              disabled={loadingCita}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {loadingCita ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Agendando...
+                </>
+              ) : (
+                <>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Agendar Cita
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
