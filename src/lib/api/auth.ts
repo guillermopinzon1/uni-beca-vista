@@ -290,6 +290,84 @@ export async function changePassword(body: ChangePasswordRequest, accessToken: s
   return payload as ChangePasswordResponse;
 }
 
+export interface ConvertirAspiranteAEstudianteRequest {
+  emailUnimet: string;
+  carrera?: string;
+  trimestre?: number;
+}
+
+export interface ConvertirAspiranteAEstudianteResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    email: string;
+    nombre: string;
+    apellido?: string;
+    role: string;
+    activo?: boolean;
+    emailVerified?: boolean;
+    carrera?: string;
+    trimestre?: number;
+    cedula?: string;
+    telefono?: string;
+    [key: string]: unknown;
+  };
+}
+
+export async function convertirAspiranteAEstudiante(
+  accessToken: string,
+  body: ConvertirAspiranteAEstudianteRequest
+): Promise<ConvertirAspiranteAEstudianteResponse> {
+  // Enviar solo campos con valor; trimestre como entero
+  const bodyToSend: Record<string, unknown> = {
+    emailUnimet: body.emailUnimet.trim().toLowerCase(),
+  };
+  if (body.carrera != null && body.carrera.trim() !== '') bodyToSend.carrera = body.carrera.trim();
+  if (body.trimestre != null && !Number.isNaN(Number(body.trimestre))) {
+    const n = Number(body.trimestre);
+    if (n >= 1 && n <= 15) bodyToSend.trimestre = Math.floor(n);
+  }
+  const response = await fetch(`${API_BASE}/v1/auth/convertir-estudiante`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(bodyToSend),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : null;
+
+  if (!response.ok) {
+    let message = payload?.message || `Error al convertir a estudiante (${response.status})`;
+    if (response.status === 400) {
+      const raw = typeof payload?.message === 'string' ? payload.message : '';
+      // Si el backend devuelve error de validación por regex undefined (ej. "reading 'test')"), mostrar mensaje claro
+      if (raw.includes("reading 'test')") || raw.includes('custom validation')) {
+        message = 'Error de validación en el servidor. Usa un email que termine en @correo.unimet.edu.ve. Si el problema continúa, contacta al administrador.';
+      } else {
+        const detail = (payload as { details?: { validationErrors?: Array<{ message?: string }> } })?.details?.validationErrors;
+        if (Array.isArray(detail) && detail.length > 0) {
+          message = detail.map((d: { message?: string }) => d.message).filter(Boolean).join('. ') || message;
+        } else if (!raw) {
+          message = 'Revisa el email (@correo.unimet.edu.ve), carrera y trimestre (1-15).';
+        }
+      }
+    } else if (response.status === 403) {
+      message = payload?.message || 'Solo los aspirantes pueden usar esta opción';
+    } else if (response.status === 409) {
+      message = payload?.message || 'Este email UNIMET ya está registrado';
+    }
+    throw new Error(message);
+  }
+
+  return payload as ConvertirAspiranteAEstudianteResponse;
+}
+
 export interface UserProfileResponse {
   success: boolean;
   data: {

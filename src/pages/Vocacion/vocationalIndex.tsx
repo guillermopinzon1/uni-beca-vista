@@ -1,79 +1,66 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Users, Award, FileText, LogIn, UserPlus, BookOpen, BrainCircuit, UserCircle, BellRing, BarChart3, ChevronRight, PlayCircle, Search, Sparkles  } from "lucide-react";
-import universityCampus from "/lovable-uploads/94d62958-982a-4046-b0e0-6c3e9c128eb6.png";
-import { useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  GraduationCap,
+  LogIn,
+  UserPlus,
+  BookOpen,
+  Calendar,
+  MapPin,
+  Clock,
+  ChevronRight,
+  Sparkles,
+  Compass,
+  Bell,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
-const vocationalBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
+const vocationalBg =
+  "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
+
+// Eventos públicos que puede ver cualquier persona (estilo CRM)
+const EVENTOS_PUBLICOS = [
+  {
+    id: "1",
+    titulo: "Jornada de Orientación Vocacional",
+    descripcion: "Conoce el test y resuelve dudas sobre carreras con orientadores.",
+    fecha: "15 Dic",
+    dia: "15",
+    mes: "DIC",
+    hora: "9:00 AM",
+    lugar: "Auditorio principal - UNIMET",
+    colorBar: "bg-primary",
+    cta: "Más información",
+  },
+  {
+    id: "2",
+    titulo: "Webinar: El futuro del trabajo",
+    descripcion: "Tendencias laborales y cómo elegir una carrera con proyección.",
+    fecha: "20 Ene",
+    dia: "20",
+    mes: "ENE",
+    hora: "10:00 AM",
+    lugar: "Zoom",
+    colorBar: "bg-blue-500",
+    cta: "Inscribirse",
+  },
+  {
+    id: "3",
+    titulo: "Visita al campus",
+    descripcion: "Recorrido por facultades y charla con estudiantes.",
+    fecha: "5 Feb",
+    dia: "5",
+    mes: "FEB",
+    hora: "9:00 AM",
+    lugar: "Presencial - UNIMET",
+    colorBar: "bg-teal-500",
+    cta: "Ver detalles",
+  },
+];
 
 const VocationalIndex = () => {
   const navigate = useNavigate();
-  const [isCtaVisible, setIsCtaVisible] = useState(false);
-  const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
-  const ctaRef = useRef<HTMLElement>(null);
-  const featuresRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.2,
-      rootMargin: "0px"
-    };
-
-    const ctaObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsCtaVisible(true);
-        }
-      });
-    }, observerOptions);
-
-    const featuresObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setIsFeaturesVisible(true);
-        }
-      });
-    }, observerOptions);
-
-    if (ctaRef.current) {
-      ctaObserver.observe(ctaRef.current);
-    }
-
-    if (featuresRef.current) {
-      featuresObserver.observe(featuresRef.current);
-    }
-
-    return () => {
-      ctaObserver.disconnect();
-      featuresObserver.disconnect();
-    };
-  }, []);
-
-  const features = [
-    {
-      icon: GraduationCap,
-      title: "Gestión de Becas",
-      description: "Administra y monitorea todas las becas disponibles para estudiantes"
-    },
-    {
-      icon: Users,
-      title: "Estudiantes",
-      description: "Gestiona perfiles de estudiantes y sus solicitudes de becas"
-    },
-    {
-      icon: Award,
-      title: "Seguimiento",
-      description: "Realiza seguimiento del progreso y estado de las becas otorgadas"
-    },
-    {
-      icon: FileText,
-      title: "Reportes",
-      description: "Genera reportes detallados sobre el programa de becas"
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,300 +69,226 @@ const VocationalIndex = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <img 
-                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
-                alt="Universidad Metropolitana" 
-                className="h-12"
+              <img
+                src="/lovable-uploads/UNIMETLogo.png"
+                alt="Universidad Metropolitana"
+                className="h-12 object-contain"
               />
             </div>
-            <nav className="flex items-center space-x-4">
+            <nav className="flex items-center gap-2 sm:gap-4">
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => navigate("/login")}
-                className="text-primary hover:text-primary-foreground hover:bg-primary"
+                className="text-primary hover:bg-primary/10"
               >
                 <LogIn className="h-4 w-4 mr-2" />
-                Iniciar Sesión
+                Iniciar sesión
               </Button>
               <Button
                 size="sm"
                 onClick={() => navigate("/register")}
-                className="bg-gradient-primary hover:opacity-90 transition-opacity"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Registrarse
               </Button>
               <Button
                 size="sm"
+                variant="outline"
                 onClick={() => navigate("/")}
-                className="bg-white text-primary hover:bg-white/90"
+                className="border-primary/30 text-primary hover:bg-primary/10"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
-                Volver al Portal
+                Volver al portal
               </Button>
             </nav>
           </div>
         </div>
       </header>
-    {/* Hero Section */}
-    <section className="relative pt-32 pb-20 px-4 overflow-hidden bg-slate-900">
-        {/* Background */}
+
+      {/* Hero: Regístrate para realizar el test */}
+      <section className="relative pt-28 pb-16 px-4 overflow-hidden bg-slate-900">
         <div className="absolute inset-0 z-0">
-          <img 
+          <img
             src={vocationalBg}
-            alt="Campus Background" 
+            alt="Campus"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-slate-900/70" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/50 to-slate-900" />
         </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-white space-y-8"
+        <div className="relative z-10 max-w-4xl mx-auto text-center text-white space-y-6">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2">
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span className="text-sm font-medium">Orientación Vocacional UNIMET</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
+            Descubre tu camino profesional
+          </h1>
+          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto">
+            Regístrate y realiza tu test de orientación vocacional. Obtén recomendaciones personalizadas y explora las carreras de la Universidad Metropolitana.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="inline-flex items-center justify-center h-12 px-6 text-base font-medium rounded-lg bg-white text-slate-900 border border-slate-200/50 transition-colors hover:bg-slate-100"
             >
-              <div className="space-y-6">
-                <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2">
-                  <Sparkles className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm font-medium">Potenciado por IA</span>
-                </div>
-                
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                  Sistema de <br/>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                    Orientación Inteligente
-                  </span>
-                </h1>
-                
-                <div className="w-32 h-1.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full" />
-                
-                <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-xl">
-                  Una plataforma integral que conecta tus intereses con oportunidades académicas reales utilizando inteligencia artificial avanzada.
-                </p>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  onClick={() => navigate("/vocational-test")}
-                  className="bg-white text-slate-900 hover:bg-slate-100 px-8 py-6 text-lg font-semibold rounded-lg transition-colors"
-                >
-                  <PlayCircle className="mr-2 h-5 w-5" />
-                  Iniciar Diagnóstico
-                </Button>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="hidden lg:block"
+              <UserPlus className="mr-2 h-4 w-4 shrink-0" />
+              <span>Registrarme para hacer el test</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="inline-flex items-center justify-center h-12 px-6 text-base font-medium rounded-lg border border-white/60 bg-white/10 text-white transition-colors hover:bg-white/20"
             >
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-3xl blur-3xl" />
-                <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-12 flex items-center justify-center">
-                  <div className="grid grid-cols-2 gap-6 w-full">
-                    <div className="bg-blue-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-blue-500/30">
-                      <BrainCircuit className="w-16 h-16 text-blue-400 mb-4" />
-                      <span className="text-white font-semibold">IA Avanzada</span>
+              <LogIn className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+              <span>Ya tengo cuenta</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Eventos públicos (estilo CRM, para todas las personas) */}
+      <section className="py-16 px-4 bg-slate-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-2 mb-8">
+            <Calendar className="w-8 h-8 text-primary" />
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                Eventos y actividades
+              </h2>
+              <p className="text-slate-600 text-sm sm:text-base">
+                Actividades abiertas que puedes ver sin iniciar sesión
+              </p>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {EVENTOS_PUBLICOS.map((evento, index) => (
+              <motion.div
+                key={evento.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.08 }}
+              >
+                <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden h-full flex flex-col">
+                  <div className={`h-2 ${evento.colorBar} w-full`} />
+                  <CardContent className="p-6 flex-1 flex flex-col">
+                    <div className="flex gap-4 mb-4">
+                      <div className="text-center px-3 py-2 bg-slate-100 rounded-xl shrink-0">
+                        <div className="text-xs font-bold text-slate-500 uppercase">
+                          {evento.mes}
+                        </div>
+                        <div className="text-xl font-bold text-slate-900">
+                          {evento.dia}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-900 leading-tight">
+                          {evento.titulo}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                          {evento.descripcion}
+                        </p>
+                      </div>
                     </div>
-                    <div className="bg-purple-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-purple-500/30">
-                      <UserCircle className="w-16 h-16 text-purple-400 mb-4" />
-                      <span className="text-white font-semibold">Personalizado</span>
+                    <div className="space-y-1.5 text-sm text-slate-600 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>{evento.hora}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className="line-clamp-1">{evento.lugar}</span>
+                      </div>
                     </div>
-                    <div className="bg-blue-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-blue-500/30">
-                      <BookOpen className="w-16 h-16 text-blue-400 mb-4" />
-                      <span className="text-white font-semibold">Contenido</span>
-                    </div>
-                    <div className="bg-green-600/20 rounded-xl p-8 flex flex-col items-center justify-center border border-green-500/30">
-                      <BarChart3 className="w-16 h-16 text-green-400 mb-4" />
-                      <span className="text-white font-semibold">Analytics</span>
-                    </div>
+                    <Button
+                      className="w-full rounded-full mt-auto"
+                      variant={index === 0 ? "default" : "outline"}
+                      onClick={() => navigate("/register")}
+                    >
+                      {evento.cta}
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Accesos: Ver carreras y Centro de novedades (CRM) */}
+      <section className="py-16 px-4 bg-white border-t border-slate-100">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">
+            Explora más
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <motion.div
+              whileHover={{ y: -4 }}
+              className="group"
+            >
+              <Card
+                className="rounded-2xl border-slate-200 shadow-sm overflow-hidden cursor-pointer h-full transition-shadow hover:shadow-md"
+                onClick={() => navigate("/vocational-explorer")}
+              >
+                <div className="h-2 bg-blue-500 w-full" />
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                    <Compass className="w-7 h-7 text-blue-600" />
                   </div>
-                </div>
-              </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                      Ver carreras
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      Conoce las carreras de la UNIMET, perfiles y campo laboral
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 shrink-0" />
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ y: -4 }}
+              className="group"
+            >
+              <Card
+                className="rounded-2xl border-slate-200 shadow-sm overflow-hidden cursor-pointer h-full transition-shadow hover:shadow-md"
+                onClick={() => navigate("/vocational-crm")}
+              >
+                <div className="h-2 bg-pink-500 w-full" />
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center shrink-0 group-hover:bg-pink-100 transition-colors">
+                    <Bell className="w-7 h-7 text-pink-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-slate-900 group-hover:text-pink-700 transition-colors">
+                      Centro de novedades
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      Notificaciones, eventos y comunicación (requiere sesión)
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-pink-500 shrink-0" />
+                </CardContent>
+              </Card>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Modules Grid */}
-      <section className="py-24 bg-slate-50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-             <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold text-slate-900 mb-4">Módulos del Sistema</h2>
-                <p className="text-slate-600 max-w-2xl mx-auto">
-                    Arquitectura modular diseñada para acompañar al estudiante en cada etapa de su decisión profesional.
-                </p>
-             </div>
-
-             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-               
-               {/* Módulo 1: Asesoría Vocacional */}
-               <Link href="/vocational-test">
-               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                       <BrainCircuit className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-purple-500 mb-2 uppercase tracking-wider">Módulo 1 & 5</div>
-                     <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-purple-700 transition-colors">
-                       Asesoría Vocacional IA
-                     </h3>
-                     <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-                       Aplicación de tests estandarizados interpretados por nuestro Motor LLM para generar recomendaciones personalizadas.
-                     </p>
-                     <div onClick={() => navigate("/vocational-test")} className="flex items-center text-purple-600 font-semibold group-hover:translate-x-2 transition-transform">
-                       Iniciar diagnóstico <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
-               {/* Módulo 2: Gestión de Perfiles */}
-               <Link href="/vocational-profile">
-               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center mb-6 text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300">
-                       <UserCircle className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-teal-500 mb-2 uppercase tracking-wider">Módulo 2</div>
-                     <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-teal-700 transition-colors">
-                       Mi Perfil y Trayectoria
-                     </h3>
-                     <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-                       Gestión centralizada de tus datos, historial de tests y preferencias para alimentar al modelo de IA.
-                     </p>
-                     <div onClick={() => navigate("/vocational-profile")} className="flex items-center text-teal-600 font-semibold group-hover:translate-x-2 transition-transform">
-                       Ver mi perfil <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
-               {/* Módulo 3: Contenido Académico */}
-               <Link href="/vocational-explorer">
-               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                       <BookOpen className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-blue-500 mb-2 uppercase tracking-wider">Módulo 3</div>
-                     <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-blue-700 transition-colors">
-                       Contenido Académico
-                     </h3>
-                     <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-                       Base de conocimiento institucional: mallas curriculares, requisitos y perfiles de egreso de la UNIMET.
-                     </p>
-                     <div onClick={() => navigate("/vocational-explorer")}className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
-                       Ver catálogo <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
-               {/* Módulo 4: Comunicación CRM */}
-               <Link href="/vocational-crm">
-               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-200 group cursor-pointer relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500" />
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center mb-6 text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-colors duration-300">
-                       <BellRing className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-pink-500 mb-2 uppercase tracking-wider">Módulo 4</div>
-                     <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-pink-700 transition-colors">
-                       Novedades y CRM
-                     </h3>
-                     <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-                       Sistema de notificaciones inteligentes y seguimiento personalizado basado en tus intereses.
-                     </p>
-                     <div onClick={() => navigate("/vocational-crm")} className="flex items-center text-pink-600 font-semibold group-hover:translate-x-2 transition-transform">
-                       Ver notificaciones <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
-               {/* Módulo 6: Analytics */}
-               <Link href="/vocational-analytics">
-               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                 <div className="h-full bg-slate-900 rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-slate-800 group cursor-pointer relative overflow-hidden">
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-300 group-hover:bg-white group-hover:text-slate-900 transition-colors duration-300">
-                       <BarChart3 className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Módulo 6</div>
-                     <h3 className="text-2xl font-bold text-white mb-3">
-                       Monitoreo y Analytics
-                     </h3>
-                     <p className="text-slate-400 mb-8 leading-relaxed text-sm">
-                       Vista administrativa para medir impacto ODS 4, métricas de uso y tendencias vocacionales.
-                     </p>
-                     <div onClick={() => navigate("/vocational-analytics")}  className="flex items-center text-white font-semibold group-hover:translate-x-2 transition-transform">
-                       Acceso Administrativo <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
-               {/* Acceso Orientadores (Nuevo Módulo) */}
-               <Link href="/vocational-counselor">
-               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }} className="md:col-span-2 lg:col-span-1">
-                 <div className="h-full bg-teal-900 rounded-2xl p-8 shadow-md hover:shadow-lg transition-shadow border border-teal-800 group cursor-pointer relative overflow-hidden">
-                   
-                   <div className="relative z-10">
-                     <div className="w-14 h-14 bg-teal-800 rounded-2xl flex items-center justify-center mb-6 text-teal-300 group-hover:bg-white group-hover:text-teal-900 transition-colors duration-300">
-                       <Users className="w-7 h-7" />
-                     </div>
-                     <div className="text-xs font-bold text-teal-400 mb-2 uppercase tracking-wider">Dirección de Bienestar</div>
-                     <h3 className="text-2xl font-bold text-white mb-3">
-                       Panel del Orientador
-                     </h3>
-                     <p className="text-teal-400 mb-8 leading-relaxed text-sm">
-                       Gestión de casos, visualización de resultados de tests y seguimiento individualizado de estudiantes.
-                     </p>
-                     <div onClick={() => navigate("/vocational-counselor")} className="flex items-center text-white font-semibold group-hover:translate-x-2 transition-transform">
-                       Ingresar al Panel <ChevronRight className="ml-1 w-4 h-4" />
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-               </Link>
-
-             </div>
-          </div>
-        </div>
-      </section>
-      
       {/* Footer */}
       <footer className="bg-card border-t border-orange/20 py-8 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center mb-4">
             <GraduationCap className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold text-primary">Universidad Metropolitana</span>
+            <span className="text-xl font-bold text-primary">
+              Universidad Metropolitana
+            </span>
           </div>
           <p className="text-muted-foreground">
             © 2025 Universidad Metropolitana. Sistema Multiplataforma.

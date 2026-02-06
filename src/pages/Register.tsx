@@ -93,7 +93,20 @@ const Register = () => {
 
       if (selectedType === "student" || selectedType === "aspirante") {
         const loginResult = await loginUser({ email: formData.email, password: formData.password });
-        loginSuccess(loginResult.data.user, loginResult.data.tokens);
+        loginSuccess({
+          id: loginResult.data.user.id,
+          email: loginResult.data.user.email,
+          nombre: loginResult.data.user.nombre,
+          apellido: loginResult.data.user.apellido || "",
+          role: loginResult.data.user.role,
+          activo: loginResult.data.user.activo,
+          emailVerified: loginResult.data.user.emailVerified,
+          firstLogin: loginResult.data.user.firstLogin,
+          cedula: loginResult.data.user.cedula,
+          telefono: loginResult.data.user.telefono,
+          carrera: loginResult.data.user.carrera,
+          trimestre: loginResult.data.user.trimestre
+        }, loginResult.data.tokens);
         navigate('/modules', { state: { newRegistration: true, userEmail: formData.email } });
       } else {
         setShowSuccessMessage(true);

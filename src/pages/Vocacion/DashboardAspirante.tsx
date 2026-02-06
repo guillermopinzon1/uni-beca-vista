@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2, Save, Edit2 } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2, Save, Edit2, GraduationCap, Bell, Calendar, MessageSquare, Mail, Megaphone } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +13,6 @@ import RecomendacionesCarrera from "@/components/OrientacionVocacional/Recomenda
 import ChatOrientacion from "@/components/OrientacionVocacional/ChatOrientacion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
@@ -22,8 +21,46 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchUserById } from "@/lib/api/users";
+import { convertirAspiranteAEstudiante } from "@/lib/api/auth";
+import { RIASEC_LABELS, RIASEC_DESCRIPTIONS } from "@/lib/riasec";
+import { obtenerMisNotificaciones, type Notificacion } from "@/lib/api/notificaciones";
 
-const profileBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
+import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
+
+// Helpers para notificaciones (estilo CRM)
+const getIconForNotifType = (tipo: string) => {
+  switch (tipo) {
+    case "evento": return <Calendar className="w-5 h-5 text-blue-500" />;
+    case "anuncio": return <Megaphone className="w-5 h-5 text-purple-500" />;
+    case "recordatorio": return <AlertCircle className="w-5 h-5 text-orange-500" />;
+    case "campana": return <Mail className="w-5 h-5 text-green-500" />;
+    case "mensaje": return <MessageSquare className="w-5 h-5 text-pink-500" />;
+    default: return <Bell className="w-5 h-5 text-slate-500" />;
+  }
+};
+const getBgForNotifType = (tipo: string) => {
+  switch (tipo) {
+    case "evento": return "bg-blue-50";
+    case "anuncio": return "bg-purple-50";
+    case "recordatorio": return "bg-orange-50";
+    case "campana": return "bg-green-50";
+    case "mensaje": return "bg-pink-50";
+    default: return "bg-slate-50";
+  }
+};
+const formatearFechaRelativa = (fecha: string) => {
+  const ahora = new Date();
+  const f = new Date(fecha);
+  const diffMs = ahora.getTime() - f.getTime();
+  const diffMin = Math.floor(diffMs / (1000 * 60));
+  const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffD = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffMin < 60) return diffMin <= 1 ? "Hace 1 minuto" : `Hace ${diffMin} minutos`;
+  if (diffH < 24) return diffH === 1 ? "Hace 1 hora" : `Hace ${diffH} horas`;
+  if (diffD === 1) return "Ayer";
+  if (diffD < 7) return `Hace ${diffD} días`;
+  return f.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+};
 
 const DashboardAspirante = () => {
   const navigate = useNavigate();
@@ -65,6 +102,10 @@ const DashboardAspirante = () => {
   const [perfilVocacionalData, setPerfilVocacionalData] = useState<PerfilVocacionalResponse["data"] | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(false);
 
+  // Notificaciones (Centro de novedades / CRM)
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [cargandoNotif, setCargandoNotif] = useState(false);
+
   // Detectar la ruta actual para mostrar navegación
   const [currentStep, setCurrentStep] = useState<string>("seleccionar");
 
@@ -75,6 +116,13 @@ const DashboardAspirante = () => {
     telefono: user?.telefono || '',
     bio: '',
   });
+
+  // Convertir aspirante a estudiante UNIMET
+  const [convertirEstudianteOpen, setConvertirEstudianteOpen] = useState(false);
+  const [emailUnimet, setEmailUnimet] = useState("");
+  const [carreraConvertir, setCarreraConvertir] = useState("");
+  const [trimestreConvertir, setTrimestreConvertir] = useState<number | "">("");
+  const [convirtiendoEstudiante, setConvirtiendoEstudiante] = useState(false);
 
   // Estados para preferencias
   const [preferencias, setPreferencias] = useState(() => {
@@ -188,6 +236,21 @@ const DashboardAspirante = () => {
       .finally(() => setCargandoPerfil(false));
   }, [activeModule, accessToken]);
 
+  // Cargar notificaciones al entrar al módulo Notificaciones
+  useEffect(() => {
+    if (activeModule !== "notificaciones") return;
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+    if (!accessToken) {
+      setCargandoNotif(false);
+      return;
+    }
+    setCargandoNotif(true);
+    obtenerMisNotificaciones(accessToken, 20)
+      .then((res) => setNotificaciones(res.data.notificaciones))
+      .catch(() => setNotificaciones([]))
+      .finally(() => setCargandoNotif(false));
+  }, [activeModule, tokens?.accessToken]);
+
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
     intereses: ['tecnología', 'programación', 'matemáticas'],
@@ -245,6 +308,11 @@ const DashboardAspirante = () => {
       title: "Chatbot vocacional",
       icon: BrainCircuit,
       module: "tests"
+    },
+    {
+      title: "Notificaciones",
+      icon: Bell,
+      module: "notificaciones"
     },
     {
       title: "Mi Perfil",
@@ -418,6 +486,54 @@ const DashboardAspirante = () => {
       });
     } finally {
       setEditandoPerfil(false);
+    }
+  };
+
+  // Convertir aspirante a estudiante UNIMET
+  const handleConvertirAEstudiante = async () => {
+    const email = emailUnimet.trim().toLowerCase();
+    if (!email) {
+      toast({ title: "Campo requerido", description: "Ingresa tu email institucional (@correo.unimet.edu.ve).", variant: "destructive" });
+      return;
+    }
+    if (!email.endsWith("@correo.unimet.edu.ve")) {
+      toast({ title: "Email institucional", description: "Debes usar tu correo de estudiante UNIMET (@correo.unimet.edu.ve).", variant: "destructive" });
+      return;
+    }
+    const accessToken = tokens?.accessToken;
+    if (!accessToken) {
+      toast({ title: "Sesión", description: "Inicia sesión nuevamente para continuar.", variant: "destructive" });
+      return;
+    }
+    setConvirtiendoEstudiante(true);
+    try {
+      // Armar body solo con valores válidos (evitar "" y tipos incorrectos)
+      const body: { emailUnimet: string; carrera?: string; trimestre?: number } = { emailUnimet: email };
+      const carreraVal = carreraConvertir.trim();
+      if (carreraVal) body.carrera = carreraVal;
+      const trimestreNum = trimestreConvertir === "" ? null : Number(trimestreConvertir);
+      if (typeof trimestreNum === "number" && !Number.isNaN(trimestreNum) && trimestreNum >= 1 && trimestreNum <= 15) {
+        body.trimestre = Math.floor(trimestreNum);
+      }
+      const res = await convertirAspiranteAEstudiante(accessToken, body);
+      const updatedUser = res.data as Parameters<typeof loginSuccess>[0];
+      loginSuccess(updatedUser, tokens!);
+      setConvertirEstudianteOpen(false);
+      setEmailUnimet("");
+      setCarreraConvertir("");
+      setTrimestreConvertir("");
+      toast({
+        title: "¡Bienvenido a la UNIMET!",
+        description: "Tu cuenta ha sido actualizada a estudiante. Revisa tu correo institucional.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "No se pudo completar la conversión.",
+        variant: "destructive",
+      });
+    } finally {
+      setConvirtiendoEstudiante(false);
     }
   };
 
@@ -1057,40 +1173,143 @@ const DashboardAspirante = () => {
         </div>
       );
     }
+
+    if (activeModule === "notificaciones") {
+      return (
+        <div className="space-y-6">
+          <Card className="border-orange/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Bell className="h-6 w-6" />
+                Notificaciones
+                {notificaciones.length > 0 && (
+                  <Badge className="ml-2 bg-primary/10 text-primary">
+                    {notificaciones.filter((n) => !n.leida).length} sin leer
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Eventos, anuncios y comunicación de orientación vocacional.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-4">
+              {cargandoNotif ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : notificaciones.length === 0 ? (
+                <Card className="border-orange/20">
+                  <CardContent className="py-12 text-center">
+                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-semibold text-slate-900 mb-2">No tienes notificaciones</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Los eventos y anuncios aparecerán aquí.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                notificaciones.map((notif, index) => (
+                  <motion.div
+                    key={notif.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className={`border-orange/20 overflow-hidden ${!notif.leida ? "border-l-4 border-l-primary bg-primary/5" : ""}`}>
+                      <CardContent className="p-4 flex gap-4">
+                        <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${getBgForNotifType(notif.tipo)}`}>
+                          {getIconForNotifType(notif.tipo)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <h3 className="font-semibold text-slate-900">{notif.titulo}</h3>
+                            <span className="text-xs text-muted-foreground shrink-0">{formatearFechaRelativa(notif.fecha_creacion)}</span>
+                          </div>
+                          <div
+                            className="text-slate-600 text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0"
+                            dangerouslySetInnerHTML={{ __html: notif.contenido }}
+                          />
+                          {notif.metadata?.url && notif.metadata?.cta && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 rounded-full border-primary/30 text-primary hover:bg-primary/10"
+                              onClick={() => window.open(notif.metadata?.url, "_blank")}
+                            >
+                              {notif.metadata.cta}
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
+              )}
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Próximos eventos
+              </h3>
+              <Card className="border-orange/20 overflow-hidden">
+                <div className="h-1.5 bg-primary w-full" />
+                <CardContent className="p-4">
+                  <div className="flex gap-3 mb-3">
+                    <div className="text-center px-2.5 py-1 bg-slate-100 rounded-lg shrink-0">
+                      <div className="text-xs font-bold text-slate-500 uppercase">DIC</div>
+                      <div className="text-lg font-bold text-slate-900">15</div>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-slate-900 leading-tight text-sm">Webinar: El Futuro del Trabajo</h4>
+                      <span className="text-xs text-muted-foreground">10:00 AM - Zoom</span>
+                    </div>
+                  </div>
+                  <Button size="sm" className="w-full rounded-full bg-primary hover:bg-primary/90">Inscribirse</Button>
+                </CardContent>
+              </Card>
+              <Card className="border-orange/20 overflow-hidden">
+                <div className="h-1.5 bg-primary/80 w-full" />
+                <CardContent className="p-4">
+                  <div className="flex gap-3 mb-3">
+                    <div className="text-center px-2.5 py-1 bg-slate-100 rounded-lg shrink-0">
+                      <div className="text-xs font-bold text-slate-500 uppercase">ENE</div>
+                      <div className="text-lg font-bold text-slate-900">20</div>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-slate-900 leading-tight text-sm">Visita al Campus</h4>
+                      <span className="text-xs text-muted-foreground">09:00 AM - Presencial</span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="w-full rounded-full border-orange/30">Ver detalles</Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
     
     if (activeModule === "perfil") {
       return (
-        <div className="space-y-4 sm:space-y-6">
-          {/* Header Profile Section */}
-          <div className="relative h-48 sm:h-64 md:h-72 lg:h-80 overflow-hidden rounded-xl sm:rounded-2xl shadow-lg mt-4">
-            <img 
-              src={profileBg}
-              alt="Background"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
-            <div className="absolute inset-0 bg-primary/20" />
-          </div>
-
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-start -mt-16 sm:-mt-24 lg:-mt-32 relative z-0 px-2 sm:px-0">
+        <div className="relative min-h-[calc(100vh-5rem)]">
+          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-stretch p-4 sm:p-6 lg:p-8">
             
-            {/* Profile Sidebar */}
+            {/* Tarjeta de perfil - sin avatar */}
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full lg:w-1/3 space-y-4 sm:space-y-6"
+              transition={{ duration: 0.3 }}
+              className="w-full lg:w-1/3 space-y-4"
             >
-              <Card className="rounded-xl sm:rounded-2xl overflow-hidden shadow-xl border-slate-200">
+              <Card className="rounded-2xl overflow-hidden shadow-xl border-0 bg-white/95 backdrop-blur-md">
+                <div className="h-2 bg-gradient-to-r from-primary to-orange-500" />
                 <CardContent className="pt-6 sm:pt-8 pb-6 sm:pb-8 flex flex-col items-center text-center px-4 sm:px-6">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-xl mb-3 sm:mb-4 overflow-hidden bg-gradient-to-br from-primary/20 to-orange-dark/20">
-                    <Avatar className="w-full h-full">
-                      <AvatarImage src="https://github.com/shadcn.png" />
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-orange-dark text-white text-2xl sm:text-3xl font-bold">
-                        {user?.nombre?.charAt(0) || ''}{user?.apellido?.charAt(0) || ''}
-                      </AvatarFallback>
-                    </Avatar>
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-orange-500/15 flex items-center justify-center mb-4">
+                    <User className="w-7 h-7 text-primary" />
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-0.5">
                     {user?.nombre || 'Usuario'} {user?.apellido || ''}
                   </h2>
                   <p className="text-sm sm:text-base text-slate-500 mb-3 sm:mb-4">
@@ -1133,10 +1352,34 @@ const DashboardAspirante = () => {
                   >
                     <Settings className="w-4 h-4 mr-2" /> Editar Perfil
                   </Button>
+
+                  {user?.role === 'aspirante' && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEmailUnimet("");
+                        setCarreraConvertir("");
+                        setTrimestreConvertir("");
+                        setConvertirEstudianteOpen(true);
+                      }}
+                      className="w-full mt-3 rounded-xl h-11 sm:h-12 border-2 border-[#f37021]/40 bg-gradient-to-r from-orange-50 to-amber-50/80 text-[#c45a1a] hover:border-[#f37021] hover:from-orange-100 hover:to-amber-100 hover:text-[#b84f0f] shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f37021]/15">
+                          <GraduationCap className="h-4 w-4 text-[#f37021]" />
+                        </span>
+                        <span className="text-left">
+                          <span className="block leading-tight">Pasar a estudiante</span>
+                          <span className="block text-xs font-normal text-slate-500 opacity-90">Universidad Metropolitana</span>
+                        </span>
+                      </span>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
 
-              <Card className="rounded-xl sm:rounded-2xl shadow-lg border-slate-200">
+              <Card className="rounded-2xl shadow-xl border-0 bg-white/95 backdrop-blur-md overflow-hidden">
+                <div className="h-1.5 bg-gradient-to-r from-primary/80 to-orange-500/80" />
                 <CardHeader className="pb-3 sm:pb-4">
                   <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                     <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -1276,14 +1519,15 @@ const DashboardAspirante = () => {
               </Card>
             </motion.div>
 
-            {/* Main Content */}
+            {/* Contenido principal Mi Trayectoria */}
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ duration: 0.3, delay: 0.05 }}
               className="w-full lg:w-2/3"
             >
-              <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 min-h-[400px] sm:min-h-[500px] p-4 sm:p-6 md:p-8">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border-0 min-h-[400px] sm:min-h-[500px] p-4 sm:p-6 md:p-8 overflow-hidden">
+                <div className="h-1.5 w-full bg-gradient-to-r from-primary to-orange-500 rounded-full mb-6" />
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Mi Trayectoria</h1>
@@ -1351,9 +1595,13 @@ const DashboardAspirante = () => {
                             const tipoTestVal = sesion.tipoTest ?? sesion.tipo_test;
                             const fechaVal = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
                             const perfilVal = sesion.perfilDominante ?? sesion.perfil_dominante;
+                            const codigoVal = sesion.codigoHolland ?? sesion.codigo_holland;
                             const idVal = sesion.id ?? sesion.sesion_id;
                             const esIco = tipoTestVal === "ICO";
                             const nombreTest = esIco ? "Test ICO" : "Test Holland RIASEC";
+                            const descripcionCorta = esIco
+                              ? "Intereses y competencias organizacionales"
+                              : (perfilVal && RIASEC_DESCRIPTIONS[perfilVal]) || (codigoVal && codigoVal[0] && RIASEC_DESCRIPTIONS[codigoVal[0]]) || "Perfil de intereses vocacionales";
                             const verResultados = () => {
                               if (esIco) navigate("/orientacion/resultados-ico", { state: { sesionId: idVal } });
                               else navigate(`/orientacion/resultados/${idVal}`);
@@ -1361,22 +1609,35 @@ const DashboardAspirante = () => {
                             return (
                               <div
                                 key={idVal || `sesion-${index}`}
-                                className="border rounded-xl p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors"
+                                className={`border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors border-l-4 ${esIco ? "border-l-blue-500" : "border-l-primary"}`}
                               >
-                                <div className="min-w-0 flex-1">
-                                  <h3 className="font-bold text-slate-900">{nombreTest}</h3>
-                                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 mt-0.5">
-                                    {fechaVal && <span>{format(new Date(fechaVal), "dd/MM/yyyy")}</span>}
-                                    {perfilVal && <span className="font-medium text-slate-800">{perfilVal}</span>}
+                                <div className="min-w-0 flex-1 space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h3 className="font-bold text-slate-900">{nombreTest}</h3>
+                                    {fechaVal && (
+                                      <span className="text-xs sm:text-sm text-slate-500">{format(new Date(fechaVal), "dd/MM/yyyy")}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-600 line-clamp-2">{descripcionCorta}</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {perfilVal && (
+                                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                                        Dominante: {RIASEC_LABELS[perfilVal] || perfilVal}
+                                      </Badge>
+                                    )}
+                                    {codigoVal && (
+                                      <Badge variant="outline" className="text-slate-700">
+                                        Código: {codigoVal}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
-                                <Button variant="outline" size="sm" onClick={verResultados} className="shrink-0">
+                                <Button variant="outline" size="sm" onClick={verResultados} className="shrink-0 self-start sm:self-center">
                                   Ver Resultados <ChevronRight className="w-3 h-3 ml-1" />
                                 </Button>
                               </div>
                             );
                           })}
-                      
                         </>
                       );
                     })()}
@@ -1390,6 +1651,59 @@ const DashboardAspirante = () => {
                       </div>
                     ) : (
                       <div className="space-y-4">
+                        {/* Resumen de lo que el usuario colocó en la pestaña Trayectoria académica */}
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-orange-50 border border-primary/20 shadow-sm">
+                          <p className="text-sm font-semibold text-slate-700 mb-1">Resumen de lo que registraste en Trayectoria académica</p>
+                          <p className="text-xs text-slate-500 mb-3">Esto es lo que tienes guardado en el módulo Trayectoria académica (bachillerato):</p>
+                          {(trayectoria.gradoActual || trayectoria.promedioGeneral != null || (trayectoria.materiasDestacadas?.length ?? 0) > 0 || (trayectoria.actividadesExtracurriculares?.length ?? 0) > 0 || (trayectoria.proyectosRealizados?.length ?? 0) > 0 || Object.keys(trayectoria.promediosPorAno || {}).length > 0 || Object.keys(trayectoria.materiasPorAnoLapso || {}).length > 0 || (trayectoria.materiasPorArea?.length ?? 0) > 0) ? (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-700">
+                              {trayectoria.gradoActual && (
+                                <span className="flex items-center gap-1">
+                                  <GraduationCap className="w-4 h-4 text-primary" />
+                                  Grado: {trayectoria.gradoActual}
+                                </span>
+                              )}
+                              {Object.keys(trayectoria.promediosPorAno || {}).length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <TrendingUp className="w-4 h-4 text-primary" />
+                                  Promedios en {Object.keys(trayectoria.promediosPorAno!).length} año(s)
+                                </span>
+                              )}
+                              {Object.keys(trayectoria.materiasPorAnoLapso || {}).length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <BookOpen className="w-4 h-4 text-orange-600" />
+                                  {Object.keys(trayectoria.materiasPorAnoLapso!).length} lapso(s) con materias
+                                </span>
+                              )}
+                              {(trayectoria.materiasPorArea?.length ?? 0) > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <BookOpen className="w-4 h-4 text-orange-600" />
+                                  {(trayectoria.materiasPorArea!).length} área(s) académica(s)
+                                </span>
+                              )}
+                              {(trayectoria.materiasDestacadas?.length ?? 0) > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <BookOpen className="w-4 h-4 text-orange-600" />
+                                  {trayectoria.materiasDestacadas!.length} materia{trayectoria.materiasDestacadas!.length !== 1 ? "s" : ""} destacada{trayectoria.materiasDestacadas!.length !== 1 ? "s" : ""}
+                                </span>
+                              )}
+                              {(trayectoria.actividadesExtracurriculares?.length ?? 0) > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Users className="w-4 h-4 text-green-600" />
+                                  {trayectoria.actividadesExtracurriculares!.length} actividad{trayectoria.actividadesExtracurriculares!.length !== 1 ? "es" : ""} extracurricular{trayectoria.actividadesExtracurriculares!.length !== 1 ? "es" : ""}
+                                </span>
+                              )}
+                              {(trayectoria.proyectosRealizados?.length ?? 0) > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Target className="w-4 h-4 text-purple-600" />
+                                  {trayectoria.proyectosRealizados!.length} proyecto{trayectoria.proyectosRealizados!.length !== 1 ? "s" : ""} realizado{trayectoria.proyectosRealizados!.length !== 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-600">Aún no has registrado nada en Trayectoria académica. Entra al módulo <strong>Trayectoria académica</strong> en el menú lateral y completa los datos de tu bachillerato.</p>
+                          )}
+                        </div>
                         {trayectoria.promedioGeneral || Object.keys(trayectoria.promediosPorAno || {}).length > 0 ? (
                           <>
                             <Card className="border-primary/20">
@@ -1400,12 +1714,6 @@ const DashboardAspirante = () => {
                                 </CardTitle>
                               </CardHeader>
                               <CardContent className="space-y-3">
-                                {trayectoria.promedioGeneral && (
-                                  <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                                    <p className="text-sm text-slate-600 mb-1">Promedio General</p>
-                                    <p className="text-2xl font-bold text-primary">{trayectoria.promedioGeneral.toFixed(2)}</p>
-                                  </div>
-                                )}
                                 {trayectoria.gradoActual && (
                                   <div className="p-3 bg-slate-50 rounded-lg">
                                     <p className="text-sm text-slate-600 mb-1">Grado Actual</p>
@@ -1746,8 +2054,16 @@ const DashboardAspirante = () => {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 px-6 py-8">
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 px-6 py-8 relative">
+          {/* Fondo solo en Perfil: capa a ancho completo sin tapar sidebar; estructura igual que el resto */}
+          {activeModule === "perfil" && (
+            <div className="absolute inset-0 z-0" aria-hidden="true">
+              <img src={imagenBecas} alt="" className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div className="absolute inset-0 bg-slate-900/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-background/30" />
+            </div>
+          )}
+          <div className="relative z-10 max-w-6xl mx-auto">
             <div className="pt-0">
               {/* Orientación: barra de progreso solo cuando ya estás en un test (RIASEC o ICO), no en selección */}
               {location.pathname.includes('/orientacion/') ? (
@@ -1909,6 +2225,84 @@ const DashboardAspirante = () => {
                 <>
                   <Save className="w-4 h-4 mr-2" />
                   Guardar Cambios
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para convertir aspirante a estudiante UNIMET */}
+      <Dialog open={convertirEstudianteOpen} onOpenChange={setConvertirEstudianteOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-primary" />
+              Pasar a estudiante de la Universidad Metropolitana
+            </DialogTitle>
+            <DialogDescription>
+              Si ya ingresaste a la UNIMET, actualiza tu cuenta con tu correo institucional (@correo.unimet.edu.ve). Tu rol pasará de aspirante a estudiante.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-unimet">Email institucional UNIMET *</Label>
+              <Input
+                id="email-unimet"
+                type="email"
+                placeholder="tu.nombre@correo.unimet.edu.ve"
+                value={emailUnimet}
+                onChange={(e) => setEmailUnimet(e.target.value)}
+                disabled={convirtiendoEstudiante}
+              />
+              <p className="text-xs text-slate-500">Debe ser @correo.unimet.edu.ve</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="carrera-convertir">Carrera (opcional)</Label>
+              <Input
+                id="carrera-convertir"
+                placeholder="Ej: Ingeniería de Sistemas"
+                value={carreraConvertir}
+                onChange={(e) => setCarreraConvertir(e.target.value)}
+                disabled={convirtiendoEstudiante}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trimestre-convertir">Trimestre (opcional, 1-15)</Label>
+              <Input
+                id="trimestre-convertir"
+                type="number"
+                min={1}
+                max={15}
+                placeholder="Ej: 1"
+                value={trimestreConvertir === "" ? "" : trimestreConvertir}
+                onChange={(e) => setTrimestreConvertir(e.target.value === "" ? "" : Math.min(15, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                disabled={convirtiendoEstudiante}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConvertirEstudianteOpen(false)}
+              disabled={convirtiendoEstudiante}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConvertirAEstudiante}
+              disabled={convirtiendoEstudiante || !emailUnimet.trim()}
+              className="bg-gradient-to-r from-primary to-orange-dark text-white"
+            >
+              {convirtiendoEstudiante ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <GraduationCap className="w-4 h-4 mr-2" />
+                  Convertir a estudiante
                 </>
               )}
             </Button>

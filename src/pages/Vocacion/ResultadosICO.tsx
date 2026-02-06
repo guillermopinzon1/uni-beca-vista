@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, TrendingUp, BookOpen, Lightbulb, Target, CheckCircle2,
+  Loader2, TrendingUp, BookOpen, Lightbulb, Target, CheckCircle2, GraduationCap, ExternalLink, Calendar, DollarSign, FileCheck,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
@@ -335,6 +335,60 @@ const ResultadosICO = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Invitación PDU - Prueba Diagnóstica de Ubicación - Diseño mejorado */}
+          <Card className="relative overflow-hidden rounded-2xl border-0 shadow-lg bg-gradient-to-br from-[#F37021] via-[#e65c15] to-amber-700">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.06\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-80" aria-hidden />
+            <CardContent className="relative p-8 sm:p-10">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+                <div className="text-white space-y-4 max-w-xl">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/95">
+                    Siguiente paso
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-bold leading-tight">
+                    Ya tomaste la decisión. ¡Realiza la PDU, te esperamos!
+                  </h3>
+                  <p className="text-white/90 text-sm sm:text-base leading-relaxed">
+                    Inscríbete a la Prueba Diagnóstica de Ubicación (PDU) de la UNIMET. Evalúa tus habilidades verbales y cuantitativas para el ingreso a la universidad.
+                  </p>
+                  <ul className="flex flex-wrap gap-3 text-sm text-white/90">
+                    <li className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-amber-200" />
+                      <span>Fechas y modalidad</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-amber-200" />
+                      <span>Costos y métodos de pago</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FileCheck className="h-4 w-4 text-amber-200" />
+                      <span>Inscripción en línea</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="flex flex-col items-center md:items-end gap-4 shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center">
+                    <GraduationCap className="h-10 w-10 text-white" />
+                  </div>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-white text-[#F37021] hover:bg-white/95 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all px-8 h-12 border-0"
+                  >
+                    <a
+                      href="https://www.unimet.edu.ve/pregrado/vias-de-ingreso/pdu/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-5 w-5 mr-2" />
+                      Ir a inscripciones PDU
+                    </a>
+                  </Button>
+                  <span className="text-xs text-white/70">Se abre en nueva pestaña</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Botones */}
           <div className="flex flex-wrap gap-4 justify-center">
