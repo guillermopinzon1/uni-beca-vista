@@ -322,32 +322,42 @@ const DashboardAspirante = () => {
     }
   };
 
-  /** Opciones de grado actual; el valor se guarda en trayectoria.gradoActual. */
-  const GRADO_OPCIONES = ["1er año", "2do año", "3er año", "4to año", "5to año"] as const;
+  /** Opciones de grado actual: solo 4to y 5to año. */
+  const GRADO_OPCIONES = ["4to año", "5to año"] as const;
   /** Valor interno del Select para "sin selección" (Radix no permite value=""). */
   const GRADO_NINGUNO = "__ninguno__";
-  /** Devuelve 1–5 según el grado actual; 0 si no hay grado seleccionado. */
+  /** Devuelve 4 o 5 según el grado actual; 0 si no hay grado seleccionado. */
   const getMaxAnoFromGrado = (grado: string): number => {
     const g = (grado || "").trim();
     if (!g || g === GRADO_NINGUNO) return 0;
     const i = GRADO_OPCIONES.indexOf(g as typeof GRADO_OPCIONES[number]);
-    if (i >= 0) return i + 1;
+    if (i >= 0) return i + 4; // 4to año -> 4, 5to año -> 5
     const lower = g.toLowerCase();
     if (/5to|quinto/.test(lower)) return 5;
     if (/4to|cuarto/.test(lower)) return 4;
-    if (/3er|tercero/.test(lower)) return 3;
-    if (/2do|segundo/.test(lower)) return 2;
-    if (/1er|1ro|primero/.test(lower)) return 1;
     return 0;
   };
-  const addToList = (key: 'materiasDestacadas' | 'actividadesExtracurriculares' | 'proyectosRealizados', value: string) => {
+  /** Agrega materia destacada con nota (se guarda como "Materia: nota" para el API). */
+  const [nuevaMateriaNota, setNuevaMateriaNota] = useState("");
+  const addMateriaDestacada = () => {
+    const mat = nuevaMateria?.trim();
+    const notaVal = nuevaMateriaNota?.trim();
+    if (!mat) return;
+    const nota = notaVal !== "" ? notaVal : "—";
+    setTrayectoria((prev) => ({
+      ...prev,
+      materiasDestacadas: [...(prev.materiasDestacadas || []), `${mat}: ${nota}`],
+    }));
+    setNuevaMateria("");
+    setNuevaMateriaNota("");
+  };
+  const addToList = (key: 'actividadesExtracurriculares' | 'proyectosRealizados', value: string) => {
     const v = value?.trim();
     if (!v) return;
     setTrayectoria((prev) => ({
       ...prev,
       [key]: [...(prev[key] || []), v],
     }));
-    if (key === 'materiasDestacadas') setNuevaMateria("");
     if (key === 'actividadesExtracurriculares') setNuevaActividad("");
     if (key === 'proyectosRealizados') setNuevoProyecto("");
   };
@@ -786,9 +796,12 @@ const DashboardAspirante = () => {
                     </Select>
                   </div>
 
-                  {/* Materias destacadas */}
+                  {/* Materias de más interés con la nota */}
                   <div className="space-y-2">
-                    <Label className="text-base font-medium">Materias destacadas</Label>
+                    <Label className="text-base font-medium">Materias de más interés con la nota</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Agrega las materias de más interés para ti con su calificación (nota 0–20).
+                    </p>
                     <div className="flex flex-wrap gap-2 mb-2">
                       {(trayectoria.materiasDestacadas || []).map((m, i) => (
                         <Badge key={i} variant="secondary" className="pl-2 pr-1 py-1">
@@ -799,14 +812,26 @@ const DashboardAspirante = () => {
                         </Badge>
                       ))}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 items-end">
                       <Input
                         placeholder="Ej: Matemáticas, Física"
+                        className="flex-1 min-w-[140px]"
                         value={nuevaMateria}
                         onChange={(e) => setNuevaMateria(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addToList("materiasDestacadas", nuevaMateria))}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMateriaDestacada())}
                       />
-                      <Button type="button" variant="outline" size="icon" onClick={() => addToList("materiasDestacadas", nuevaMateria)}>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={20}
+                        step={0.01}
+                        placeholder="Nota"
+                        className="w-20"
+                        value={nuevaMateriaNota}
+                        onChange={(e) => setNuevaMateriaNota(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMateriaDestacada())}
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={addMateriaDestacada}>
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -1408,7 +1433,7 @@ const DashboardAspirante = () => {
                                 <CardHeader className="pb-3">
                                   <CardTitle className="text-base flex items-center gap-2">
                                     <BookOpen className="w-4 h-4 text-orange-dark" />
-                                    Materias Destacadas
+                                    Materias de más interés con la nota
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>

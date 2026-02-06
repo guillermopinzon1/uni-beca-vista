@@ -5,9 +5,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  GraduationCap, LogOut, Compass, BrainCircuit, 
-  ChevronLeft, CheckCircle2 
+import {
+  Compass,
+  BrainCircuit,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+  BarChart3,
+  Clock,
+  Target,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { iniciarTest, TipoTest, obtenerHistorial } from "@/lib/api/orientacionVocacional";
@@ -167,78 +173,111 @@ const SeleccionarTest = () => {
     }
   };
 
-  return (
-    <div className="w-full pb-24">
-      <div className="container mx-auto px-4 py-4 md:py-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-5 md:mb-6">
-            <BrainCircuit className="w-12 h-12 md:w-14 md:h-14 text-orange-500 mx-auto mb-2 md:mb-3" />
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-              Selecciona el Tipo de Test
-            </h2>
-            <p className="text-gray-500 text-sm md:text-base">
-              Elige el test que mejor se adapte a tus necesidades
-            </p>
-          </div>
+  const ambosCompletados = yaTieneHolland && yaTieneIco;
+  const puedeIniciar = tipoTest && !cargando && !(tipoTest === "Holland_RIASEC" && yaTieneHolland) && !(tipoTest === "ICO" && yaTieneIco);
 
-          <div className="grid md:grid-cols-2 gap-4 md:gap-5 mb-6">
+  return (
+    <div className="w-full min-h-[70vh] pb-28">
+      <div className="container mx-auto px-4 py-6 md:py-10">
+        <div className="max-w-4xl mx-auto">
+          {/* Hero / Título */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-center mb-8 md:mb-10"
+          >
+            <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200 mb-4">
+              <Compass className="w-8 h-8 md:w-10 md:h-10" />
+            </div>
+            <h1 className="text-2xl md:text-4xl font-bold text-slate-900 mb-2 tracking-tight">
+              Tests de Orientación Vocacional
+            </h1>
+            <p className="text-slate-600 text-base md:text-lg max-w-xl mx-auto">
+              Elige un test para descubrir tu perfil vocacional y las carreras que mejor se alinean contigo.
+            </p>
+            {cargandoHistorial && (
+              <p className="text-sm text-slate-500 mt-2 flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verificando tu historial...
+              </p>
+            )}
+          </motion.div>
+
+          {/* Tarjetas de tests */}
+          <div className="grid md:grid-cols-2 gap-5 md:gap-6 mb-8">
             {/* Test Holland RIASEC */}
             <motion.div
-              whileHover={yaTieneHolland ? undefined : { scale: 1.02 }}
-              whileTap={yaTieneHolland ? undefined : { scale: 0.98 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.1 }}
+              whileHover={yaTieneHolland ? undefined : { y: -4, transition: { duration: 0.2 } }}
+              whileTap={yaTieneHolland ? undefined : { scale: 0.99 }}
             >
               <Card
-                className={`transition-all border-2 ${
+                className={`overflow-hidden transition-all duration-200 border-2 h-full ${
                   yaTieneHolland
-                    ? "border-gray-200 bg-gray-50 opacity-90 cursor-not-allowed"
+                    ? "border-slate-200 bg-slate-50/80 cursor-default"
                     : tipoTest === "Holland_RIASEC"
-                      ? "border-orange-500 bg-orange-50 shadow-lg cursor-pointer"
-                      : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                      ? "border-orange-500 bg-gradient-to-br from-orange-50 to-white shadow-xl shadow-orange-100 ring-2 ring-orange-200/50"
+                      : "border-slate-200 bg-white hover:border-orange-300 hover:shadow-md cursor-pointer"
                 }`}
                 onClick={() => !yaTieneHolland && setTipoTest("Holland_RIASEC")}
               >
-                <CardContent className="p-5 md:p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-lg md:text-xl font-bold text-gray-900">
-                          Test Holland RIASEC
-                        </h3>
-                        {yaTieneHolland && (
-                          <Badge variant="secondary" className="shrink-0">Ya completaste este test</Badge>
+                <CardContent className="p-0">
+                  <div className="p-5 md:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
+                        yaTieneHolland ? "bg-slate-200 text-slate-500" : "bg-orange-100 text-orange-600"
+                      }`}>
+                        <BarChart3 className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="text-lg md:text-xl font-bold text-slate-900">
+                            Test Holland RIASEC
+                          </h3>
+                          {yaTieneHolland && (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-0 shrink-0">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Completado
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-slate-600 text-sm mb-3">
+                          Evalúa tus intereses en 6 dimensiones: Realista, Investigador, Artístico, Social, Emprendedor y Convencional.
+                        </p>
+                        <ul className="space-y-1.5 text-sm text-slate-600">
+                          <li className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-orange-500 shrink-0" />
+                            Dos rondas de preguntas
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-orange-500 shrink-0" />
+                            Código Holland y carreras recomendadas
+                          </li>
+                        </ul>
+                        {yaTieneHolland && sesionIdHolland && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-4 w-full sm:w-auto border-orange-200 text-orange-700 hover:bg-orange-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/orientacion/resultados/${sesionIdHolland}`);
+                            }}
+                          >
+                            Ver mis resultados
+                          </Button>
                         )}
                       </div>
-                      <p className="text-gray-600 text-sm mb-2">
-                        Evalúa 6 dimensiones de personalidad vocacional:
-                      </p>
-                      <ul className="space-y-0.5 text-xs text-gray-600">
-                        <li className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Realista (R), Investigador (I), Artístico (A)
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Social (S), Emprendedor (E), Convencional (C)
-                        </li>
-                      </ul>
-                      {yaTieneHolland && sesionIdHolland && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 w-full sm:w-auto"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/orientacion/resultados/${sesionIdHolland}`);
-                          }}
-                        >
-                          Ver resultados
-                        </Button>
+                      {tipoTest === "Holland_RIASEC" && !yaTieneHolland && (
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        </div>
                       )}
                     </div>
-                    {tipoTest === "Holland_RIASEC" && !yaTieneHolland && (
-                      <CheckCircle2 className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -246,95 +285,123 @@ const SeleccionarTest = () => {
 
             {/* Test ICO */}
             <motion.div
-              whileHover={yaTieneIco ? undefined : { scale: 1.02 }}
-              whileTap={yaTieneIco ? undefined : { scale: 0.98 }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.2 }}
+              whileHover={yaTieneIco ? undefined : { y: -4, transition: { duration: 0.2 } }}
+              whileTap={yaTieneIco ? undefined : { scale: 0.99 }}
             >
               <Card
-                className={`transition-all border-2 ${
+                className={`overflow-hidden transition-all duration-200 border-2 h-full ${
                   yaTieneIco
-                    ? "border-gray-200 bg-gray-50 opacity-90 cursor-not-allowed"
+                    ? "border-slate-200 bg-slate-50/80 cursor-default"
                     : tipoTest === "ICO"
-                      ? "border-orange-500 bg-orange-50 shadow-lg cursor-pointer"
-                      : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                      ? "border-orange-500 bg-gradient-to-br from-orange-50 to-white shadow-xl shadow-orange-100 ring-2 ring-orange-200/50"
+                      : "border-slate-200 bg-white hover:border-orange-300 hover:shadow-md cursor-pointer"
                 }`}
                 onClick={() => !yaTieneIco && setTipoTest("ICO")}
               >
-                <CardContent className="p-5 md:p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-lg md:text-xl font-bold text-gray-900">
-                          Test ICO
-                        </h3>
-                        {yaTieneIco && (
-                          <Badge variant="secondary" className="shrink-0">Ya completaste este test</Badge>
+                <CardContent className="p-0">
+                  <div className="p-5 md:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
+                        yaTieneIco ? "bg-slate-200 text-slate-500" : "bg-orange-100 text-orange-600"
+                      }`}>
+                        <Sparkles className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="text-lg md:text-xl font-bold text-slate-900">
+                            Test ICO
+                          </h3>
+                          {yaTieneIco && (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-0 shrink-0">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Completado
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-slate-600 text-sm mb-3">
+                          Versión corta con preguntas Sí/No. Incluye análisis con inteligencia artificial y recomendaciones de carreras.
+                        </p>
+                        <ul className="space-y-1.5 text-sm text-slate-600">
+                          <li className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-orange-500 shrink-0" />
+                            Una sola ronda, más rápido
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <BrainCircuit className="w-4 h-4 text-orange-500 shrink-0" />
+                            Perfil RIASEC y análisis con IA
+                          </li>
+                        </ul>
+                        {yaTieneIco && sesionIdIco && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-4 w-full sm:w-auto border-orange-200 text-orange-700 hover:bg-orange-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/orientacion/resultados-ico", { state: { sesionId: sesionIdIco } });
+                            }}
+                          >
+                            Ver mis resultados
+                          </Button>
                         )}
                       </div>
-                      <p className="text-gray-600 text-sm mb-2">
-                        Una sola ronda: preguntas Sí/No, puntuaciones RIASEC y recomendaciones con IA.
-                      </p>
-                      <ul className="space-y-0.5 text-xs text-gray-600">
-                        <li className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Preguntas directas por dimensión
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Código Holland y perfil dominante/secundario
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shrink-0" />
-                          Carreras recomendadas y análisis LLM
-                        </li>
-                      </ul>
-                      {yaTieneIco && sesionIdIco && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 w-full sm:w-auto"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/orientacion/resultados-ico", { state: { sesionId: sesionIdIco } });
-                          }}
-                        >
-                          Ver resultados
-                        </Button>
+                      {tipoTest === "ICO" && !yaTieneIco && (
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        </div>
                       )}
                     </div>
-                    {tipoTest === "ICO" && !yaTieneIco && (
-                      <CheckCircle2 className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                    )}
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
+
+          {ambosCompletados && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center text-sm text-slate-500 mb-4"
+            >
+              Has completado ambos tests. Puedes ver tus resultados desde cada tarjeta o desde tu <button type="button" onClick={() => navigate("/orientacion/perfil")} className="text-orange-600 font-medium hover:underline">perfil vocacional</button>.
+            </motion.p>
+          )}
         </div>
       </div>
 
-      {/* Botón Comenzar Test fijo abajo: siempre visible */}
-      <div className="sticky bottom-0 left-0 right-0 z-10 py-4 bg-background/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
-        <div className="max-w-4xl mx-auto px-4 flex justify-center">
+      {/* Barra fija: Comenzar Test */}
+      <div className="fixed bottom-0 left-0 right-0 z-10 py-4 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          {tipoTest && !puedeIniciar && !cargando && (
+            <p className="text-sm text-slate-500">
+              {tipoTest === "Holland_RIASEC" && yaTieneHolland
+                ? "Ya completaste el test Holland."
+                : tipoTest === "ICO" && yaTieneIco
+                  ? "Ya completaste el test ICO."
+                  : null}
+            </p>
+          )}
           <Button
             onClick={handleIniciarTest}
-            disabled={
-              !tipoTest ||
-              cargando ||
-              (tipoTest === "Holland_RIASEC" && yaTieneHolland) ||
-              (tipoTest === "ICO" && yaTieneIco)
-            }
-            className="bg-[#F37021] hover:bg-orange-600 text-white rounded-lg px-8 h-12 font-bold text-base md:text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            disabled={!puedeIniciar}
+            size="lg"
+            className="w-full sm:w-auto min-w-[200px] bg-[#F37021] hover:bg-orange-600 text-white rounded-xl px-8 h-12 font-bold text-base shadow-lg shadow-orange-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {cargando ? (
               <>
-                <span className="animate-spin mr-2">⏳</span>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Iniciando...
               </>
+            ) : !tipoTest ? (
+              "Selecciona un test arriba"
             ) : (tipoTest === "Holland_RIASEC" && yaTieneHolland) || (tipoTest === "ICO" && yaTieneIco) ? (
-              "Ya completaste este test"
+              "Test ya completado"
             ) : (
-              "Comenzar Test"
+              "Comenzar test"
             )}
           </Button>
         </div>

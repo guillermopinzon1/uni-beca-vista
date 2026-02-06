@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronsUpDown, Eye, EyeOff, Loader2, CheckCircle, Clock, User, UserCog, Shield, ArrowLeft, Compass } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
+import universityCampus from "../assets/Universidad-Metropolitana.jpg";
 import { registerUser, loginUser } from "@/lib/api/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -120,7 +120,7 @@ const Register = () => {
     { id: "student" as RegistrationType, title: "Registro Usuario", description: "Estudiantes de la universidad", icon: User },
     { id: "supervisor" as RegistrationType, title: "Registro Supervisor", description: "Supervisores de plazas", icon: Shield },
     { id: "especialista" as RegistrationType, title: "Registro Especialista", description: "Psicólogo / Orientador", icon: UserCog },
-    { id: "aspirante" as RegistrationType, title: "Registro Aspirante", description: "Aspirante a beca", icon: Compass }
+    { id: "aspirante" as RegistrationType, title: "Registro Aspirante", description: "Aspirante de Orientación Vocacional", icon: Compass }
   ];
 
   return (

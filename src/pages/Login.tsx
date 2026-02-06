@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
-import universityCampus from "/lovable-uploads/7fff67cf-5355-4c7a-9671-198edb21dc3d.png";
+import universityCampus from "../assets/Universidad-Metropolitana.jpg";
 import { loginUser, forgotPassword } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -143,7 +143,7 @@ const Login = () => {
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800 tracking-tight">Iniciar Sesión</CardTitle>
             <CardDescription className="text-gray-500 text-sm">
-              Usa tu cuenta institucional para acceder al sistema
+              Usa tu cuenta para acceder al sistema
             </CardDescription>
           </CardHeader>
           

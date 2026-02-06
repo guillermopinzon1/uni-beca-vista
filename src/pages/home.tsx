@@ -1,66 +1,26 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { 
-  GraduationCap, Users, TrendingUp, Shield, 
-  Compass, LogIn, UserPlus, ArrowRight 
-} from "lucide-react";
+import { GraduationCap, Compass, LogIn, Search, ArrowRight } from "lucide-react";
+import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
+import imagenOrientacion from "@/assets/university-hero.jpg";
 
-// --- Componentes Atómicos para un Diseño Limpio ---
-
-const StatCard = ({ icon: Icon, number, label, delay }: any) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ duration: 0.5, delay }}
-    className="relative overflow-hidden group bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl text-center"
-  >
-    <div className="absolute -right-4 -top-4 w-20 h-20 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-colors" />
-    <Icon className="w-8 h-8 text-orange-400 mx-auto mb-3" />
-    <div className="text-3xl font-bold text-white mb-1">{number}</div>
-    <div className="text-orange-100/70 text-sm font-medium uppercase tracking-wider">{label}</div>
-  </motion.div>
-);
-
-const ServiceCard = ({ title, description, icon: Icon, onClick, primary }: any) => (
-  <motion.div
-    whileHover={{ y: -8 }}
-    transition={{ type: "spring", stiffness: 300 }}
-    onClick={onClick}
-    className={`cursor-pointer p-8 rounded-3xl border transition-all shadow-sm ${
-      primary 
-      ? "bg-white border-slate-100 hover:shadow-orange-200/50 hover:shadow-2xl" 
-      : "bg-slate-50 border-transparent hover:bg-white hover:border-slate-200"
-    }`}
-  >
-    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${
-      primary ? "bg-orange-500 text-white" : "bg-slate-200 text-slate-600"
-    }`}>
-      <Icon className="w-7 h-7" />
-    </div>
-    <h3 className="text-2xl font-bold text-slate-900 mb-3">{title}</h3>
-    <p className="text-slate-600 leading-relaxed mb-6">{description}</p>
-    <div className={`flex items-center font-bold text-sm uppercase tracking-widest ${
-      primary ? "text-orange-500" : "text-slate-400"
-    }`}>
-      Explorar ahora <ArrowRight className="ml-2 w-4 h-4" />
-    </div>
-  </motion.div>
-);
+const CAMPUS_IMAGE = "https://www.unimet.edu.ve/wp-content/uploads/2023/12/FOTOS-CAMPUS-2023-24-1-1024x683.jpg";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [barraSeleccion, setBarraSeleccion] = useState<"becas" | "orientacion" | null>(null);
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-slate-900">
-      {/* Navbar Minimalista estilo Unimet */}
+      {/* Header como estaba: claro, logo sin invertir */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-          <img 
-            src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png" 
-            alt="UNIMET" 
-            className="h-10 w-auto object-contain" 
+          <img
+            src="/lovable-uploads/UNIMETLogo.png"
+            alt="UNIMET"
+            className="h-10 w-auto object-contain"
           />
           <div className="flex gap-4">
             <Button variant="ghost" className="text-slate-600 font-semibold" onClick={() => navigate("/login")}>
@@ -73,87 +33,175 @@ const Home = () => {
         </div>
       </header>
 
-      {/* Hero Section: Inspirado en el banner de "El futuro se diseña" */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div 
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="z-10"
+      {/* Hero: imagen completa + overlay + texto a la izquierda */}
+      <section className="relative min-h-[75vh] flex flex-col justify-end">
+        <div className="absolute inset-0">
+          <img src={CAMPUS_IMAGE} alt="Campus UNIMET" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/85 via-slate-900/50 to-transparent" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pb-24 pt-28">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-xl"
           >
-            <span className="inline-block py-1 px-4 rounded-full bg-orange-100 text-orange-600 text-xs font-bold uppercase tracking-[0.2em] mb-6">
+            <p className="text-white/90 text-sm font-medium uppercase tracking-wide mb-2">
               Dirección de Bienestar y Desarrollo Estudiantil
-            </span>
-            <h1 className="text-6xl md:text-7xl font-black text-slate-900 leading-[1.1] mb-8">
-              Tu éxito <span className="text-orange-500">Unimetano</span> comienza aquí.
-            </h1>
-            <p className="text-xl text-slate-500 leading-relaxed max-w-lg mb-10">
-              Accede a becas, orientación vocacional y herramientas digitales diseñadas para potenciar tu carrera universitaria.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-slate-900 text-white hover:bg-slate-800 h-14 px-8 rounded-2xl text-lg font-bold" onClick={() => navigate("/postulaciones-becas")}>
-                Postularse a una Beca
+            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-4">
+              Encontrar tu camino es más simple
+            </h1>
+            <p className="text-lg text-white/90 mb-8">
+              Becas, orientación vocacional y apoyo para tu trayectoria. Todo en un solo lugar para la comunidad Unimetana.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                className="bg-[#f37021] hover:bg-orange-600 text-white rounded-xl px-6 h-12 font-semibold shadow-xl"
+                onClick={() => navigate("/postulaciones-becas")}
+              >
+                <Search className="w-4 h-4 mr-2" /> Postularme a Beca
               </Button>
-              <Button size="lg" variant="outline" className="border-2 border-slate-200 h-14 px-8 rounded-2xl text-lg font-bold" onClick={() => navigate("/vocational")}>
-                Test Vocacional
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-white text-white bg-white/15 hover:bg-white/25 rounded-xl px-6 h-12 font-semibold shadow-lg"
+                onClick={() => navigate("/vocational")}
+              >
+                <Compass className="w-5 h-5 mr-2" /> Test Vocacional
               </Button>
             </div>
           </motion.div>
-
-          {/* Elemento Visual Moderno */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-orange-500 rounded-[40px] rotate-6 opacity-10 blur-3xl" />
-            <img 
-              src="https://www.unimet.edu.ve/wp-content/uploads/2023/12/FOTOS-CAMPUS-2023-24-1-1024x683.jpg" 
-              className="relative rounded-[32px] shadow-2xl border-8 border-white object-cover h-[500px] w-full"
-              alt="Campus Unimet"
-            />
-          </motion.div>
         </div>
       </section>
 
-      {/* Stats en Banner Oscuro (como el footer de Unimet) */}
-      <section className="bg-slate-900 py-20 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-blue-500" />
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard icon={GraduationCap} number="500+" label="Becas Activas" delay={0.1} />
-          <StatCard icon={Users} number="1,200+" label="Estudiantes" delay={0.2} />
-          <StatCard icon={TrendingUp} number="95%" label="Efectividad" delay={0.3} />
-          <StatCard icon={Shield} number="SISE" label="Seguridad" delay={0.4} />
-        </div>
-      </section>
-
-      {/* Grid de Servicios "Bento" */}
-      <section className="py-24 max-w-7xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-          <div>
-            <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Nuestros Pilares</h2>
-            <p className="text-lg text-slate-500 max-w-md">Ecosistema digital pensado para la comunidad universitaria de la Unimet.</p>
+      {/* Barra de acceso rápido: selector Becas / Orientación + Buscar */}
+      <div className="relative z-20 max-w-4xl mx-auto px-6 -mt-12">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between"
+        >
+          <span className="text-slate-600 font-medium text-sm sm:text-base shrink-0">¿Qué quieres hacer?</span>
+          <div className="flex flex-wrap gap-3 items-center">
+            <button
+              type="button"
+              onClick={() => setBarraSeleccion("becas")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-all ${
+                barraSeleccion === "becas"
+                  ? "bg-[#f37021] text-white border-[#f37021] shadow-md"
+                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 shrink-0" /> Becas
+            </button>
+            <button
+              type="button"
+              onClick={() => setBarraSeleccion("orientacion")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-all ${
+                barraSeleccion === "orientacion"
+                  ? "bg-[#f37021] text-white border-[#f37021] shadow-md"
+                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+              }`}
+            >
+              <Compass className="w-4 h-4 shrink-0" /> Orientación vocacional
+            </button>
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <ServiceCard 
-            primary
-            title="Gestión de Becas"
-            description="Administra tu solicitud de ayuda económica de forma transparente y digital. Consulta estados y requisitos en tiempo real."
-            icon={GraduationCap}
-            onClick={() => navigate("/postulaciones-becas")}
-          />
-          <ServiceCard 
-            title="Orientación Vocacional"
-            description="¿Aún no decides tu camino? Realiza nuestras pruebas psicométricas diseñadas por expertos de la universidad."
-            icon={Compass}
-            onClick={() => navigate("/vocational")}
-          />
+      {/* Sección: frase La Metro al inicio; tarjetas al elegir Becas u Orientación */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          {barraSeleccion === null ? (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-2xl mx-auto"
+            >
+              <div className="relative rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
+                {/* Franja naranja superior */}
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#f37021] to-orange-400" />
+                <div className="px-8 sm:px-12 py-14 sm:py-16 text-center">
+                  <p className="text-slate-500 text-[11px] font-semibold uppercase tracking-[0.25em] mb-6">
+                    Universidad Metropolitana
+                  </p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 leading-[1.3]">
+                    <span className="text-[#f37021]">Re-Imagina</span> tu carrera.
+                  </h2>
+                  <h2 className="mt-2 text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 leading-[1.3]">
+                    <span className="text-[#f37021]">Re-Imagina</span> tu historia.
+                  </h2>
+                  <div className="mt-8 h-px w-16 mx-auto bg-slate-200" />
+                  <p className="mt-6 text-slate-500 text-sm">
+                    Elige Becas u Orientación vocacional arriba para continuar.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-slate-900 mb-2">Lo más utilizado</h2>
+                <p className="text-slate-600 max-w-lg mx-auto">
+                  {barraSeleccion === "becas"
+                    ? "Accede a becas, solicitudes y seguimiento en tiempo real."
+                    : "Descubre tu perfil vocacional con tests y recomendaciones de carreras."}
+                </p>
+              </div>
+              <div className="max-w-md mx-auto">
+                {barraSeleccion === "becas" && (
+                  <motion.div
+                    key="becas"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    onClick={() => navigate("/postulaciones-becas")}
+                    className="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-lg hover:border-orange-200 transition-all cursor-pointer"
+                  >
+                    <div className="aspect-video overflow-hidden bg-slate-200">
+                      <img src={imagenBecas} alt="Becas" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Gestión de Becas</h3>
+                      <p className="text-slate-600 text-sm mb-4">Solicitudes, requisitos y seguimiento en tiempo real.</p>
+                      <span className="inline-flex items-center font-semibold text-[#f37021] text-sm">
+                        Acceder <ArrowRight className="w-4 h-4 ml-1" />
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+                {barraSeleccion === "orientacion" && (
+                  <motion.div
+                    key="orientacion"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    onClick={() => navigate("/vocational")}
+                    className="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-lg hover:border-orange-200 transition-all cursor-pointer"
+                  >
+                    <div className="aspect-video overflow-hidden bg-slate-200">
+                      <img src={imagenOrientacion} alt="Orientación vocacional" className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Orientación Vocacional</h3>
+                      <p className="text-slate-600 text-sm mb-4">Tests y recomendaciones de carreras para tu perfil.</p>
+                      <span className="inline-flex items-center font-semibold text-[#f37021] text-sm">
+                        Acceder <ArrowRight className="w-4 h-4 ml-1" />
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </section>
 
-      {/* Footer Estilo Corporativo */}
+      {/* Footer como estaba: fondo claro, logo centrado con barras naranja */}
       <footer className="bg-slate-50 border-t border-slate-200 py-16">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <div className="flex justify-center items-center gap-3 mb-8">
@@ -166,7 +214,7 @@ const Home = () => {
             <div className="w-10 h-1 bg-orange-500" />
           </div>
           <p className="text-slate-400 text-sm font-medium">
-            © 2025 Universidad Metropolitana | Dirección de Bienestar y Desarrollo Estudiantil
+            © {new Date().getFullYear()} Universidad Metropolitana | Dirección de Bienestar y Desarrollo Estudiantil
           </p>
         </div>
       </footer>
