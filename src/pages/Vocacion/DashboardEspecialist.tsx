@@ -2083,7 +2083,10 @@ Te invitamos a conocer más sobre:
           </div>
 
           {/* Logo en el centro */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
+          <div
+            className="absolute left-1/2 transform -translate-x-1/2 cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             <img
               src="/lovable-uploads/UNIMETLogo.png"
               alt="UNIMET Logo"
