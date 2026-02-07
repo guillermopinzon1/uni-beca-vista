@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { setLogoutCallback } from '@/lib/api/apiClient';
+import { API_BASE } from '@/lib/api/config';
 
 interface AuthUser {
   id: string;
@@ -30,6 +32,7 @@ interface AuthTokens {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  isLoading: boolean;
   user: AuthUser | null;
   tokens: AuthTokens | null;
   loginSuccess: (user: AuthUser, tokens: AuthTokens) => void;
@@ -40,22 +43,69 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
-  const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('auth_user');
-      const storedTokens = localStorage.getItem('auth_tokens');
-      if (storedUser && storedTokens) {
-        setUser(JSON.parse(storedUser));
-        setTokens(JSON.parse(storedTokens));
-        setIsLoggedIn(true);
+    const initializeAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem('auth_user');
+        const storedTokens = localStorage.getItem('auth_tokens');
+
+        if (storedUser && storedTokens) {
+          const parsedTokens = JSON.parse(storedTokens);
+          const parsedUser = JSON.parse(storedUser);
+
+          // Validar token con el backend
+          try {
+            const response = await fetch(`${API_BASE}/v1/auth/verify-token`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${parsedTokens.accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              // Token válido, restaurar sesión
+              console.log('✅ [AUTH] Token válido, restaurando sesión');
+              setUser(parsedUser);
+              setTokens(parsedTokens);
+              setIsLoggedIn(true);
+            } else {
+              // Token inválido o expirado, limpiar sesión
+              console.warn('⚠️ [AUTH] Token inválido o expirado, limpiando sesión');
+              localStorage.removeItem('auth_user');
+              localStorage.removeItem('auth_tokens');
+            }
+          } catch (error) {
+            // Error de red, restaurar sesión de todos modos (offline mode)
+            console.warn('⚠️ [AUTH] Error validando token, restaurando sesión (modo offline):', error);
+            setUser(parsedUser);
+            setTokens(parsedTokens);
+            setIsLoggedIn(true);
+          }
+        }
+      } catch (error) {
+        console.error('❌ [AUTH] Error inicializando autenticación:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch {}
-  }, []);
+    };
+
+    initializeAuth();
+
+    // Registrar el callback de logout para el apiClient
+    setLogoutCallback(() => {
+      setIsLoggedIn(false);
+      setUser(null);
+      setTokens(null);
+      navigate('/login');
+    });
+  }, [navigate]);
 
   const loginSuccess = (nextUser: AuthUser, nextTokens: AuthTokens) => {
     setIsLoggedIn(true);
@@ -79,60 +129,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🚪 [LOGOUT] Access token existe:', !!tokens?.accessToken);
       
       if (tokens?.accessToken) {
-        // Intentar diferentes URLs posibles
-        const possibleUrls = [
-          import.meta.env.VITE_API_BASE_URL,
-          'https://srodriguez.intelcondev.org',
-          'http://localhost:3000',
-          'http://localhost:3001', 
-          'http://localhost:5000',
-          'http://localhost:8000',
-          'http://127.0.0.1:3000',
-          'http://127.0.0.1:3001'
-        ].filter(Boolean);
-        
-        // Si no hay VITE_API_BASE_URL configurada, usar la URL de producción por defecto
-        if (!import.meta.env.VITE_API_BASE_URL) {
-          possibleUrls.unshift('https://srodriguez.intelcondev.org');
-        }
-        
-        console.log('🚪 [LOGOUT] Enviando petición de logout al servidor...');
-        console.log('🚪 [LOGOUT] VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
-        console.log('🚪 [LOGOUT] URLs posibles a probar:', possibleUrls);
-        
-        let response = null;
-        let lastError = null;
-        
-        for (const baseUrl of possibleUrls) {
-          try {
-            const apiUrl = `${baseUrl}/api/v1/auth/logout`;
-            console.log('🚪 [LOGOUT] Probando URL:', apiUrl);
-            response = await fetch(apiUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${tokens.accessToken}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            });
-            console.log('🚪 [LOGOUT] Respuesta del servidor:', response.status, response.statusText);
-            
-            if (response.ok) {
-              console.log('✅ [LOGOUT] Logout del servidor completado exitosamente');
-              break; // Salir del bucle si funciona
-            } else {
-              console.warn('⚠️ [LOGOUT] El servidor respondió con error:', response.status);
-              lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const apiUrl = `${API_BASE}/v1/auth/logout`;
+        console.log('🚪 [LOGOUT] Enviando petición de logout a:', apiUrl);
+
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tokens.accessToken}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
             }
-          } catch (error) {
-            console.warn('❌ [LOGOUT] Error con URL', apiUrl, ':', error.message);
-            lastError = error;
-            response = null;
+          });
+
+          if (response.ok) {
+            console.log('✅ [LOGOUT] Logout del servidor completado exitosamente');
+          } else {
+            console.warn('⚠️ [LOGOUT] El servidor respondió con error:', response.status);
           }
-        }
-        
-        if (!response) {
-          console.warn('❌ [LOGOUT] No se pudo conectar con ninguna URL. Último error:', lastError?.message);
+        } catch (error) {
+          console.warn('❌ [LOGOUT] Error al conectar con el servidor:', error instanceof Error ? error.message : 'Error desconocido');
         }
       } else {
         console.log('ℹ️ [LOGOUT] No hay token de acceso, saltando logout del servidor');
@@ -185,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Auto-logout por navegación deshabilitado.
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, tokens, loginSuccess, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, isLoading, user, tokens, loginSuccess, logout }}>
       {children}
     </AuthContext.Provider>
   );

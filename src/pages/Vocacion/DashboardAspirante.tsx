@@ -289,8 +289,7 @@ const DashboardAspirante = () => {
   ]);
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
+    logout(() => navigate("/"));
   };
 
   const sidebarItems = [

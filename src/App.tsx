@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -14,8 +15,6 @@ import Requisitos from "./pages/Requisitos";
 import ModuleSelection from "./pages/ModuleSelection";
 import AyudantiasDashboard from "./pages/AyudantiasDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import PasanteModules from "./pages/PasanteModules";
-
 import PasanteAyudantiasModules from "./pages/PasanteAyudantiasModules";
 import EstudianteDetail from "./pages/EstudianteDetail";
 import ScholarshipPrograms from "./pages/ScholarshipPrograms";
@@ -74,23 +73,29 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              {/* Rutas públicas */}
               <Route path="/" element={<Home />} />
               <Route path="/index" element={<Index />} />
-              {/* New Items */}
-              <Route path="/home" element={<Home/>} /> 
+              <Route path="/home" element={<Home/>} />
               <Route path="/vocational" element={<VocationalIndex/>}/>
-              <Route path="/vocational-test" element={<VocationalTest/>}/>
-              <Route path="/vocational-explorer" element={<VocationalExplorer/>}/>
-              <Route path="/vocational-crm" element={<VocationalCrm/>}/>
-              <Route path="/vocational-analytics" element={<VocationalAnalytics/>}/>
-
               <Route path="/career/:id" element={<CareerDetailPage />} />
 
+              {/* Rutas de autenticación (solo para usuarios NO autenticados) */}
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-              <Route path="/dashboard-aspirante" element={<DashboardAspirante/>}/>
-              
+              {/* Rutas protegidas - Orientación Vocacional */}
+              <Route path="/vocational-test" element={<ProtectedRoute><VocationalTest/></ProtectedRoute>}/>
+              <Route path="/vocational-explorer" element={<ProtectedRoute><VocationalExplorer/></ProtectedRoute>}/>
+              <Route path="/vocational-crm" element={<ProtectedRoute allowedRoles={['admin', 'especialista']}><VocationalCrm/></ProtectedRoute>}/>
+              <Route path="/vocational-analytics" element={<ProtectedRoute allowedRoles={['admin', 'especialista']}><VocationalAnalytics/></ProtectedRoute>}/>
+
+              {/* Dashboard Aspirante - Protegido (estudiantes y aspirantes) */}
+              <Route path="/dashboard-aspirante" element={<ProtectedRoute allowedRoles={['aspirante', 'estudiante']}><DashboardAspirante/></ProtectedRoute>}/>
+
               {/* Rutas de Orientación Vocacional con DashboardAspirante como layout */}
-              <Route path="/orientacion" element={<DashboardAspirante/>}>
+              <Route path="/orientacion" element={<ProtectedRoute allowedRoles={['aspirante', 'estudiante']}><DashboardAspirante/></ProtectedRoute>}>
                 <Route path="seleccionar-test" element={<SeleccionarTest/>}/>
                 <Route path="ronda-1" element={<Ronda1/>}/>
                 <Route path="ronda-2" element={<Ronda2/>}/>
@@ -100,42 +105,49 @@ const App = () => (
                 <Route path="perfil" element={<PerfilVocacional/>}/>
                 <Route path="historial" element={<Historial/>}/>
               </Route>
-              
-              <Route path="/dashboard-especialista" element={<DashboardEspecialist/>}/>
 
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/cambiar-password-obligatorio" element={<ChangePasswordRequired />} />
-              <Route path="/modules" element={<ModuleSelection />} />
-          <Route path="/ayudantias-dashboard" element={<AyudantiasDashboard />} /> --supervisor
-          <Route path="/admin-dashboard" element={<AdminDashboard />} /> 
-          <Route path="/modules" element={<PasanteModules />} /> 
-          
-          <Route path="/pasante-ayudantias-modules" element={<PasanteAyudantiasModules />} />
-          <Route path="/estudiante/:id" element={<EstudianteDetail />} />
-              <Route path="/scholarship-programs" element={<ScholarshipPrograms />} />
-              <Route path="/aspirante-scholarship-programs" element={<AspiranteScholarshipPrograms />} />
-              <Route path="/postulaciones-becas" element={<PostulacionesBecas />} />
-              <Route path="/post-register-application" element={<PostRegisterApplication />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/requisitos" element={<Requisitos />} />
-              <Route path="/postulaciones" element={<PostulacionesList />} />
-              <Route path="/postulaciones/:id" element={<PostulacionDetail />} />
-              <Route path="/reportes" element={<Reportes />} />
-        <Route path="/impacto" element={<ImpactoProgram />} />
-        <Route path="/exoneracion" element={<ExoneracionProgram />} />
-              <Route path="/excelencia" element={<ExcelenciaProgram />} />
-              <Route path="/formacion-docente" element={<FormacionDocenteProgram />} />
-              <Route path="/ayudantias" element={<AyudantiasProgram />} />
+              {/* Dashboard Especialista - Protegido */}
+              <Route path="/dashboard-especialista" element={<ProtectedRoute allowedRoles={['especialista']}><DashboardEspecialist/></ProtectedRoute>}/>
 
-              <Route path="/formacion-docente-admin" element={<FormacionDocenteAdmin />} />
-              <Route path="/exoneracion-student" element={<ExoneracionStudent />} />
-              <Route path="/exoneracion-capital-humano" element={<ExoneracionCapitalHumano />} />
-              <Route path="/mentor-dashboard" element={<MentorDashboard />} />
-              <Route path="/director-area-dashboard" element={<DirectorAreaDashboard />} />
-              <Route path="/capital-humano-dashboard" element={<CapitalHumanoDashboard />} />
-              <Route path="/supervisor-laboral-dashboard" element={<SupervisorLaboralDashboard />} />
+              {/* Cambio de contraseña obligatorio - Protegido pero sin restricción de rol */}
+              <Route path="/cambiar-password-obligatorio" element={<ProtectedRoute><ChangePasswordRequired /></ProtectedRoute>} />
+              {/* Módulos y Dashboards - Protegidos por rol */}
+              <Route path="/modules" element={<ProtectedRoute allowedRoles={['estudiante', 'aspirante']}><ModuleSelection /></ProtectedRoute>} />
+              <Route path="/ayudantias-dashboard" element={<ProtectedRoute allowedRoles={['supervisor']}><AyudantiasDashboard /></ProtectedRoute>} />
+              <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/pasante-ayudantias-modules" element={<ProtectedRoute allowedRoles={['estudiante']}><PasanteAyudantiasModules /></ProtectedRoute>} />
+              <Route path="/estudiante/:id" element={<ProtectedRoute allowedRoles={['supervisor', 'admin', 'mentor', 'director-area', 'capital-humano', 'supervisor-laboral']}><EstudianteDetail /></ProtectedRoute>} />
+
+              {/* Programas de Becas - Protegidos */}
+              <Route path="/scholarship-programs" element={<ProtectedRoute allowedRoles={['estudiante']}><ScholarshipPrograms /></ProtectedRoute>} />
+              <Route path="/aspirante-scholarship-programs" element={<ProtectedRoute allowedRoles={['aspirante']}><AspiranteScholarshipPrograms /></ProtectedRoute>} />
+              <Route path="/postulaciones-becas" element={<ProtectedRoute><PostulacionesBecas /></ProtectedRoute>} />
+              <Route path="/post-register-application" element={<ProtectedRoute allowedRoles={['aspirante']}><PostRegisterApplication /></ProtectedRoute>} />
+
+              {/* Perfil y Postulaciones - Protegidos */}
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/requisitos" element={<ProtectedRoute><Requisitos /></ProtectedRoute>} />
+              <Route path="/postulaciones" element={<ProtectedRoute><PostulacionesList /></ProtectedRoute>} />
+              <Route path="/postulaciones/:id" element={<ProtectedRoute><PostulacionDetail /></ProtectedRoute>} />
+              <Route path="/reportes" element={<ProtectedRoute allowedRoles={['admin', 'director-area', 'capital-humano', 'supervisor-laboral']}><Reportes /></ProtectedRoute>} />
+
+              {/* Programas específicos - Protegidos para estudiantes */}
+              <Route path="/impacto" element={<ProtectedRoute allowedRoles={['estudiante']}><ImpactoProgram /></ProtectedRoute>} />
+              <Route path="/exoneracion" element={<ProtectedRoute allowedRoles={['estudiante']}><ExoneracionProgram /></ProtectedRoute>} />
+              <Route path="/excelencia" element={<ProtectedRoute allowedRoles={['estudiante']}><ExcelenciaProgram /></ProtectedRoute>} />
+              <Route path="/formacion-docente" element={<ProtectedRoute allowedRoles={['estudiante']}><FormacionDocenteProgram /></ProtectedRoute>} />
+              <Route path="/ayudantias" element={<ProtectedRoute allowedRoles={['estudiante']}><AyudantiasProgram /></ProtectedRoute>} />
+
+              {/* Rutas administrativas - Protegidas por rol */}
+              <Route path="/formacion-docente-admin" element={<ProtectedRoute allowedRoles={['admin', 'director-area']}><FormacionDocenteAdmin /></ProtectedRoute>} />
+              <Route path="/exoneracion-student" element={<ProtectedRoute allowedRoles={['estudiante']}><ExoneracionStudent /></ProtectedRoute>} />
+              <Route path="/exoneracion-capital-humano" element={<ProtectedRoute allowedRoles={['capital-humano', 'admin']}><ExoneracionCapitalHumano /></ProtectedRoute>} />
+
+              {/* Dashboards específicos por rol */}
+              <Route path="/mentor-dashboard" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />
+              <Route path="/director-area-dashboard" element={<ProtectedRoute allowedRoles={['director-area']}><DirectorAreaDashboard /></ProtectedRoute>} />
+              <Route path="/capital-humano-dashboard" element={<ProtectedRoute allowedRoles={['capital-humano']}><CapitalHumanoDashboard /></ProtectedRoute>} />
+              <Route path="/supervisor-laboral-dashboard" element={<ProtectedRoute allowedRoles={['supervisor-laboral']}><SupervisorLaboralDashboard /></ProtectedRoute>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
