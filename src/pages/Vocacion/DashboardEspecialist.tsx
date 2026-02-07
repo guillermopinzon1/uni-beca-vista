@@ -67,15 +67,17 @@ const DashboardEspecialist = () => {
     promedio: ""
   });
   const [estadisticasCampanas, setEstadisticasCampanas] = useState({
-    ingenieria: 0,
-    artes: 0,
-    cienciasSociales: 0,
+    facultadIngenieria: 0,
+    facultadCienciasEconomicas: 0,
+    facultadCiencias: 0,
+    facultadHumanidades: 0,
+    facultadEstudiosJuridicos: 0,
     total: 0
   });
   const [loadingCampanas, setLoadingCampanas] = useState(false);
   const [modalCampanaAbierto, setModalCampanaAbierto] = useState(false);
   const [campanaSeleccionada, setCampanaSeleccionada] = useState<{
-    grupo: 'ingenieria' | 'artes' | 'ciencias_sociales';
+    grupo: 'facultad_ingenieria' | 'facultad_ciencias_economicas' | 'facultad_ciencias' | 'facultad_humanidades' | 'facultad_estudios_juridicos';
     nombreGrupo: string;
     titulo: string;
     asunto: string;
@@ -438,9 +440,11 @@ const DashboardEspecialist = () => {
         const respuesta = await obtenerEstadisticas(accessToken);
         const d = respuesta.data as Record<string, unknown>;
         setEstadisticasCampanas({
-          ingenieria: Number(d?.ingenieria ?? 0),
-          artes: Number(d?.artes ?? 0),
-          cienciasSociales: Number(d?.cienciasSociales ?? d?.ciencias_sociales ?? 0),
+          facultadIngenieria: Number(d?.facultadIngenieria ?? d?.facultad_ingenieria ?? 0),
+          facultadCienciasEconomicas: Number(d?.facultadCienciasEconomicas ?? d?.facultad_ciencias_economicas ?? 0),
+          facultadCiencias: Number(d?.facultadCiencias ?? d?.facultad_ciencias ?? 0),
+          facultadHumanidades: Number(d?.facultadHumanidades ?? d?.facultad_humanidades ?? 0),
+          facultadEstudiosJuridicos: Number(d?.facultadEstudiosJuridicos ?? d?.facultad_estudios_juridicos ?? 0),
           total: Number(d?.total ?? 0),
         });
       } catch (error: unknown) {
@@ -496,56 +500,83 @@ const DashboardEspecialist = () => {
 
   // Función para abrir el modal de edición de campaña
   const handleAbrirModalCampana = (
-    grupo: 'ingenieria' | 'artes' | 'ciencias_sociales',
+    grupo: 'facultad_ingenieria' | 'facultad_ciencias_economicas' | 'facultad_ciencias' | 'facultad_humanidades' | 'facultad_estudios_juridicos',
     nombreGrupo: string
   ) => {
-    // Contenido predeterminado según el grupo
-    const contenidosPorGrupo = {
-      ingenieria: {
-        titulo: "Webinar: Futuro de la IA y la Ingeniería",
-        asunto: "Invitación: Webinar sobre Inteligencia Artificial",
-        contenido: `Hemos identificado que tu perfil vocacional muestra gran afinidad con las áreas de tecnología e ingeniería.
+    // Contenido predeterminado según la facultad
+    const contenidosPorFacultad = {
+      facultad_ingenieria: {
+        titulo: "Descubre la Facultad de Ingeniería UNIMET",
+        asunto: "Invitación: Conoce nuestras carreras de Ingeniería",
+        contenido: `Tu perfil vocacional muestra gran afinidad con las áreas de tecnología e ingeniería.
 
-Te invitamos a un webinar exclusivo donde exploraremos:
-• Las últimas tendencias en Inteligencia Artificial
-• Oportunidades de carrera en tecnología
-• Innovaciones en ingeniería de sistemas
+Te invitamos a conocer nuestra Facultad de Ingeniería:
+• Ingeniería Civil, Mecánica y Producción
+• Ingeniería Química y Eléctrica
+• Ingeniería de Sistemas
 
 Fecha: Próximo sábado, 10:00 AM`,
-        ctaTexto: "Registrarme al Webinar",
-        ctaUrl: "https://unimet.edu.ve/webinar-ia"
+        ctaTexto: "Registrarme",
+        ctaUrl: "https://unimet.edu.ve/ingenieria"
       },
-      artes: {
-        titulo: "Taller: Diseño y Creatividad",
-        asunto: "Invitación: Taller de Diseño Creativo",
-        contenido: `Tu perfil vocacional destaca por su orientación creativa y artística.
+      facultad_ciencias_economicas: {
+        titulo: "Explora Ciencias Económicas y Sociales",
+        asunto: "Invitación: Charla sobre negocios y economía",
+        contenido: `Tu perfil vocacional destaca por tu interés en el mundo empresarial y económico.
 
-Te invitamos a un taller especial de diseño donde exploraremos:
-• Técnicas avanzadas de diseño digital
-• Carreras en el mundo del arte y la arquitectura
-• Portfolio profesional para creativos
+Conoce nuestra Facultad de Ciencias Económicas y Sociales:
+• Ciencias Administrativas
+• Economía Empresarial
+• Contaduría Pública
 
 Fecha: Próximo viernes, 3:00 PM`,
-        ctaTexto: "Inscribirme al Taller",
-        ctaUrl: "https://unimet.edu.ve/taller-diseno"
+        ctaTexto: "Inscribirme",
+        ctaUrl: "https://unimet.edu.ve/ciencias-economicas"
       },
-      ciencias_sociales: {
-        titulo: "Charla: Impacto Social y Humanidades",
-        asunto: "Invitación: Charla sobre Ciencias Sociales",
-        contenido: `Tu perfil vocacional muestra gran interés por las áreas sociales y humanísticas.
+      facultad_ciencias: {
+        titulo: "Descubre la Facultad de Ciencias",
+        asunto: "Invitación: Conoce Psicología y Matemáticas",
+        contenido: `Tu perfil vocacional muestra interés en las ciencias y el comportamiento humano.
 
-Te invitamos a una charla especial donde discutiremos:
-• Carreras con impacto social
-• Psicología y desarrollo humano
-• Oportunidades en derecho y comunicación social
+Te invitamos a conocer nuestra Facultad de Ciencias:
+• Psicología
+• Matemáticas Industriales
 
 Fecha: Próximo jueves, 4:00 PM`,
         ctaTexto: "Confirmar Asistencia",
-        ctaUrl: "https://unimet.edu.ve/charla-social"
+        ctaUrl: "https://unimet.edu.ve/ciencias"
+      },
+      facultad_humanidades: {
+        titulo: "Explora la Facultad de Humanidades",
+        asunto: "Invitación: Charla sobre Humanidades y Comunicación",
+        contenido: `Tu perfil vocacional destaca por tu orientación humanística y creativa.
+
+Conoce nuestra Facultad de Humanidades:
+• Educación e Idiomas Modernos
+• Comunicación Social y Empresarial
+• Turismo Sostenible
+
+Fecha: Próximo miércoles, 2:00 PM`,
+        ctaTexto: "Reservar Cupo",
+        ctaUrl: "https://unimet.edu.ve/humanidades"
+      },
+      facultad_estudios_juridicos: {
+        titulo: "Descubre Estudios Jurídicos y Políticos",
+        asunto: "Invitación: Conoce Derecho y Estudios Internacionales",
+        contenido: `Tu perfil vocacional muestra interés en el ámbito legal y las relaciones internacionales.
+
+Te invitamos a conocer nuestra Facultad de Estudios Jurídicos y Políticos:
+• Derecho
+• Estudios Liberales
+• Estudios Internacionales
+
+Fecha: Próximo martes, 5:00 PM`,
+        ctaTexto: "Registrarme",
+        ctaUrl: "https://unimet.edu.ve/estudios-juridicos"
       }
     };
 
-    const datosPredeterminados = contenidosPorGrupo[grupo];
+    const datosPredeterminados = contenidosPorFacultad[grupo];
 
     setCampanaSeleccionada({
       grupo,
@@ -608,9 +639,11 @@ Fecha: Próximo jueves, 4:00 PM`,
       const respuesta = await obtenerEstadisticas(accessToken);
       const d = respuesta.data as Record<string, unknown>;
       setEstadisticasCampanas({
-        ingenieria: Number(d?.ingenieria ?? 0),
-        artes: Number(d?.artes ?? 0),
-        cienciasSociales: Number(d?.cienciasSociales ?? d?.ciencias_sociales ?? 0),
+        facultadIngenieria: Number(d?.facultadIngenieria ?? d?.facultad_ingenieria ?? 0),
+        facultadCienciasEconomicas: Number(d?.facultadCienciasEconomicas ?? d?.facultad_ciencias_economicas ?? 0),
+        facultadCiencias: Number(d?.facultadCiencias ?? d?.facultad_ciencias ?? 0),
+        facultadHumanidades: Number(d?.facultadHumanidades ?? d?.facultad_humanidades ?? 0),
+        facultadEstudiosJuridicos: Number(d?.facultadEstudiosJuridicos ?? d?.facultad_estudios_juridicos ?? 0),
         total: Number(d?.total ?? 0),
       });
 
@@ -1381,7 +1414,7 @@ Te invitamos a conocer más sobre:
     }
 
     if (activeModule === "campanas") {
-      const totalEstudiantes = estadisticasCampanas.ingenieria + estadisticasCampanas.artes + estadisticasCampanas.cienciasSociales;
+      const totalEstudiantes = estadisticasCampanas.facultadIngenieria + estadisticasCampanas.facultadCienciasEconomicas + estadisticasCampanas.facultadCiencias + estadisticasCampanas.facultadHumanidades + estadisticasCampanas.facultadEstudiosJuridicos;
 
       return (
         <div className="space-y-6">
@@ -1396,12 +1429,12 @@ Te invitamos a conocer más sobre:
 
                 <Card className="rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-2xl text-slate-900">Gestor de Campañas Masivas</CardTitle>
-                    <CardDescription>Envía comunicaciones segmentadas a grupos de estudiantes basados en sus intereses vocacionales.</CardDescription>
+                    <CardTitle className="text-2xl text-slate-900">Gestor de Campañas por Facultad</CardTitle>
+                    <CardDescription>Envía comunicaciones segmentadas a estudiantes según la facultad de su interés vocacional.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                      {/* Campaña Ingeniería */}
+                      {/* Facultad de Ingeniería */}
                       <Card className="border border-blue-200 bg-blue-50/50 hover:bg-blue-50 transition-colors cursor-pointer">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-start mb-4">
@@ -1409,15 +1442,15 @@ Te invitamos a conocer más sobre:
                               <BrainCircuit className="w-6 h-6" />
                             </div>
                             <Badge className="bg-blue-600">
-                              {estadisticasCampanas.ingenieria} {estadisticasCampanas.ingenieria === 1 ? 'Estudiante' : 'Estudiantes'}
+                              {estadisticasCampanas.facultadIngenieria} {estadisticasCampanas.facultadIngenieria === 1 ? 'Estudiante' : 'Estudiantes'}
                             </Badge>
                           </div>
-                          <h3 className="font-bold text-slate-900 mb-2">Interesados en Ingeniería</h3>
-                          <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Lógico-Matemático que mostraron interés en áreas técnicas.</p>
+                          <h3 className="font-bold text-slate-900 mb-2">Facultad de Ingeniería</h3>
+                          <p className="text-sm text-slate-600 mb-4">Civil, Mecánica, Producción, Química, Sistemas, Eléctrica</p>
                           <Button
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => handleAbrirModalCampana('ingenieria', 'Interesados en Ingeniería')}
-                            disabled={loadingCampanas || estadisticasCampanas.ingenieria === 0}
+                            onClick={() => handleAbrirModalCampana('facultad_ingenieria', 'Facultad de Ingeniería')}
+                            disabled={loadingCampanas || estadisticasCampanas.facultadIngenieria === 0}
                           >
                             <Mail className="w-4 h-4 mr-2" />
                             Crear Campaña
@@ -1425,23 +1458,47 @@ Te invitamos a conocer más sobre:
                         </CardContent>
                       </Card>
 
-                      {/* Campaña Artes */}
+                      {/* Facultad de Ciencias Económicas y Sociales */}
+                      <Card className="border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 transition-colors cursor-pointer">
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
+                              <TrendingUp className="w-6 h-6" />
+                            </div>
+                            <Badge className="bg-emerald-600">
+                              {estadisticasCampanas.facultadCienciasEconomicas} {estadisticasCampanas.facultadCienciasEconomicas === 1 ? 'Estudiante' : 'Estudiantes'}
+                            </Badge>
+                          </div>
+                          <h3 className="font-bold text-slate-900 mb-2">Ciencias Económicas y Sociales</h3>
+                          <p className="text-sm text-slate-600 mb-4">Administración, Economía Empresarial, Contaduría</p>
+                          <Button
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => handleAbrirModalCampana('facultad_ciencias_economicas', 'Ciencias Económicas y Sociales')}
+                            disabled={loadingCampanas || estadisticasCampanas.facultadCienciasEconomicas === 0}
+                          >
+                            <Mail className="w-4 h-4 mr-2" />
+                            Crear Campaña
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      {/* Facultad de Ciencias */}
                       <Card className="border border-purple-200 bg-purple-50/50 hover:bg-purple-50 transition-colors cursor-pointer">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-start mb-4">
                             <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
-                              <Sparkles className="w-6 h-6" />
+                              <Heart className="w-6 h-6" />
                             </div>
                             <Badge className="bg-purple-600">
-                              {estadisticasCampanas.artes} {estadisticasCampanas.artes === 1 ? 'Estudiante' : 'Estudiantes'}
+                              {estadisticasCampanas.facultadCiencias} {estadisticasCampanas.facultadCiencias === 1 ? 'Estudiante' : 'Estudiantes'}
                             </Badge>
                           </div>
-                          <h3 className="font-bold text-slate-900 mb-2">Interesados en Artes</h3>
-                          <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Creativo que buscan carreras de diseño o arquitectura.</p>
+                          <h3 className="font-bold text-slate-900 mb-2">Facultad de Ciencias</h3>
+                          <p className="text-sm text-slate-600 mb-4">Psicología, Matemáticas Industriales</p>
                           <Button
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={() => handleAbrirModalCampana('artes', 'Interesados en Artes')}
-                            disabled={loadingCampanas || estadisticasCampanas.artes === 0}
+                            onClick={() => handleAbrirModalCampana('facultad_ciencias', 'Facultad de Ciencias')}
+                            disabled={loadingCampanas || estadisticasCampanas.facultadCiencias === 0}
                           >
                             <Mail className="w-4 h-4 mr-2" />
                             Crear Campaña
@@ -1449,23 +1506,47 @@ Te invitamos a conocer más sobre:
                         </CardContent>
                       </Card>
 
-                      {/* Campaña Humanidades */}
-                      <Card className="border border-green-200 bg-green-50/50 hover:bg-green-50 transition-colors cursor-pointer">
+                      {/* Facultad de Humanidades */}
+                      <Card className="border border-orange-200 bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-start mb-4">
-                            <div className="p-3 bg-green-100 rounded-xl text-green-600">
-                              <Users className="w-6 h-6" />
+                            <div className="p-3 bg-orange-100 rounded-xl text-orange-600">
+                              <BookOpen className="w-6 h-6" />
                             </div>
-                            <Badge className="bg-green-600">
-                              {estadisticasCampanas.cienciasSociales} {estadisticasCampanas.cienciasSociales === 1 ? 'Estudiante' : 'Estudiantes'}
+                            <Badge className="bg-orange-600">
+                              {estadisticasCampanas.facultadHumanidades} {estadisticasCampanas.facultadHumanidades === 1 ? 'Estudiante' : 'Estudiantes'}
                             </Badge>
                           </div>
-                          <h3 className="font-bold text-slate-900 mb-2">Ciencias Sociales</h3>
-                          <p className="text-sm text-slate-600 mb-4">Estudiantes con perfil Social-Humanista interesados en derecho o psicología.</p>
+                          <h3 className="font-bold text-slate-900 mb-2">Facultad de Humanidades</h3>
+                          <p className="text-sm text-slate-600 mb-4">Educación, Idiomas, Comunicación Social, Turismo</p>
                           <Button
-                            className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => handleAbrirModalCampana('ciencias_sociales', 'Ciencias Sociales')}
-                            disabled={loadingCampanas || estadisticasCampanas.cienciasSociales === 0}
+                            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                            onClick={() => handleAbrirModalCampana('facultad_humanidades', 'Facultad de Humanidades')}
+                            disabled={loadingCampanas || estadisticasCampanas.facultadHumanidades === 0}
+                          >
+                            <Mail className="w-4 h-4 mr-2" />
+                            Crear Campaña
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      {/* Facultad de Estudios Jurídicos y Políticos */}
+                      <Card className="border border-rose-200 bg-rose-50/50 hover:bg-rose-50 transition-colors cursor-pointer">
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-rose-100 rounded-xl text-rose-600">
+                              <Award className="w-6 h-6" />
+                            </div>
+                            <Badge className="bg-rose-600">
+                              {estadisticasCampanas.facultadEstudiosJuridicos} {estadisticasCampanas.facultadEstudiosJuridicos === 1 ? 'Estudiante' : 'Estudiantes'}
+                            </Badge>
+                          </div>
+                          <h3 className="font-bold text-slate-900 mb-2">Estudios Jurídicos y Políticos</h3>
+                          <p className="text-sm text-slate-600 mb-4">Derecho, Estudios Liberales, Estudios Internacionales</p>
+                          <Button
+                            className="w-full bg-rose-600 hover:bg-rose-700 text-white"
+                            onClick={() => handleAbrirModalCampana('facultad_estudios_juridicos', 'Estudios Jurídicos y Políticos')}
+                            disabled={loadingCampanas || estadisticasCampanas.facultadEstudiosJuridicos === 0}
                           >
                             <Mail className="w-4 h-4 mr-2" />
                             Crear Campaña
@@ -1488,13 +1569,34 @@ Te invitamos a conocer más sobre:
                             onChange={(e) => setFiltrosSegmentacion({ ...filtrosSegmentacion, carreraInteres: e.target.value || undefined })}
                           >
                             <option value="">Todas las carreras</option>
-                            <option value="ingeniería">Ingeniería</option>
-                            <option value="sistemas">Sistemas</option>
-                            <option value="derecho">Derecho</option>
-                            <option value="psicología">Psicología</option>
-                            <option value="medicina">Medicina</option>
-                            <option value="arquitectura">Arquitectura</option>
-                            <option value="diseño">Diseño</option>
+                            <optgroup label="Facultad de Ingeniería">
+                              <option value="ingenieria_civil">Ingeniería Civil</option>
+                              <option value="ingenieria_mecanica">Ingeniería Mecánica</option>
+                              <option value="ingenieria_produccion">Ingeniería Producción</option>
+                              <option value="ingenieria_quimica">Ingeniería Química</option>
+                              <option value="ingenieria_sistemas">Ingeniería de Sistemas</option>
+                              <option value="ingenieria_electrica">Ingeniería Eléctrica</option>
+                            </optgroup>
+                            <optgroup label="Ciencias Económicas y Sociales">
+                              <option value="ciencias_administrativas">Ciencias Administrativas</option>
+                              <option value="economia_empresarial">Economía Empresarial</option>
+                              <option value="contaduria_publica">Contaduría Pública</option>
+                            </optgroup>
+                            <optgroup label="Facultad de Ciencias">
+                              <option value="psicologia">Psicología</option>
+                              <option value="matematicas_industriales">Matemáticas Industriales</option>
+                            </optgroup>
+                            <optgroup label="Facultad de Humanidades">
+                              <option value="educacion">Educación</option>
+                              <option value="idiomas_modernos">Idiomas Modernos</option>
+                              <option value="comunicacion_social">Comunicación Social y Empresarial</option>
+                              <option value="turismo_sostenible">Turismo Sostenible</option>
+                            </optgroup>
+                            <optgroup label="Estudios Jurídicos y Políticos">
+                              <option value="derecho">Derecho</option>
+                              <option value="estudios_liberales">Estudios Liberales</option>
+                              <option value="estudios_internacionales">Estudios Internacionales</option>
+                            </optgroup>
                           </select>
                         </div>
                         <div>
@@ -1711,7 +1813,13 @@ Te invitamos a conocer más sobre:
               Personalizar Campaña: {campanaSeleccionada?.nombreGrupo}
             </DialogTitle>
             <DialogDescription>
-              Edita el contenido de la campaña antes de enviarla a {campanaSeleccionada?.nombreGrupo === 'Interesados en Ingeniería' ? estadisticasCampanas.ingenieria : campanaSeleccionada?.nombreGrupo === 'Interesados en Artes' ? estadisticasCampanas.artes : estadisticasCampanas.cienciasSociales} estudiante(s).
+              Edita el contenido de la campaña antes de enviarla a {
+                campanaSeleccionada?.grupo === 'facultad_ingenieria' ? estadisticasCampanas.facultadIngenieria :
+                campanaSeleccionada?.grupo === 'facultad_ciencias_economicas' ? estadisticasCampanas.facultadCienciasEconomicas :
+                campanaSeleccionada?.grupo === 'facultad_ciencias' ? estadisticasCampanas.facultadCiencias :
+                campanaSeleccionada?.grupo === 'facultad_humanidades' ? estadisticasCampanas.facultadHumanidades :
+                estadisticasCampanas.facultadEstudiosJuridicos
+              } estudiante(s).
             </DialogDescription>
           </DialogHeader>
 
