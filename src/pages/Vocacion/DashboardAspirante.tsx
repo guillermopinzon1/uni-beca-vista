@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { fetchUserById } from "@/lib/api/users";
 import { convertirAspiranteAEstudiante } from "@/lib/api/auth";
 import { RIASEC_LABELS, RIASEC_DESCRIPTIONS } from "@/lib/riasec";
-import { obtenerMisNotificaciones, type Notificacion } from "@/lib/api/notificaciones";
+import { obtenerMisNotificaciones, marcarComoLeida, marcarTodasComoLeidas, type Notificacion } from "@/lib/api/notificaciones";
 
 import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
 
@@ -250,6 +250,39 @@ const DashboardAspirante = () => {
       .catch(() => setNotificaciones([]))
       .finally(() => setCargandoNotif(false));
   }, [activeModule, tokens?.accessToken]);
+
+  // Handler para marcar una notificación como leída
+  const handleMarcarComoLeida = async (notificacionId: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+    if (!accessToken) return;
+
+    try {
+      await marcarComoLeida(accessToken, notificacionId);
+      // Actualizar el estado local
+      setNotificaciones(prev =>
+        prev.map(n => n.id === notificacionId ? { ...n, leida: true } : n)
+      );
+    } catch (error) {
+      console.error("Error al marcar notificación como leída:", error);
+    }
+  };
+
+  // Handler para marcar todas las notificaciones como leídas
+  const handleMarcarTodasComoLeidas = async () => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+    if (!accessToken) return;
+
+    try {
+      await marcarTodasComoLeidas(accessToken);
+      // Actualizar el estado local
+      setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+    } catch (error) {
+      console.error("Error al marcar todas las notificaciones como leídas:", error);
+    }
+  };
+
+  // Contar notificaciones no leídas
+  const notificacionesNoLeidas = notificaciones.filter(n => !n.leida).length;
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -1178,15 +1211,28 @@ const DashboardAspirante = () => {
         <div className="space-y-6">
           <Card className="border-orange/20">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Bell className="h-6 w-6" />
-                Notificaciones
-                {notificaciones.length > 0 && (
-                  <Badge className="ml-2 bg-primary/10 text-primary">
-                    {notificaciones.filter((n) => !n.leida).length} sin leer
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-primary">
+                  <Bell className="h-6 w-6" />
+                  Notificaciones
+                  {notificacionesNoLeidas > 0 && (
+                    <Badge className="ml-2 bg-primary/10 text-primary">
+                      {notificacionesNoLeidas} sin leer
+                    </Badge>
+                  )}
+                </CardTitle>
+                {notificacionesNoLeidas > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                    onClick={handleMarcarTodasComoLeidas}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                    Marcar todas como leídas
+                  </Button>
                 )}
-              </CardTitle>
+              </div>
               <CardDescription>
                 Eventos, anuncios y comunicación de orientación vocacional.
               </CardDescription>
@@ -1224,7 +1270,20 @@ const DashboardAspirante = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex justify-between items-start gap-2 mb-1">
                             <h3 className="font-semibold text-slate-900">{notif.titulo}</h3>
-                            <span className="text-xs text-muted-foreground shrink-0">{formatearFechaRelativa(notif.fecha_creacion)}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-muted-foreground">{formatearFechaRelativa(notif.fecha_creacion)}</span>
+                              {!notif.leida && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs text-primary hover:bg-primary/10"
+                                  onClick={() => handleMarcarComoLeida(notif.id)}
+                                  title="Marcar como leída"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           <div
                             className="text-slate-600 text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0"

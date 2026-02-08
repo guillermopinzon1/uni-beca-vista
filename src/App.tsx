@@ -59,7 +59,7 @@ import TestICO from "./pages/Vocacion/TestICO";
 import ResultadosICO from "./pages/Vocacion/ResultadosICO";
 import PerfilVocacional from "./pages/Vocacion/PerfilVocacional";
 import Historial from "./pages/Vocacion/Historial";
-
+import CitaRespuesta from "./pages/Vocacion/CitaRespuesta";
 
 
 const queryClient = new QueryClient();
@@ -79,6 +79,10 @@ const App = () => (
               <Route path="/home" element={<Home/>} />
               <Route path="/vocational" element={<VocationalIndex/>}/>
               <Route path="/career/:id" element={<CareerDetailPage />} />
+
+              {/* Rutas públicas para confirmación/cancelación de citas */}
+              <Route path="/cita/confirmar/:citaId" element={<CitaRespuesta />} />
+              <Route path="/cita/cancelar/:citaId" element={<CitaRespuesta />} />
 
               {/* Rutas de autenticación (solo para usuarios NO autenticados) */}
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />

@@ -21,8 +21,21 @@ import { enviarGrupoPredefinido, obtenerEstadisticas, segmentarEstudiantes, envi
 import type { Estudiante, FiltrosSegmentacion } from "@/lib/api/campanas";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getUserProfile, type UserProfileResponse } from "@/lib/api/auth";
-import { agendarCita } from "@/lib/api/citas";
+import { agendarCita, obtenerMisCitas, actualizarCita, type Cita } from "@/lib/api/citas";
+
+const MOTIVOS_LEGIBLES: Record<string, string> = {
+  orientacion_vocacional: "Orientación Vocacional",
+  revision_resultados: "Revisión de Resultados de Test",
+  opciones_beca: "Información sobre Becas",
+  plan_estudios: "Plan de Estudios",
+  seguimiento: "Seguimiento General",
+  otro: "Otro",
+};
+
+const formatearMotivo = (motivo: string): string =>
+  MOTIVOS_LEGIBLES[motivo] || motivo.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
 
 // Interface para mapear datos del backend (soporta Holland e ICO)
 interface StudentData {
@@ -58,6 +71,14 @@ const DashboardEspecialist = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAdmissions, setLoadingAdmissions] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filtrosEstudiantes, setFiltrosEstudiantes] = useState<{
+    nivelRiesgo: string;
+    perfilHolland: string;
+  }>({
+    nivelRiesgo: '',
+    perfilHolland: ''
+  });
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [admissionsData, setAdmissionsData] = useState<HistorialEspecialistaResponse['data']>([]);
   const [notasColegio, setNotasColegio] = useState({
     primerAno: "",
@@ -117,6 +138,11 @@ const DashboardEspecialist = () => {
     notas: ""
   });
   const [loadingCita, setLoadingCita] = useState(false);
+
+  // Estados para el módulo de agenda
+  const [citasAgendadas, setCitasAgendadas] = useState<Cita[]>([]);
+  const [loadingCitas, setLoadingCitas] = useState(false);
+  const [filtroEstadoCita, setFiltroEstadoCita] = useState<string>("todas");
 
   // Datos para RecomendacionesCarrera
   const [perfilEstudiante] = useState({
@@ -385,6 +411,11 @@ const DashboardEspecialist = () => {
       module: "estudiantes"
     },
     {
+      title: "Agenda de Citas",
+      icon: Calendar,
+      module: "agenda"
+    },
+    {
       title: "Admisiones y Aspirantes",
       icon: GraduationCap,
       module: "admissions"
@@ -497,6 +528,38 @@ const DashboardEspecialist = () => {
 
     cargarPerfil();
   }, [activeModule, tokens, navigate, toast]);
+
+  // Cargar citas cuando se active el módulo de agenda
+  useEffect(() => {
+    if (activeModule !== "agenda") return;
+    if (!tokens?.accessToken) {
+      navigate("/login");
+      return;
+    }
+
+    const cargarCitas = async () => {
+      setLoadingCitas(true);
+      try {
+        const filtro = filtroEstadoCita !== "todas"
+          ? { estado: filtroEstadoCita as 'pendiente' | 'confirmada' | 'completada' | 'cancelada' }
+          : undefined;
+
+        const resultado = await obtenerMisCitas(tokens.accessToken, filtro);
+        setCitasAgendadas(resultado.data.citas);
+      } catch (error: unknown) {
+        console.error('Error al cargar citas:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Error al cargar las citas",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingCitas(false);
+      }
+    };
+
+    cargarCitas();
+  }, [activeModule, tokens, navigate, toast, filtroEstadoCita]);
 
   // Función para abrir el modal de edición de campaña
   const handleAbrirModalCampana = (
@@ -864,12 +927,36 @@ Te invitamos a conocer más sobre:
     }
   };
 
-  // Filtrar estudiantes por término de búsqueda
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.career_interest.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar estudiantes por término de búsqueda y filtros
+  const filteredStudents = students.filter(student => {
+    // Filtro de búsqueda por texto
+    const matchesSearch = searchTerm === '' ||
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.career_interest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filtro por nivel de riesgo
+    const matchesRiesgo = !filtrosEstudiantes.nivelRiesgo ||
+      student.risk_level === filtrosEstudiantes.nivelRiesgo;
+
+    // Filtro por perfil Holland
+    const matchesHolland = !filtrosEstudiantes.perfilHolland ||
+      student.codigoHolland?.includes(filtrosEstudiantes.perfilHolland);
+
+    return matchesSearch && matchesRiesgo && matchesHolland;
+  });
+
+  // Contar filtros activos
+  const filtrosActivos = [
+    filtrosEstudiantes.nivelRiesgo,
+    filtrosEstudiantes.perfilHolland
+  ].filter(Boolean).length;
+
+  // Limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setFiltrosEstudiantes({ nivelRiesgo: '', perfilHolland: '' });
+    setFiltrosAbiertos(false);
+  };
  
   const renderContent = () => {
     if (activeModule === "estudiantes") {
@@ -895,9 +982,77 @@ Te invitamos a conocer más sobre:
                           onChange={(e) => setSearchTerm(e.target.value)}
                         />
                       </div>
-                      <Button variant="outline" size="icon" className="border-slate-200" title="Filtrar">
-                        <Filter className="h-4 w-4 text-slate-500" />
-                      </Button>
+                      <Popover open={filtrosAbiertos} onOpenChange={setFiltrosAbiertos}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className={`border-slate-200 relative ${filtrosActivos > 0 ? 'border-teal-300 bg-teal-50' : ''}`}
+                            title="Filtrar"
+                          >
+                            <Filter className={`h-4 w-4 ${filtrosActivos > 0 ? 'text-teal-600' : 'text-slate-500'}`} />
+                            {filtrosActivos > 0 && (
+                              <span className="absolute -top-1 -right-1 w-4 h-4 bg-teal-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                                {filtrosActivos}
+                              </span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-4" align="end">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-sm text-slate-900">Filtros</h4>
+                              {filtrosActivos > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-slate-500 hover:text-slate-700"
+                                  onClick={limpiarFiltros}
+                                >
+                                  Limpiar
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-slate-600">Nivel de Riesgo</Label>
+                              <select
+                                className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
+                                value={filtrosEstudiantes.nivelRiesgo}
+                                onChange={(e) => setFiltrosEstudiantes(prev => ({ ...prev, nivelRiesgo: e.target.value }))}
+                              >
+                                <option value="">Todos los niveles</option>
+                                <option value="Alto">Riesgo Alto</option>
+                                <option value="Medio">Riesgo Medio</option>
+                                <option value="Bajo">Riesgo Bajo</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-slate-600">Perfil Holland</Label>
+                              <select
+                                className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
+                                value={filtrosEstudiantes.perfilHolland}
+                                onChange={(e) => setFiltrosEstudiantes(prev => ({ ...prev, perfilHolland: e.target.value }))}
+                              >
+                                <option value="">Todos los perfiles</option>
+                                <option value="R">R - Realista</option>
+                                <option value="I">I - Investigador</option>
+                                <option value="A">A - Artístico</option>
+                                <option value="S">S - Social</option>
+                                <option value="E">E - Emprendedor</option>
+                                <option value="C">C - Convencional</option>
+                              </select>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100">
+                              <p className="text-xs text-slate-400">
+                                {filteredStudents.length} de {students.length} estudiantes
+                              </p>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     {loading ? (
@@ -1705,6 +1860,183 @@ Te invitamos a conocer más sobre:
                   </CardContent>
                 </Card>
               </div>
+      );
+    }
+
+    if (activeModule === "agenda") {
+      return (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">Agenda de Citas</h2>
+            <p className="text-sm text-slate-600">
+              Gestiona tus citas de orientación vocacional con los estudiantes. Puedes ver, confirmar, completar o cancelar las citas agendadas.
+            </p>
+          </div>
+
+          {/* Filtros */}
+          <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+            <Label className="text-sm font-medium text-slate-700">Filtrar por estado:</Label>
+            <select
+              value={filtroEstadoCita}
+              onChange={(e) => setFiltroEstadoCita(e.target.value)}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="todas">Todas las citas</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="confirmada">Confirmadas</option>
+              <option value="completada">Completadas</option>
+              <option value="cancelada">Canceladas</option>
+            </select>
+          </div>
+
+          {/* Lista de citas */}
+          {loadingCitas ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+              <span className="ml-3 text-slate-600">Cargando citas...</span>
+            </div>
+          ) : citasAgendadas.length === 0 ? (
+            <Card className="border-slate-200">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="w-16 h-16 text-slate-300 mb-4" />
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">No hay citas agendadas</h3>
+                <p className="text-sm text-slate-500 text-center max-w-md">
+                  Las citas que agendes con los estudiantes desde la sección de Gestión de Estudiantes aparecerán aquí.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {citasAgendadas.map((cita) => (
+                <Card key={cita.id} className="border-slate-200 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className={`p-3 rounded-full ${
+                          cita.estado === 'pendiente' ? 'bg-yellow-100' :
+                          cita.estado === 'confirmada' ? 'bg-blue-100' :
+                          cita.estado === 'completada' ? 'bg-green-100' :
+                          'bg-red-100'
+                        }`}>
+                          <Calendar className={`w-6 h-6 ${
+                            cita.estado === 'pendiente' ? 'text-yellow-600' :
+                            cita.estado === 'confirmada' ? 'text-blue-600' :
+                            cita.estado === 'completada' ? 'text-green-600' :
+                            'text-red-600'
+                          }`} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900">
+                            {cita.estudiante?.nombre} {cita.estudiante?.apellido}
+                          </h3>
+                          <p className="text-sm text-slate-600">{cita.estudiante?.email}</p>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-slate-700">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {new Date(cita.fecha).toLocaleDateString('es-VE', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </span>
+                            <span className="font-medium">{cita.hora}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="capitalize">
+                              {cita.modalidad}
+                            </Badge>
+                            <Badge className={`${
+                              cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                              cita.estado === 'confirmada' ? 'bg-blue-100 text-blue-800' :
+                              cita.estado === 'completada' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {cita.estado.charAt(0).toUpperCase() + cita.estado.slice(1)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-slate-600 mt-2">
+                            <strong>Motivo:</strong> {formatearMotivo(cita.motivo)}
+                          </p>
+                          {cita.notas && (
+                            <p className="text-sm text-slate-500 mt-1">
+                              <strong>Notas:</strong> {cita.notas}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Acciones */}
+                      {cita.estado !== 'cancelada' && cita.estado !== 'completada' && (
+                        <div className="flex gap-2">
+                          {cita.estado === 'pendiente' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              onClick={async () => {
+                                try {
+                                  await actualizarCita(tokens!.accessToken, cita.id, { estado: 'confirmada' });
+                                  setCitasAgendadas(prev => prev.map(c =>
+                                    c.id === cita.id ? { ...c, estado: 'confirmada' } : c
+                                  ));
+                                  toast({ title: "Cita confirmada", description: "La cita ha sido confirmada exitosamente" });
+                                } catch (error) {
+                                  toast({ title: "Error", description: "No se pudo confirmar la cita", variant: "destructive" });
+                                }
+                              }}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" /> Confirmar
+                            </Button>
+                          )}
+                          {(cita.estado === 'pendiente' || cita.estado === 'confirmada') && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={async () => {
+                                  try {
+                                    await actualizarCita(tokens!.accessToken, cita.id, { estado: 'completada' });
+                                    setCitasAgendadas(prev => prev.map(c =>
+                                      c.id === cita.id ? { ...c, estado: 'completada' } : c
+                                    ));
+                                    toast({ title: "Cita completada", description: "La cita ha sido marcada como completada" });
+                                  } catch (error) {
+                                    toast({ title: "Error", description: "No se pudo completar la cita", variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" /> Completar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={async () => {
+                                  try {
+                                    await actualizarCita(tokens!.accessToken, cita.id, { estado: 'cancelada' });
+                                    setCitasAgendadas(prev => prev.map(c =>
+                                      c.id === cita.id ? { ...c, estado: 'cancelada' } : c
+                                    ));
+                                    toast({ title: "Cita cancelada", description: "La cita ha sido cancelada" });
+                                  } catch (error) {
+                                    toast({ title: "Error", description: "No se pudo cancelar la cita", variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                <X className="w-4 h-4 mr-1" /> Cancelar
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       );
     }
 
