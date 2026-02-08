@@ -1933,7 +1933,7 @@ Te invitamos a conocer más sobre:
                           <div className="flex items-center gap-4 mt-2 text-sm text-slate-700">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {new Date(cita.fecha).toLocaleDateString('es-VE', {
+                              {new Date(cita.fecha + 'T00:00:00').toLocaleDateString('es-VE', {
                                 weekday: 'long',
                                 year: 'numeric',
                                 month: 'long',

@@ -24,6 +24,7 @@ import { fetchUserById } from "@/lib/api/users";
 import { convertirAspiranteAEstudiante } from "@/lib/api/auth";
 import { RIASEC_LABELS, RIASEC_DESCRIPTIONS } from "@/lib/riasec";
 import { obtenerMisNotificaciones, marcarComoLeida, marcarTodasComoLeidas, type Notificacion } from "@/lib/api/notificaciones";
+import { obtenerCitasEstudiante, type Cita } from "@/lib/api/citas";
 
 import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
 
@@ -105,6 +106,7 @@ const DashboardAspirante = () => {
   // Notificaciones (Centro de novedades / CRM)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [cargandoNotif, setCargandoNotif] = useState(false);
+  const [citasProximas, setCitasProximas] = useState<Cita[]>([]);
 
   // Detectar la ruta actual para mostrar navegación
   const [currentStep, setCurrentStep] = useState<string>("seleccionar");
@@ -236,7 +238,7 @@ const DashboardAspirante = () => {
       .finally(() => setCargandoPerfil(false));
   }, [activeModule, accessToken]);
 
-  // Cargar notificaciones al entrar al módulo Notificaciones
+  // Cargar notificaciones y citas al entrar al módulo Notificaciones
   useEffect(() => {
     if (activeModule !== "notificaciones") return;
     const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
@@ -245,11 +247,27 @@ const DashboardAspirante = () => {
       return;
     }
     setCargandoNotif(true);
-    obtenerMisNotificaciones(accessToken, 20)
-      .then((res) => setNotificaciones(res.data.notificaciones))
-      .catch(() => setNotificaciones([]))
-      .finally(() => setCargandoNotif(false));
-  }, [activeModule, tokens?.accessToken]);
+    const promesas: Promise<void>[] = [
+      obtenerMisNotificaciones(accessToken, 20)
+        .then((res) => setNotificaciones(res.data.notificaciones))
+        .catch(() => setNotificaciones([])),
+    ];
+    if (user?.id) {
+      promesas.push(
+        obtenerCitasEstudiante(accessToken, user.id)
+          .then((res) => {
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            const proximas = res.data.citas
+              .filter((c) => ["pendiente", "confirmada"].includes(c.estado) && new Date(c.fecha + "T00:00:00") >= hoy)
+              .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
+            setCitasProximas(proximas);
+          })
+          .catch(() => setCitasProximas([]))
+      );
+    }
+    Promise.all(promesas).finally(() => setCargandoNotif(false));
+  }, [activeModule, tokens?.accessToken, user?.id]);
 
   // Handler para marcar una notificación como leída
   const handleMarcarComoLeida = async (notificacionId: string) => {
@@ -1309,40 +1327,60 @@ const DashboardAspirante = () => {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" />
-                Próximos eventos
+                Próximas citas
               </h3>
-              <Card className="border-orange/20 overflow-hidden">
-                <div className="h-1.5 bg-primary w-full" />
-                <CardContent className="p-4">
-                  <div className="flex gap-3 mb-3">
-                    <div className="text-center px-2.5 py-1 bg-slate-100 rounded-lg shrink-0">
-                      <div className="text-xs font-bold text-slate-500 uppercase">DIC</div>
-                      <div className="text-lg font-bold text-slate-900">15</div>
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-semibold text-slate-900 leading-tight text-sm">Webinar: El Futuro del Trabajo</h4>
-                      <span className="text-xs text-muted-foreground">10:00 AM - Zoom</span>
-                    </div>
-                  </div>
-                  <Button size="sm" className="w-full rounded-full bg-primary hover:bg-primary/90">Inscribirse</Button>
-                </CardContent>
-              </Card>
-              <Card className="border-orange/20 overflow-hidden">
-                <div className="h-1.5 bg-primary/80 w-full" />
-                <CardContent className="p-4">
-                  <div className="flex gap-3 mb-3">
-                    <div className="text-center px-2.5 py-1 bg-slate-100 rounded-lg shrink-0">
-                      <div className="text-xs font-bold text-slate-500 uppercase">ENE</div>
-                      <div className="text-lg font-bold text-slate-900">20</div>
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-semibold text-slate-900 leading-tight text-sm">Visita al Campus</h4>
-                      <span className="text-xs text-muted-foreground">09:00 AM - Presencial</span>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="outline" className="w-full rounded-full border-orange/30">Ver detalles</Button>
-                </CardContent>
-              </Card>
+              {cargandoNotif ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : citasProximas.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="p-4 text-center text-sm text-muted-foreground">
+                    No tienes citas próximas agendadas.
+                  </CardContent>
+                </Card>
+              ) : (
+                citasProximas.slice(0, 3).map((cita) => {
+                  const [y, m, d] = cita.fecha.split("-").map(Number);
+                  const fechaCita = new Date(y, m - 1, d);
+                  const mes = fechaCita.toLocaleDateString("es-ES", { month: "short" }).toUpperCase();
+                  const dia = fechaCita.getDate();
+                  const modalidadLabel = ({ presencial: "Presencial", virtual: "Virtual", telefonica: "Telefónica" } as Record<string, string>)[cita.modalidad] ?? cita.modalidad;
+                  const motivoLabel = ({
+                    orientacion_vocacional: "Orientación Vocacional",
+                    revision_resultados: "Revisión de Resultados",
+                    opciones_beca: "Info. sobre Becas",
+                    plan_estudios: "Plan de Estudios",
+                    seguimiento: "Seguimiento",
+                    otro: "Otro",
+                  } as Record<string, string>)[cita.motivo] ?? cita.motivo;
+                  return (
+                    <Card key={cita.id} className="border-primary/20 overflow-hidden">
+                      <div className={`h-1.5 w-full ${cita.estado === "confirmada" ? "bg-green-500" : "bg-primary"}`} />
+                      <CardContent className="p-4">
+                        <div className="flex gap-3">
+                          <div className="text-center px-2.5 py-1 bg-slate-100 rounded-lg shrink-0">
+                            <div className="text-xs font-bold text-slate-500 uppercase">{mes}</div>
+                            <div className="text-lg font-bold text-slate-900">{dia}</div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-slate-900 leading-tight text-sm">{motivoLabel}</h4>
+                            <span className="text-xs text-muted-foreground">{cita.hora} · {modalidadLabel}</span>
+                            {cita.especialista && (
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                Con {cita.especialista.nombre} {cita.especialista.apellido}
+                              </p>
+                            )}
+                          </div>
+                          <Badge variant={cita.estado === "confirmada" ? "default" : "secondary"} className="shrink-0 self-start text-xs">
+                            {cita.estado === "confirmada" ? "Confirmada" : "Pendiente"}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

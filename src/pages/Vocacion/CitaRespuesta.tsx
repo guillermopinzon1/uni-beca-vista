@@ -80,7 +80,7 @@ const CitaRespuesta = () => {
   }, [citaId, token, accion]);
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-VE", {
+    return new Date(fecha + "T00:00:00").toLocaleDateString("es-VE", {
       weekday: "long",
       year: "numeric",
       month: "long",
