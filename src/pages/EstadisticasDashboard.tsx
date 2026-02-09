@@ -21,7 +21,8 @@ import {
   Activity,
   PieChart,
   TrendingUp,
-  Search
+  Search,
+  Brain
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,7 @@ import {
   exportarActividades,
   exportarDistribucionBecas,
   exportarDistribucionPostulantes,
+  exportarOrientacionVocacional,
   exportarDashboard,
 } from "@/lib/api/reportes";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +61,7 @@ const EstadisticasDashboard = () => {
   const [actividadesData, setActividadesData] = useState<any>(null);
   const [distribucionBecasData, setDistribucionBecasData] = useState<any>(null);
   const [distribucionPostulantesData, setDistribucionPostulantesData] = useState<any>(null);
+  const [orientacionVocacionalData, setOrientacionVocacionalData] = useState<any>(null);
   const [dashboardData, setDashboardData] = useState<any>(null);
 
   // Filtro de búsqueda para tabla de becarios
@@ -132,6 +135,13 @@ const EstadisticasDashboard = () => {
           setDistribucionPostulantesData(distribucionPostulantesResponse);
           break;
 
+        case 'orientacion-vocacional':
+          const orientacionResponse = await exportarOrientacionVocacional(accessToken, {
+            formato: 'json',
+          });
+          setOrientacionVocacionalData(orientacionResponse);
+          break;
+
         case 'dashboard':
           const dashboardResponse = await exportarDashboard(accessToken, {
             formato: 'json',
@@ -195,6 +205,9 @@ const EstadisticasDashboard = () => {
         case 'distribucion-postulantes':
           await exportarDistribucionPostulantes(accessToken, params);
           break;
+        case 'orientacion-vocacional':
+          await exportarOrientacionVocacional(accessToken, params);
+          break;
         case 'dashboard':
           await exportarDashboard(accessToken, params);
           break;
@@ -241,7 +254,7 @@ const EstadisticasDashboard = () => {
 
       {/* Tabs para diferentes reportes */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard
@@ -269,6 +282,10 @@ const EstadisticasDashboard = () => {
           <TabsTrigger value="distribucion-postulantes" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Dist. Postulantes
+          </TabsTrigger>
+          <TabsTrigger value="orientacion-vocacional" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            Orientación
           </TabsTrigger>
         </TabsList>
 
@@ -1199,6 +1216,186 @@ const EstadisticasDashboard = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-16 text-center text-muted-foreground">
+                No hay datos disponibles para este reporte
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* TAB: ORIENTACIÓN VOCACIONAL */}
+        <TabsContent value="orientacion-vocacional" className="space-y-6 mt-6">
+          <div className="flex justify-end gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Descargar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleDescargar('orientacion-vocacional', 'excel')}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDescargar('orientacion-vocacional', 'pdf')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {orientacionVocacionalData ? (
+            <div className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Tests Completados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">{orientacionVocacionalData.resumen?.testsCompletados || 0}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Pruebas finalizadas</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">En Progreso</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-yellow-600">{orientacionVocacionalData.resumen?.testsEnProgreso || 0}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Pruebas iniciadas</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Abandonados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-red-600">{orientacionVocacionalData.resumen?.testsAbandonados || 0}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Sin completar</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Tasa de Completitud</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">{orientacionVocacionalData.resumen?.tasaCompletitud || 0}%</div>
+                    <p className="text-xs text-muted-foreground mt-1">Éxito general</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Usuarios Evaluados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-purple-600">{orientacionVocacionalData.resumen?.usuariosUnicos || 0}</div>
+                    <p className="text-xs text-muted-foreground mt-1">Usuarios únicos</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tests por Tipo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tests por Tipo</CardTitle>
+                  <CardDescription>Distribución de pruebas completadas</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {orientacionVocacionalData.testsPorTipo?.map((test: any, index: number) => (
+                      <Card key={index}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{test.tipo}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-blue-600 mb-2">{test.cantidad}</div>
+                          <Progress value={(test.cantidad / (orientacionVocacionalData.resumen?.testsCompletados || 1)) * 100} className="h-2" />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {((test.cantidad / (orientacionVocacionalData.resumen?.testsCompletados || 1)) * 100).toFixed(1)}% del total
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Perfiles RIASEC Dominantes */}
+              {orientacionVocacionalData.perfilesDominantes && orientacionVocacionalData.perfilesDominantes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Perfiles RIASEC Dominantes</CardTitle>
+                    <CardDescription>Top 10 perfiles vocacionales más frecuentes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {orientacionVocacionalData.perfilesDominantes.map((perfil: any, index: number) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-gray-700">{perfil.perfil}</span>
+                            <div className="flex items-center gap-4 text-gray-600">
+                              <span>{perfil.cantidad} usuarios</span>
+                              <span className="font-semibold">{perfil.porcentaje}%</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 transition-all duration-500"
+                              style={{ width: `${perfil.porcentaje}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Usuarios con Tests */}
+              {orientacionVocacionalData.usuariosConTests && orientacionVocacionalData.usuariosConTests.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Top Usuarios con Tests Completados</CardTitle>
+                    <CardDescription>Usuarios más activos en orientación vocacional</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Tests Completados</TableHead>
+                          <TableHead>Tipos de Test</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orientacionVocacionalData.usuariosConTests.slice(0, 15).map((usuario: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{usuario.nombre}</TableCell>
+                            <TableCell className="text-sm">{usuario.email}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">{usuario.role}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="bg-blue-100 text-blue-800">
+                                {usuario.testsCompletados}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs">{usuario.tiposTestRealizados}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           ) : (
             <Card>

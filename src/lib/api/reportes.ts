@@ -254,7 +254,33 @@ export async function exportarDistribucionPostulantes(
 }
 
 /**
- * 7. Exportar dashboard completo
+ * 7. Exportar datos de orientación vocacional
+ * GET /v1/reportes/exportar/orientacion-vocacional
+ */
+export async function exportarOrientacionVocacional(
+  accessToken: string,
+  params?: {
+    formato?: 'json' | 'excel' | 'pdf';
+  }
+): Promise<any> {
+  const formato = params?.formato || 'json';
+
+  if (formato === 'json') {
+    return fetchConAuth('/v1/reportes/exportar/orientacion-vocacional', accessToken, params);
+  } else {
+    const extension = formato === 'excel' ? 'xlsx' : 'pdf';
+    const nombreArchivo = `orientacion-vocacional-${new Date().toISOString().split('T')[0]}.${extension}`;
+    return descargarArchivo(
+      '/v1/reportes/exportar/orientacion-vocacional',
+      accessToken,
+      nombreArchivo,
+      params
+    );
+  }
+}
+
+/**
+ * 8. Exportar dashboard completo
  * GET /v1/reportes/exportar/dashboard
  */
 export async function exportarDashboard(

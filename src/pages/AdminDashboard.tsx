@@ -19,7 +19,7 @@ import { fetchUsers, API_BASE } from "@/lib/api";
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { logout, tokens } = useAuth();
+  const { logout, tokens, user } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [activeModule, setActiveModule] = useState<string | null>("dashboard");
   const [pendingUsersCount, setPendingUsersCount] = useState<number>(0);
@@ -200,7 +200,10 @@ const AdminDashboard = () => {
           </div>
 
           {/* Logo en el centro */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
+          <div
+            className="absolute left-1/2 transform -translate-x-1/2 cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             <img
               src="/lovable-uploads/UNIMETLogo.png"
               alt="UNIMET Logo"
@@ -210,8 +213,12 @@ const AdminDashboard = () => {
 
           <div className="flex items-center space-x-3">
             <div className="text-right">
-              <p className="text-sm font-medium text-primary">María González</p>
-              <p className="text-xs text-muted-foreground">Administrador</p>
+              <p className="text-sm font-medium text-primary">
+                {user ? `${user.nombre} ${user.apellido}` : 'Cargando...'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {user?.role === 'admin' ? 'Administrador' : user?.role || 'Usuario'}
+              </p>
             </div>
           </div>
         </div>
