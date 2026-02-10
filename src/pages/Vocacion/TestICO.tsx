@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, DoorOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   guardarRespuestasIco,
@@ -42,6 +42,20 @@ const TestICO = () => {
       const lista = JSON.parse(raw);
       const listaPreguntas = Array.isArray(lista) ? lista : lista?.preguntas ?? [];
       setPreguntas(listaPreguntas);
+      const guardadas = localStorage.getItem("respuestasIco");
+      if (guardadas && listaPreguntas.length > 0) {
+        try {
+          const parsed = JSON.parse(guardadas) as Record<string, boolean>;
+          const idsValidos = new Set(listaPreguntas.map((p: Pregunta) => p.id));
+          const filtrado: Record<string, boolean> = {};
+          Object.keys(parsed).forEach((id) => {
+            if (idsValidos.has(id)) filtrado[id] = parsed[id];
+          });
+          if (Object.keys(filtrado).length > 0) setRespuestas(filtrado);
+        } catch {
+          // ignorar si no se puede parsear
+        }
+      }
     } catch {
       toast({
         title: "Error",
@@ -52,13 +66,16 @@ const TestICO = () => {
     }
   }, [navigate, toast]);
 
+  useEffect(() => {
+    if (Object.keys(respuestas).length === 0) return;
+    localStorage.setItem("respuestasIco", JSON.stringify(respuestas));
+  }, [respuestas]);
+
   const responderPregunta = (preguntaId: string, valor: boolean) => {
-    setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }));
-    if (preguntaActual < preguntas.length - 1) {
-      setPreguntaActual((prev) => prev + 1);
-    } else {
-      enviarRespuestas({ ...respuestas, [preguntaId]: valor });
-    }
+    setRespuestas((prev) => {
+      const next = { ...prev, [preguntaId]: valor };
+      return next;
+    });
   };
 
   const enviarRespuestas = async (respuestasParaEnviar: Record<string, boolean>) => {
@@ -87,6 +104,7 @@ const TestICO = () => {
       );
 
       localStorage.removeItem("preguntasIco");
+      localStorage.removeItem("respuestasIco");
       toast({
         title: "Test ICO completado",
         description: "Tus resultados están listos.",
@@ -159,14 +177,18 @@ const TestICO = () => {
               <Button
                 onClick={() => responderPregunta(pregunta.id, true)}
                 disabled={cargando}
-                className="w-full h-14 text-base font-medium bg-green-50 hover:bg-green-100 text-green-700 border-2 border-green-200"
+                className={`w-full h-14 text-base font-medium border-2 transition-all ${
+                  respuestas[pregunta.id] === true ? "bg-green-200 border-green-500 shadow-sm" : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                }`}
               >
                 Sí
               </Button>
               <Button
                 onClick={() => responderPregunta(pregunta.id, false)}
                 disabled={cargando}
-                className="w-full h-14 text-base font-medium bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200"
+                className={`w-full h-14 text-base font-medium border-2 transition-all ${
+                  respuestas[pregunta.id] === false ? "bg-red-200 border-red-500 shadow-sm" : "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                }`}
               >
                 No
               </Button>
@@ -175,20 +197,33 @@ const TestICO = () => {
         </Card>
 
         {/* Navegación fija abajo: siempre visible sin bajar */}
-        <div className="shrink-0 flex justify-between items-center gap-4 mt-4 py-2">
-          <Button
-            variant="outline"
-            onClick={() => setPreguntaActual((p) => (p > 0 ? p - 1 : 0))}
-            disabled={preguntaActual === 0}
-            className="rounded-lg shrink-0"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Anterior
-          </Button>
+        <div className="shrink-0 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-4 py-2">
+          <div className="flex justify-between items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => setPreguntaActual((p) => (p > 0 ? p - 1 : 0))}
+              disabled={preguntaActual === 0}
+              className="rounded-lg shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate("/orientacion/historial")}
+              disabled={cargando}
+              className="rounded-lg shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+            >
+              <DoorOpen className="h-4 w-4 mr-1" />
+              Salir y continuar después
+            </Button>
+          </div>
           {preguntaActual < preguntas.length - 1 ? (
             <Button
               onClick={() => setPreguntaActual((p) => p + 1)}
-              className="bg-orange-600 hover:bg-orange-700 rounded-lg shrink-0"
+              disabled={respuestas[pregunta?.id] === undefined}
+              className="bg-orange-600 hover:bg-orange-700 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Siguiente
               <ChevronRight className="h-4 w-4 ml-1" />

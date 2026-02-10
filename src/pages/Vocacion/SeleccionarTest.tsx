@@ -16,7 +16,7 @@ import {
   Target,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { iniciarTest, TipoTest, obtenerHistorial } from "@/lib/api/orientacionVocacional";
+import { iniciarTest, TipoTest, obtenerHistorial, obtenerSesion, obtenerPreguntasIco } from "@/lib/api/orientacionVocacional";
 
 /** Considera una sesión completada si tiene resultado o estado finalizado. */
 function sesionCompletada(
@@ -35,6 +35,18 @@ function tipoTestDeSesion(s: Record<string, unknown>): string | undefined {
   return (s.tipoTest as string) ?? (s.tipo_test as string);
 }
 
+/** Texto "donde quedó" según estado de la sesión. */
+function dondeQuedo(estado: string | undefined, tipoTest: string): string {
+  const e = (estado ?? "").toString().toLowerCase();
+  if (tipoTest === "ICO") return "Test ICO en curso";
+  if (/ronda_2|ronda_1_completada/.test(e)) return "Ronda 2";
+  return "Ronda 1";
+}
+
+function idDeSesion(s: Record<string, unknown>): string {
+  return String((s.id ?? s.sesion_id ?? s.sesionId ?? "") || "");
+}
+
 const SeleccionarTest = () => {
   const navigate = useNavigate();
   const { tokens, logout } = useAuth();
@@ -45,7 +57,10 @@ const SeleccionarTest = () => {
   const [yaTieneIco, setYaTieneIco] = useState(false);
   const [sesionIdHolland, setSesionIdHolland] = useState<string | null>(null);
   const [sesionIdIco, setSesionIdIco] = useState<string | null>(null);
+  const [hollandEnProgreso, setHollandEnProgreso] = useState<Record<string, unknown> | null>(null);
+  const [icoEnProgreso, setIcoEnProgreso] = useState<Record<string, unknown> | null>(null);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
+  const [continuandoId, setContinuandoId] = useState<string | null>(null);
 
   const accessToken = tokens?.accessToken || 
     JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
@@ -58,13 +73,15 @@ const SeleccionarTest = () => {
     obtenerHistorial(accessToken)
       .then((res) => {
         const raw = res.data;
-        const historial: Record<string, unknown>[] = Array.isArray(raw)
-          ? raw
-          : raw && typeof raw === "object" && "historial" in raw && Array.isArray((raw as { historial: unknown[] }).historial)
-            ? (raw as { historial: Record<string, unknown>[] }).historial
-            : raw && typeof raw === "object" && "sesiones" in raw && Array.isArray((raw as { sesiones: unknown[] }).sesiones)
-              ? (raw as { sesiones: Record<string, unknown>[] }).sesiones
-              : [];
+        const data = raw && typeof raw === "object" ? (raw as { historial?: unknown[]; sesionesEnProgreso?: unknown[] }) : {};
+        const historial: Record<string, unknown>[] = Array.isArray(data.historial)
+          ? (data.historial as Record<string, unknown>[])
+          : Array.isArray(raw)
+            ? (raw as Record<string, unknown>[])
+            : [];
+        const sesionesEnProgreso: Record<string, unknown>[] = Array.isArray(data.sesionesEnProgreso)
+          ? (data.sesionesEnProgreso as Record<string, unknown>[])
+          : [];
         const hollandCompletada = historial.find((s) => {
           const tipo = tipoTestDeSesion(s);
           return tipo === "Holland_RIASEC" && sesionCompletada(s.estado as string, s.tieneResultado as boolean, s);
@@ -73,8 +90,12 @@ const SeleccionarTest = () => {
           const tipo = tipoTestDeSesion(s);
           return tipo === "ICO" && sesionCompletada(s.estado as string, s.tieneResultado as boolean, s);
         });
+        const hollandProgreso = sesionesEnProgreso.find((s) => tipoTestDeSesion(s) === "Holland_RIASEC") ?? null;
+        const icoProgreso = sesionesEnProgreso.find((s) => tipoTestDeSesion(s) === "ICO") ?? null;
         setYaTieneHolland(!!hollandCompletada);
         setYaTieneIco(!!icoCompletada);
+        setHollandEnProgreso(hollandProgreso as Record<string, unknown> | null);
+        setIcoEnProgreso(icoProgreso as Record<string, unknown> | null);
         const idDe = (s: Record<string, unknown>) => String((s.id ?? s.sesion_id ?? s.sesionId ?? "") || "");
         setSesionIdHolland(hollandCompletada ? idDe(hollandCompletada) || null : null);
         setSesionIdIco(icoCompletada ? idDe(icoCompletada) || null : null);
@@ -86,6 +107,43 @@ const SeleccionarTest = () => {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const continuarTest = async (sesion: Record<string, unknown>) => {
+    const id = idDeSesion(sesion);
+    const tipoTest = tipoTestDeSesion(sesion) ?? "Holland_RIASEC";
+    const estado = (sesion.estado ?? "").toString().toLowerCase();
+    if (!accessToken || !id) return;
+    setContinuandoId(id);
+    try {
+      localStorage.setItem("sesionId", id);
+      localStorage.setItem("tipoTest", tipoTest);
+      localStorage.setItem("estadoSesion", (sesion.estado ?? "iniciada") as string);
+      if (tipoTest === "ICO") {
+        const res = await obtenerPreguntasIco(accessToken, id);
+        const preguntas = (res?.data as { preguntas?: unknown[] })?.preguntas ?? [];
+        localStorage.setItem("preguntasIco", JSON.stringify(preguntas));
+        navigate("/orientacion/test-ico");
+        return;
+      }
+      if (tipoTest === "Holland_RIASEC") {
+        if (estado === "ronda_1_completada" || estado === "ronda_2") {
+          const sesionInfo = await obtenerSesion(accessToken, id);
+          const preguntasR2 = (sesionInfo?.data as { preguntasRonda2?: unknown[] })?.preguntasRonda2 ?? [];
+          if (preguntasR2.length > 0) {
+            localStorage.setItem("preguntasRonda2", JSON.stringify(preguntasR2));
+            navigate("/orientacion/ronda-2");
+            return;
+          }
+        }
+        navigate("/orientacion/ronda-1");
+      }
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "message" in err ? (err as { message: string }).message : "No se pudo cargar el test.";
+      toast({ title: "Error al continuar", description: msg, variant: "destructive" });
+    } finally {
+      setContinuandoId(null);
+    }
   };
 
   const handleIniciarTest = async () => {
@@ -174,7 +232,9 @@ const SeleccionarTest = () => {
   };
 
   const ambosCompletados = yaTieneHolland && yaTieneIco;
-  const puedeIniciar = tipoTest && !cargando && !(tipoTest === "Holland_RIASEC" && yaTieneHolland) && !(tipoTest === "ICO" && yaTieneIco);
+  const puedeIniciar = tipoTest && !cargando
+    && !(tipoTest === "Holland_RIASEC" && (yaTieneHolland || hollandEnProgreso))
+    && !(tipoTest === "ICO" && (yaTieneIco || icoEnProgreso));
 
   return (
     <div className="w-full min-h-[70vh] pb-28">
@@ -218,17 +278,19 @@ const SeleccionarTest = () => {
                 className={`overflow-hidden transition-all duration-200 border-2 h-full ${
                   yaTieneHolland
                     ? "border-slate-200 bg-slate-50/80 cursor-default"
-                    : tipoTest === "Holland_RIASEC"
-                      ? "border-orange-500 bg-gradient-to-br from-orange-50 to-white shadow-xl shadow-orange-100 ring-2 ring-orange-200/50"
-                      : "border-slate-200 bg-white hover:border-orange-300 hover:shadow-md cursor-pointer"
+                    : hollandEnProgreso
+                      ? "border-amber-300 bg-amber-50/50"
+                      : tipoTest === "Holland_RIASEC"
+                        ? "border-orange-500 bg-gradient-to-br from-orange-50 to-white shadow-xl shadow-orange-100 ring-2 ring-orange-200/50"
+                        : "border-slate-200 bg-white hover:border-orange-300 hover:shadow-md cursor-pointer"
                 }`}
-                onClick={() => !yaTieneHolland && setTipoTest("Holland_RIASEC")}
+                onClick={() => !yaTieneHolland && !hollandEnProgreso && setTipoTest("Holland_RIASEC")}
               >
                 <CardContent className="p-0">
                   <div className="p-5 md:p-6">
                     <div className="flex items-start gap-4">
                       <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
-                        yaTieneHolland ? "bg-slate-200 text-slate-500" : "bg-orange-100 text-orange-600"
+                        yaTieneHolland ? "bg-slate-200 text-slate-500" : hollandEnProgreso ? "bg-amber-100 text-amber-700" : "bg-orange-100 text-orange-600"
                       }`}>
                         <BarChart3 className="w-6 h-6" />
                       </div>
@@ -243,7 +305,18 @@ const SeleccionarTest = () => {
                               Completado
                             </Badge>
                           )}
+                          {!yaTieneHolland && hollandEnProgreso && (
+                            <Badge className="bg-amber-100 text-amber-800 border-0 shrink-0">
+                              <Clock className="w-3 h-3 mr-1" />
+                              En progreso
+                            </Badge>
+                          )}
                         </div>
+                        {!yaTieneHolland && hollandEnProgreso && (
+                          <p className="text-amber-800 text-sm font-medium mb-2">
+                            Quedaste en {dondeQuedo(hollandEnProgreso.estado as string, "Holland_RIASEC")}
+                          </p>
+                        )}
                         <p className="text-slate-600 text-sm mb-3">
                           Evalúa tus intereses en 6 dimensiones: Realista, Investigador, Artístico, Social, Emprendedor y Convencional.
                         </p>
@@ -271,8 +344,26 @@ const SeleccionarTest = () => {
                             Ver mis resultados
                           </Button>
                         )}
+                        {!yaTieneHolland && hollandEnProgreso && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="mt-4 w-full sm:w-auto bg-[#F37021] hover:bg-orange-600 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              continuarTest(hollandEnProgreso);
+                            }}
+                            disabled={continuandoId === idDeSesion(hollandEnProgreso)}
+                          >
+                            {continuandoId === idDeSesion(hollandEnProgreso) ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cargando...</>
+                            ) : (
+                              "Continuar"
+                            )}
+                          </Button>
+                        )}
                       </div>
-                      {tipoTest === "Holland_RIASEC" && !yaTieneHolland && (
+                      {tipoTest === "Holland_RIASEC" && !yaTieneHolland && !hollandEnProgreso && (
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
                           <CheckCircle2 className="w-4 h-4 text-white" />
                         </div>
@@ -295,17 +386,19 @@ const SeleccionarTest = () => {
                 className={`overflow-hidden transition-all duration-200 border-2 h-full ${
                   yaTieneIco
                     ? "border-slate-200 bg-slate-50/80 cursor-default"
-                    : tipoTest === "ICO"
-                      ? "border-orange-500 bg-gradient-to-br from-orange-50 to-white shadow-xl shadow-orange-100 ring-2 ring-orange-200/50"
-                      : "border-slate-200 bg-white hover:border-orange-300 hover:shadow-md cursor-pointer"
+                    : icoEnProgreso
+                      ? "border-amber-300 bg-amber-50/50"
+                      : tipoTest === "ICO"
+                        ? "border-orange-500 bg-gradient-to-br from-orange-50 to-white shadow-xl shadow-orange-100 ring-2 ring-orange-200/50"
+                        : "border-slate-200 bg-white hover:border-orange-300 hover:shadow-md cursor-pointer"
                 }`}
-                onClick={() => !yaTieneIco && setTipoTest("ICO")}
+                onClick={() => !yaTieneIco && !icoEnProgreso && setTipoTest("ICO")}
               >
                 <CardContent className="p-0">
                   <div className="p-5 md:p-6">
                     <div className="flex items-start gap-4">
                       <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
-                        yaTieneIco ? "bg-slate-200 text-slate-500" : "bg-orange-100 text-orange-600"
+                        yaTieneIco ? "bg-slate-200 text-slate-500" : icoEnProgreso ? "bg-amber-100 text-amber-700" : "bg-orange-100 text-orange-600"
                       }`}>
                         <Sparkles className="w-6 h-6" />
                       </div>
@@ -320,7 +413,18 @@ const SeleccionarTest = () => {
                               Completado
                             </Badge>
                           )}
+                          {!yaTieneIco && icoEnProgreso && (
+                            <Badge className="bg-amber-100 text-amber-800 border-0 shrink-0">
+                              <Clock className="w-3 h-3 mr-1" />
+                              En progreso
+                            </Badge>
+                          )}
                         </div>
+                        {!yaTieneIco && icoEnProgreso && (
+                          <p className="text-amber-800 text-sm font-medium mb-2">
+                            {dondeQuedo(icoEnProgreso.estado as string, "ICO")}
+                          </p>
+                        )}
                         <p className="text-slate-600 text-sm mb-3">
                           Versión corta con preguntas Sí/No. Incluye análisis con inteligencia artificial y recomendaciones de carreras.
                         </p>
@@ -348,8 +452,26 @@ const SeleccionarTest = () => {
                             Ver mis resultados
                           </Button>
                         )}
+                        {!yaTieneIco && icoEnProgreso && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="mt-4 w-full sm:w-auto bg-[#F37021] hover:bg-orange-600 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              continuarTest(icoEnProgreso);
+                            }}
+                            disabled={continuandoId === idDeSesion(icoEnProgreso)}
+                          >
+                            {continuandoId === idDeSesion(icoEnProgreso) ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cargando...</>
+                            ) : (
+                              "Continuar"
+                            )}
+                          </Button>
+                        )}
                       </div>
-                      {tipoTest === "ICO" && !yaTieneIco && (
+                      {tipoTest === "ICO" && !yaTieneIco && !icoEnProgreso && (
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
                           <CheckCircle2 className="w-4 h-4 text-white" />
                         </div>
@@ -382,7 +504,9 @@ const SeleccionarTest = () => {
                 ? "Ya completaste el test Holland."
                 : tipoTest === "ICO" && yaTieneIco
                   ? "Ya completaste el test ICO."
-                  : null}
+                  : (tipoTest === "Holland_RIASEC" && hollandEnProgreso) || (tipoTest === "ICO" && icoEnProgreso)
+                    ? "Tienes este test en progreso. Usa «Continuar» en la tarjeta."
+                    : null}
             </p>
           )}
           <Button

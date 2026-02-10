@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { 
   GraduationCap, LogOut, Compass, ChevronLeft, 
-  ChevronRight, Loader2 
+  ChevronRight, Loader2, DoorOpen 
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { 
@@ -27,7 +27,7 @@ const Ronda1 = () => {
   const [respuestas, setRespuestas] = useState<Record<string, RespuestaPregunta>>({});
   const [tiempos, setTiempos] = useState<Record<string, number>>({});
   const [inicioTiempo, setInicioTiempo] = useState<number | null>(null);
-  const [respuestaSeleccionada, setRespuestaSeleccionada] = useState<string | null>(null);
+  const [respuestaSeleccionada, setRespuestaSeleccionada] = useState<string | boolean | null>(null);
   const [cargando, setCargando] = useState(false);
 
   const accessToken = tokens?.accessToken || 
@@ -90,6 +90,14 @@ const Ronda1 = () => {
       navigate('/orientacion/seleccionar-test');
     }
   }, [navigate, toast]);
+
+  // Sincronizar la selección mostrada al cambiar de pregunta (al retroceder se ve lo ya guardado)
+  useEffect(() => {
+    const p = preguntas[preguntaActual];
+    if (!p) return;
+    const guardada = respuestas[p.id]?.respuesta;
+    setRespuestaSeleccionada(guardada !== undefined && guardada !== null ? guardada : null);
+  }, [preguntaActual, preguntas, respuestas]);
 
   const calcularNivelSeguridad = (tiempoSegundos: number): 'seguro' | 'no_seguro' => {
     // Lógica basada en tiempo de respuesta:
@@ -300,8 +308,8 @@ const Ronda1 = () => {
 
               {pregunta?.opcionesRespuesta && pregunta.opcionesRespuesta.length > 0 ? (
                 <RadioGroup 
-                  value={respuestaSeleccionada || ""} 
-                  onValueChange={setRespuestaSeleccionada}
+                  value={respuestaSeleccionada !== null && respuestaSeleccionada !== undefined ? String(respuestaSeleccionada) : ""} 
+                  onValueChange={(v) => setRespuestaSeleccionada(v)}
                   className="space-y-4"
                 >
                   {pregunta.opcionesRespuesta.map((opcion, index) => (
@@ -327,18 +335,18 @@ const Ronda1 = () => {
               ) : (
                 <div className="space-y-4">
                   <Button
-                    onClick={() => {
-                      responderPregunta(pregunta.id, true);
-                    }}
-                    className="w-full h-16 text-lg font-medium bg-green-50 hover:bg-green-100 text-green-700 border-2 border-green-200"
+                    onClick={() => setRespuestaSeleccionada(true)}
+                    className={`w-full h-16 text-lg font-medium border-2 transition-all ${
+                      respuestaSeleccionada === true ? "bg-green-200 border-green-500 shadow-sm" : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                    }`}
                   >
                     Sí
                   </Button>
                   <Button
-                    onClick={() => {
-                      responderPregunta(pregunta.id, false);
-                    }}
-                    className="w-full h-16 text-lg font-medium bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200"
+                    onClick={() => setRespuestaSeleccionada(false)}
+                    className={`w-full h-16 text-lg font-medium border-2 transition-all ${
+                      respuestaSeleccionada === false ? "bg-red-200 border-red-500 shadow-sm" : "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                    }`}
                   >
                     No
                   </Button>
@@ -348,32 +356,52 @@ const Ronda1 = () => {
             </CardContent>
           </Card>
 
-          {/* Botón Avanzar fijo abajo: siempre visible al hacer scroll */}
-          {pregunta?.opcionesRespuesta && pregunta.opcionesRespuesta.length > 0 && (
-            <div className="sticky bottom-0 left-0 right-0 z-10 mt-6 -mb-8 py-4 bg-background/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
-              <div className="max-w-3xl mx-auto px-4 flex justify-end">
+          {/* Navegación fija: Anterior + Siguiente/Finalizar (no avanzar sin responder) */}
+          <div className="sticky bottom-0 left-0 right-0 z-10 mt-6 -mb-8 py-4 bg-background/95 backdrop-blur border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+            <div className="max-w-3xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+              <div className="flex justify-between items-center gap-4">
                 <Button
-                  onClick={() => respuestaSeleccionada && responderPregunta(pregunta.id, respuestaSeleccionada)}
-                  disabled={!respuestaSeleccionada || cargando}
-                  className="bg-gray-900 hover:bg-black text-white px-8 h-12 rounded-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPreguntaActual((p) => Math.max(0, p - 1))}
+                  disabled={preguntaActual === 0 || cargando}
+                  className="shrink-0"
                 >
-                  {cargando ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Procesando...
-                    </>
-                  ) : preguntaActual === preguntas.length - 1 ? (
-                    "Finalizar Ronda 1"
-                  ) : (
-                    <>
-                      Siguiente
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Anterior
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => navigate("/orientacion/historial")}
+                  disabled={cargando}
+                  className="shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                >
+                  <DoorOpen className="h-4 w-4 mr-2" />
+                  Salir y continuar después
                 </Button>
               </div>
+              <Button
+                onClick={() => respuestaSeleccionada !== null && respuestaSeleccionada !== undefined && responderPregunta(pregunta.id, respuestaSeleccionada)}
+                disabled={respuestaSeleccionada === null || respuestaSeleccionada === undefined || cargando}
+                className="bg-gray-900 hover:bg-black text-white px-8 h-12 rounded-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {cargando ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Procesando...
+                  </>
+                ) : preguntaActual === preguntas.length - 1 ? (
+                  "Finalizar Ronda 1"
+                ) : (
+                  <>
+                    Siguiente
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Outlet } from "react-router-dom";
-import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria, obtenerHistorial, obtenerPerfilVocacional, HistorialResponse, PerfilVocacionalResponse, MateriasPorAnoLapsoType, MateriaNota, MateriasPorAreaItem } from "@/lib/api/orientacionVocacional";
+import { iniciarTest, TipoTest, obtenerMiTrayectoria, actualizarMiTrayectoria, TrayectoriaBody, normalizarTrayectoria, obtenerHistorial, obtenerPerfilVocacional, obtenerSesion, obtenerPreguntasIco, HistorialResponse, type HistorialItem, PerfilVocacionalResponse, MateriasPorAnoLapsoType, MateriaNota, MateriasPorAreaItem } from "@/lib/api/orientacionVocacional";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,6 +62,12 @@ const formatearFechaRelativa = (fecha: string) => {
   if (diffD < 7) return `Hace ${diffD} días`;
   return f.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 };
+const formatearFechaSegura = (fecha: string | undefined | null): string => {
+  if (fecha == null || String(fecha).trim() === "") return "—";
+  const d = new Date(fecha);
+  if (Number.isNaN(d.getTime())) return "—";
+  return format(d, "dd/MM/yyyy");
+};
 
 const DashboardAspirante = () => {
   const navigate = useNavigate();
@@ -99,9 +105,11 @@ const DashboardAspirante = () => {
   const [cargandoTest, setCargandoTest] = useState(false);
 
   // Datos del perfil (historial y perfil vocacional) para Mi Perfil
-  const [historialPerfil, setHistorialPerfil] = useState<HistorialResponse["data"]>([]);
+  const [historialPerfil, setHistorialPerfil] = useState<HistorialItem[]>([]);
+  const [sesionesEnProgresoPerfil, setSesionesEnProgresoPerfil] = useState<HistorialItem[]>([]);
   const [perfilVocacionalData, setPerfilVocacionalData] = useState<PerfilVocacionalResponse["data"] | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(false);
+  const [continuandoTestId, setContinuandoTestId] = useState<string | null>(null);
 
   // Notificaciones (Centro de novedades / CRM)
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
@@ -209,26 +217,15 @@ const DashboardAspirante = () => {
     if (activeModule !== "perfil" || !accessToken) return;
     setCargandoPerfil(true);
     Promise.all([
-      obtenerHistorial(accessToken).catch(() => ({ success: true, data: [] } as HistorialResponse)),
+      obtenerHistorial(accessToken).catch(() => ({ success: true, data: { historial: [], sesionesEnProgreso: [], total: 0, totalEnProgreso: 0 } })),
       obtenerPerfilVocacional(accessToken).catch(() => null),
     ])
       .then(([histRes, perfilRes]) => {
-        // Extraer array del historial (misma lógica que Historial.tsx: data puede ser array u objeto anidado)
-        let historialData: any[] = [];
         const data = (histRes as HistorialResponse).data;
-        if (Array.isArray(data)) {
-          historialData = data;
-        } else if (data && typeof data === "object") {
-          const dataObj = data as Record<string, unknown>;
-          if (Array.isArray(dataObj.sesiones)) historialData = dataObj.sesiones;
-          else if (Array.isArray(dataObj.historial)) historialData = dataObj.historial;
-          else if (Array.isArray(dataObj.data)) historialData = dataObj.data;
-          else {
-            const firstKey = Object.keys(dataObj).find((k) => Array.isArray(dataObj[k]));
-            if (firstKey) historialData = (dataObj[firstKey] as any[]) || [];
-          }
-        }
+        const historialData = Array.isArray(data.historial) ? data.historial : [];
+        const enProgresoData = Array.isArray(data.sesionesEnProgreso) ? data.sesionesEnProgreso : [];
         setHistorialPerfil(historialData);
+        setSesionesEnProgresoPerfil(enProgresoData);
         setPerfilVocacionalData(perfilRes?.data ?? null);
 
         // Debug: ver qué datos se reciben
@@ -296,6 +293,51 @@ const DashboardAspirante = () => {
       setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
     } catch (error) {
       console.error("Error al marcar todas las notificaciones como leídas:", error);
+    }
+  };
+
+  // Continuar test en progreso (desde pestaña Tests)
+  const dondeQuedoTest = (estado: string | undefined, tipoTest: string): string => {
+    const e = (estado ?? "").toString().toLowerCase();
+    if (tipoTest === "ICO") return "Test ICO en curso";
+    if (/ronda_2|ronda_1_completada/.test(e)) return "Ronda 2";
+    return "Ronda 1";
+  };
+  const continuarTestDesdePerfil = async (sesion: HistorialItem) => {
+    const id = sesion.id ?? (sesion as unknown as { sesion_id?: string }).sesion_id;
+    const tipoTest = (sesion.tipoTest ?? (sesion as unknown as { tipo_test?: string }).tipo_test) ?? "Holland_RIASEC";
+    const estado = (sesion.estado ?? "").toString().toLowerCase();
+    const acc = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+    if (!acc || !id) return;
+    setContinuandoTestId(String(id));
+    try {
+      localStorage.setItem("sesionId", String(id));
+      localStorage.setItem("tipoTest", tipoTest);
+      localStorage.setItem("estadoSesion", sesion.estado ?? "iniciada");
+      if (tipoTest === "ICO") {
+        const res = await obtenerPreguntasIco(acc, String(id));
+        const preguntas = (res?.data as { preguntas?: unknown[] })?.preguntas ?? [];
+        localStorage.setItem("preguntasIco", JSON.stringify(preguntas));
+        navigate("/orientacion/test-ico");
+        return;
+      }
+      if (tipoTest === "Holland_RIASEC") {
+        if (estado === "ronda_1_completada" || estado === "ronda_2") {
+          const sesionInfo = await obtenerSesion(acc, String(id));
+          const preguntasR2 = (sesionInfo?.data as { preguntasRonda2?: unknown[] })?.preguntasRonda2 ?? [];
+          if (preguntasR2.length > 0) {
+            localStorage.setItem("preguntasRonda2", JSON.stringify(preguntasR2));
+            navigate("/orientacion/ronda-2");
+            return;
+          }
+        }
+        navigate("/orientacion/ronda-1");
+      }
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "message" in err ? (err as { message: string }).message : "No se pudo cargar el test.";
+      toast({ title: "Error al continuar", description: msg, variant: "destructive" });
+    } finally {
+      setContinuandoTestId(null);
     }
   };
 
@@ -605,8 +647,8 @@ const DashboardAspirante = () => {
       return;
     }
 
-    const testsCompletados = historialPerfil.filter((s: Record<string, unknown>) => {
-      const e = ((s.estado ?? s.estado) as string | undefined)?.toLowerCase?.() ?? "";
+    const testsCompletados = historialPerfil.filter((s: HistorialItem) => {
+      const e = (s.estado ?? "").toLowerCase();
       const t = s.tipoTest ?? s.tipo_test;
       return t === "ICO" ? (e === "finalizada" || e === "completada") : (e === "finalizada" || e === "ronda_2_completada");
     });
@@ -663,15 +705,15 @@ const DashboardAspirante = () => {
                 </tr>
               </thead>
               <tbody>
-                ${testsCompletados.map((sesion: Record<string, unknown>) => {
+                ${testsCompletados.map((sesion: HistorialItem) => {
                   const tipoTestVal = sesion.tipoTest ?? sesion.tipo_test;
-                  const fechaVal = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
+                  const fechaVal = sesion.fechaCompletada ?? sesion.fechaFin ?? sesion.fechaInicio ?? sesion.fecha_fin ?? sesion.fecha_inicio;
                   const perfilVal = sesion.perfilDominante ?? sesion.perfil_dominante ?? '—';
                   const nombreTest = tipoTestVal === "ICO" ? "Test ICO" : "Test Holland RIASEC";
                   return `
                     <tr>
                       <td>${nombreTest}</td>
-                      <td>${fechaVal ? format(new Date(fechaVal as string), 'dd/MM/yyyy') : '—'}</td>
+                      <td>${formatearFechaSegura(fechaVal as string)}</td>
                       <td>${perfilVal}</td>
                     </tr>
                   `;
@@ -1509,21 +1551,19 @@ const DashboardAspirante = () => {
                     }
 
                     // También buscar en el historial el test más reciente completado
-                    const ultimoTestCompletado = historialPerfil.find((s: Record<string, unknown>) => {
-                      const estado = ((s.estado ?? s.estado) as string | undefined)?.toLowerCase?.() ?? "";
+                    const ultimoTestCompletado = historialPerfil.find((s: HistorialItem) => {
+                      const estado = (s.estado ?? "").toLowerCase();
                       const tipo = s.tipoTest ?? s.tipo_test;
                       return tipo === "ICO"
                         ? (estado === "finalizada" || estado === "completada")
                         : (estado === "finalizada" || estado === "ronda_2_completada");
                     });
 
-                    const perfilDelHistorial = (ultimoTestCompletado as Record<string, unknown>)?.perfilDominante ||
-                                             (ultimoTestCompletado as Record<string, unknown>)?.perfil_dominante;
+                    const perfilDelHistorial = ultimoTestCompletado?.perfilDominante ?? ultimoTestCompletado?.perfil_dominante;
 
                     // Usar datos del resultado o del historial
                     const perfilMostrar = perfilDominante || perfilDelHistorial;
-                    const codigoMostrar = codigoHolland || (ultimoTestCompletado as Record<string, unknown>)?.codigoHolland ||
-                                         (ultimoTestCompletado as Record<string, unknown>)?.codigo_holland;
+                    const codigoMostrar = codigoHolland || (ultimoTestCompletado?.codigoHolland ?? ultimoTestCompletado?.codigo_holland);
 
                     // Debug: mostrar qué valores se encontraron
                     console.log('🔍 [Resumen] perfilDominante:', perfilDominante);
@@ -1661,6 +1701,7 @@ const DashboardAspirante = () => {
                   
                   <TabsContent value="tests" className="space-y-3 sm:space-y-4">
                     {(() => {
+                      const enProgreso = sesionesEnProgresoPerfil;
                       const completados = historialPerfil.filter((s: any) => {
                         const e = (s.estado ?? s.estado)?.toLowerCase?.() ?? "";
                         const t = s.tipoTest ?? s.tipo_test;
@@ -1673,7 +1714,7 @@ const DashboardAspirante = () => {
                           </div>
                         );
                       }
-                      if (completados.length === 0) {
+                      if (enProgreso.length === 0 && completados.length === 0) {
                         return (
                           <div className="border-2 border-dashed border-slate-200 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
                             <BrainCircuit className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -1687,6 +1728,52 @@ const DashboardAspirante = () => {
                       }
                       return (
                         <>
+                          {enProgreso.length > 0 && (
+                            <div className="space-y-2 mb-4">
+                              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-amber-500" />
+                                Tests en progreso
+                              </h3>
+                              {enProgreso.map((sesion: any, idx: number) => {
+                                const tipoVal = sesion.tipoTest ?? sesion.tipo_test;
+                                const esIco = tipoVal === "ICO";
+                                const nombreTest = esIco ? "Test ICO" : "Test Holland RIASEC";
+                                const idVal = sesion.id ?? sesion.sesion_id;
+                                const donde = dondeQuedoTest(sesion.estado, tipoVal);
+                                return (
+                                  <div
+                                    key={idVal || `prog-${idx}`}
+                                    className="border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-amber-400 bg-amber-50/50"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <h3 className="font-bold text-slate-900">{nombreTest}</h3>
+                                        <Badge className="bg-amber-100 text-amber-800 border-0">En progreso</Badge>
+                                      </div>
+                                      <p className="text-sm text-slate-600 mt-1">Quedaste en {donde}</p>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => continuarTestDesdePerfil(sesion)}
+                                      disabled={continuandoTestId === String(idVal)}
+                                      className="shrink-0 bg-[#F37021] hover:bg-orange-600 text-white"
+                                    >
+                                      {continuandoTestId === String(idVal) ? (
+                                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cargando...</>
+                                      ) : (
+                                        "Continuar"
+                                      )}
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {completados.length > 0 && (
+                            <>
+                              {enProgreso.length > 0 && (
+                                <h3 className="text-sm font-semibold text-slate-700 mt-2 mb-2">Completados</h3>
+                              )}
                           {completados.map((sesion: any, index: number) => {
                             const tipoTestVal = sesion.tipoTest ?? sesion.tipo_test;
                             const fechaVal = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
@@ -1710,9 +1797,7 @@ const DashboardAspirante = () => {
                                 <div className="min-w-0 flex-1 space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <h3 className="font-bold text-slate-900">{nombreTest}</h3>
-                                    {fechaVal && (
-                                      <span className="text-xs sm:text-sm text-slate-500">{format(new Date(fechaVal), "dd/MM/yyyy")}</span>
-                                    )}
+                                    <span className="text-xs sm:text-sm text-slate-500">{formatearFechaSegura(fechaVal)}</span>
                                   </div>
                                   <p className="text-sm text-slate-600 line-clamp-2">{descripcionCorta}</p>
                                   <div className="flex flex-wrap gap-2">
@@ -1734,6 +1819,8 @@ const DashboardAspirante = () => {
                               </div>
                             );
                           })}
+                            </>
+                          )}
                         </>
                       );
                     })()}

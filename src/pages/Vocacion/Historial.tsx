@@ -8,16 +8,25 @@ import {
   GraduationCap, LogOut, Compass, ChevronLeft, 
   Loader2, Clock, CheckCircle2, XCircle, FileText 
 } from "lucide-react";
-import { obtenerHistorial, HistorialResponse } from "@/lib/api/orientacionVocacional";
+import { obtenerHistorial, obtenerSesion, obtenerPreguntasIco, type HistorialItem } from "@/lib/api/orientacionVocacional";
 import { format } from "date-fns";
+
+const formatearFechaSegura = (fecha: string | undefined | null): string => {
+  if (fecha == null || String(fecha).trim() === "") return "—";
+  const d = new Date(fecha);
+  if (Number.isNaN(d.getTime())) return "Sin completar";
+  return format(d, "dd/MM/yyyy");
+};
 
 const Historial = () => {
   const navigate = useNavigate();
   const { tokens, logout } = useAuth();
   const { toast } = useToast();
   
-  const [historial, setHistorial] = useState<HistorialResponse['data']>([]);
+  const [historial, setHistorial] = useState<HistorialItem[]>([]);
+  const [sesionesEnProgreso, setSesionesEnProgreso] = useState<HistorialItem[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [continuandoId, setContinuandoId] = useState<string | null>(null);
 
   const accessToken = tokens?.accessToken || 
     JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
@@ -41,37 +50,14 @@ const Historial = () => {
 
     try {
       const respuesta = await obtenerHistorial(accessToken);
-      console.log('📋 [Frontend] Respuesta completa de obtenerHistorial:', JSON.stringify(respuesta, null, 2));
-      console.log('📋 [Frontend] respuesta.data:', respuesta.data);
-      console.log('📋 [Frontend] Tipo de respuesta.data:', typeof respuesta.data);
-      console.log('📋 [Frontend] Es array?', Array.isArray(respuesta.data));
-      
-      // Asegurarse de que data sea un array
-      let historialData: any[] = [];
-      
-      const data = (respuesta as HistorialResponse).data;
-      if (Array.isArray(data)) {
-        historialData = data;
-      } else if (data && typeof data === 'object') {
-        const dataObj = data as Record<string, unknown>;
-        if (Array.isArray(dataObj.data)) {
-          historialData = dataObj.data;
-        } else {
-          const keys = Object.keys(dataObj);
-          if (keys.length > 0 && Array.isArray(dataObj[keys[0]])) {
-            historialData = dataObj[keys[0]] as any[];
-          }
-        }
-      }
-      
-      console.log('📋 [Frontend] Historial procesado:', historialData.length, 'tests');
-      console.log('📋 [Frontend] Datos del historial:', JSON.stringify(historialData, null, 2));
-      
-      setHistorial(historialData);
+      const data = respuesta.data;
+      setHistorial(data.historial ?? []);
+      setSesionesEnProgreso(data.sesionesEnProgreso ?? []);
     } catch (error: any) {
       console.error('Error al cargar historial:', error);
       console.error('Error completo:', JSON.stringify(error, null, 2));
-      setHistorial([]); // Asegurar que siempre sea un array
+      setHistorial([]);
+      setSesionesEnProgreso([]);
       
       // Mensaje más amigable según el tipo de error
       let mensajeError = error.message || "Error al cargar el historial";
@@ -177,7 +163,50 @@ const Historial = () => {
     return tipoTest === 'Holland_RIASEC' ? 'Holland RIASEC' : 'ICO';
   };
 
-  // Solo mostrar tests completados
+  const continuarTest = async (sesion: any) => {
+    const id = sesion.id ?? sesion.sesion_id;
+    const tipoTest = sesion.tipoTest ?? sesion.tipo_test;
+    const estado = (sesion.estado ?? sesion.estado ?? "").toString().toLowerCase();
+    if (!accessToken || !id) return;
+
+    setContinuandoId(id);
+    try {
+      localStorage.setItem("sesionId", id);
+      localStorage.setItem("tipoTest", tipoTest ?? "Holland_RIASEC");
+      localStorage.setItem("estadoSesion", sesion.estado ?? sesion.estado ?? "iniciada");
+
+      if (tipoTest === "ICO") {
+        const res = await obtenerPreguntasIco(accessToken, id);
+        const preguntas = res?.data?.preguntas ?? res?.preguntas ?? [];
+        localStorage.setItem("preguntasIco", JSON.stringify(preguntas));
+        navigate("/orientacion/test-ico");
+        return;
+      }
+
+      if (tipoTest === "Holland_RIASEC") {
+        if (estado === "ronda_1_completada" || estado === "ronda_2") {
+          const sesionInfo = await obtenerSesion(accessToken, id);
+          const preguntasR2 = sesionInfo?.data?.preguntasRonda2 ?? [];
+          if (preguntasR2.length > 0) {
+            localStorage.setItem("preguntasRonda2", JSON.stringify(preguntasR2));
+            navigate("/orientacion/ronda-2");
+            return;
+          }
+        }
+        navigate("/orientacion/ronda-1");
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error al continuar",
+        description: err?.message ?? "No se pudo cargar el test. Intenta desde Seleccionar test.",
+        variant: "destructive",
+      });
+    } finally {
+      setContinuandoId(null);
+    }
+  };
+
+  const historialEnProgreso = sesionesEnProgreso;
   const historialCompletados = historial.filter((s: any) =>
     isSesionCompletada(s.estado ?? s.estado, s.tipoTest ?? s.tipo_test)
   );
@@ -201,19 +230,76 @@ const Historial = () => {
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Historial de Tests</h2>
               <p className="text-gray-600">
-                {historialCompletados.length === 0 
-                  ? "No hay tests completados" 
-                  : `${historialCompletados.length} test${historialCompletados.length > 1 ? 's' : ''} completado${historialCompletados.length > 1 ? 's' : ''}`
+                {historialCompletados.length === 0 && historialEnProgreso.length === 0
+                  ? "No hay tests"
+                  : historialEnProgreso.length > 0
+                    ? `${historialEnProgreso.length} en progreso, ${historialCompletados.length} completado${historialCompletados.length !== 1 ? "s" : ""}`
+                    : `${historialCompletados.length} test${historialCompletados.length > 1 ? "s" : ""} completado${historialCompletados.length > 1 ? "s" : ""}`
                 }
               </p>
             </div>
             <Button
-              onClick={() => navigate('/orientacion/seleccionar-test')}
+              onClick={() => navigate("/orientacion/seleccionar-test")}
               className="bg-[#F37021] hover:bg-orange-600 text-white"
             >
               Realizar Nuevo Test
             </Button>
           </div>
+
+          {historialEnProgreso.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-500" />
+                Tests en progreso
+              </h3>
+              <div className="space-y-3">
+                {historialEnProgreso.map((sesion: any) => {
+                  const tipoTest = sesion.tipoTest ?? sesion.tipo_test;
+                  const fecha = sesion.fechaInicio ?? sesion.fecha_inicio;
+                  const id = sesion.id ?? sesion.sesion_id;
+                  const estado = sesion.estado ?? sesion.estado;
+                  const isLoading = continuandoId === id;
+                  return (
+                    <Card
+                      key={id}
+                      className="border-none shadow-sm rounded-xl border-l-4 border-l-amber-500 bg-amber-50/50 hover:bg-amber-50 transition-all"
+                    >
+                      <CardContent className="p-5 flex flex-wrap items-center justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            {getTipoTestTexto(tipoTest)}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5 shrink-0" />
+                              {formatearFechaSegura(fecha)}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${getEstadoColor(estado, tipoTest)}`}>
+                              {getEstadoTexto(estado, tipoTest)}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => continuarTest(sesion)}
+                          disabled={isLoading}
+                          className="bg-[#F37021] hover:bg-orange-600 text-white shrink-0"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Cargando...
+                            </>
+                          ) : (
+                            "Continuar"
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {historialCompletados.length === 0 ? (
             <Card className="border-none shadow-sm rounded-xl">
@@ -237,7 +323,7 @@ const Historial = () => {
             <div className="space-y-4">
               {historialCompletados.map((sesion: any) => {
                 const tipoTest = sesion.tipoTest ?? sesion.tipo_test;
-                const fecha = sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
+                const fecha = sesion.fechaCompletada ?? sesion.fecha_completada ?? sesion.fechaFin ?? sesion.fecha_fin ?? sesion.fechaInicio ?? sesion.fecha_inicio;
                 const perfil = sesion.perfilDominante ?? sesion.perfil_dominante;
                 const id = sesion.id ?? sesion.sesion_id;
                 return (
@@ -253,12 +339,10 @@ const Historial = () => {
                             {getTipoTestTexto(tipoTest)}
                           </h3>
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                            {fecha && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3.5 w-3.5 shrink-0" />
-                                {format(new Date(fecha), "dd/MM/yyyy")}
-                              </span>
-                            )}
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5 shrink-0" />
+                              {formatearFechaSegura(fecha)}
+                            </span>
                             {perfil && (
                               <span className="flex items-center gap-1 font-medium text-gray-900">
                                 <GraduationCap className="h-3.5 w-3.5 shrink-0" />

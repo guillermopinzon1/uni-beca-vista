@@ -25,7 +25,15 @@ const Resultados = () => {
   const accessToken = tokens?.accessToken || 
     JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
 
+  // Si no hay sesionId en la URL, redirigir al historial (no usar sesión en progreso de localStorage)
   useEffect(() => {
+    if (!sesionIdParam) {
+      navigate('/orientacion/historial', { replace: true });
+    }
+  }, [sesionIdParam, navigate]);
+
+  useEffect(() => {
+    if (!sesionIdParam) return;
     const cargarResultados = async () => {
       if (!accessToken) {
         toast({
@@ -36,17 +44,7 @@ const Resultados = () => {
         navigate("/login");
         return;
       }
-
-      const sesionId = sesionIdParam || localStorage.getItem('sesionId');
-      if (!sesionId) {
-        toast({
-          title: "Error",
-          description: "No se encontró la sesión. Por favor inicia un nuevo test.",
-          variant: "destructive",
-        });
-        navigate('/orientacion/seleccionar-test');
-        return;
-      }
+      const sesionId = sesionIdParam;
 
       setCargando(true);
       setError(null);
@@ -136,6 +134,8 @@ const Resultados = () => {
     logout();
     navigate("/");
   };
+
+  if (!sesionIdParam) return null;
 
   const datosGrafico = prepararDatosDimensiones(
     resultados?.puntuacionesFinales as Record<string, number> | undefined

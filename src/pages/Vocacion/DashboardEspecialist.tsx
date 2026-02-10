@@ -1,9 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, FileQuestion, BookMarked } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -20,10 +20,41 @@ import { obtenerHistorialEspecialista, HistorialEspecialistaResponse, type Recom
 import { enviarGrupoPredefinido, obtenerEstadisticas, segmentarEstudiantes, enviarCampana } from "@/lib/api/campanas";
 import type { Estudiante, FiltrosSegmentacion } from "@/lib/api/campanas";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getUserProfile, type UserProfileResponse } from "@/lib/api/auth";
 import { agendarCita, obtenerMisCitas, actualizarCita, type Cita } from "@/lib/api/citas";
+import {
+  listarPreguntas,
+  obtenerPregunta,
+  crearPregunta,
+  actualizarPregunta,
+  desactivarPregunta,
+  existeCodigoPregunta,
+  type PreguntaItem,
+  type CrearPreguntaBody,
+  type TipoTestPregunta,
+  type DimensionRIASEC,
+} from "@/lib/api/preguntas";
+import {
+  listarCareers,
+  obtenerCareer,
+  crearCareer,
+  actualizarCareer,
+  desactivarCareer,
+  type CareerListItem,
+  type CrearCarreraBody,
+} from "@/lib/api/careers";
 
 const MOTIVOS_LEGIBLES: Record<string, string> = {
   orientacion_vocacional: "Orientación Vocacional",
@@ -158,6 +189,52 @@ const DashboardEspecialist = () => {
     }
   });
 
+  // Módulo Preguntas de tests
+  const [preguntasList, setPreguntasList] = useState<PreguntaItem[]>([]);
+  const [preguntasLoading, setPreguntasLoading] = useState(false);
+  const [preguntasPagination, setPreguntasPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [preguntasFilters, setPreguntasFilters] = useState<{ tipo_test: TipoTestPregunta | ""; dimension_principal: DimensionRIASEC | ""; activa: "" | boolean }>({ tipo_test: "", dimension_principal: "", activa: "" });
+  const [modalPreguntaAbierto, setModalPreguntaAbierto] = useState(false);
+  const [preguntaEdit, setPreguntaEdit] = useState<PreguntaItem | null>(null);
+  const [formPregunta, setFormPregunta] = useState<CrearPreguntaBody & { id?: string }>({
+    codigo_pregunta: "",
+    tipo_test: "Holland_RIASEC",
+    dimension_principal: "Realista",
+    texto__pregunta: "",
+    tipo_pregunta: "directa",
+    peso_pregunta: "media",
+    activa: true,
+  });
+  const [guardandoPregunta, setGuardandoPregunta] = useState(false);
+  const [uploadPreguntasLoading, setUploadPreguntasLoading] = useState(false);
+  const [uploadPreguntasResult, setUploadPreguntasResult] = useState<{ creadas: number; duplicados: number; errores: string[] } | null>(null);
+  const fileInputPreguntasRef = useRef<HTMLInputElement>(null);
+  const [busquedaCodigoPregunta, setBusquedaCodigoPregunta] = useState("");
+  const [guiaCSVPreguntasTab, setGuiaCSVPreguntasTab] = useState<"descargar" | "subir" | null>(null);
+  const [exportandoPreguntas, setExportandoPreguntas] = useState(false);
+  const [preguntaADesactivar, setPreguntaADesactivar] = useState<PreguntaItem | null>(null);
+  const [carreraADesactivar, setCarreraADesactivar] = useState<CareerListItem | null>(null);
+  const [desactivandoPregunta, setDesactivandoPregunta] = useState(false);
+  const [desactivandoCarrera, setDesactivandoCarrera] = useState(false);
+
+  // Módulo Carreras
+  const [careersList, setCareersList] = useState<CareerListItem[]>([]);
+  const [careersLoading, setCareersLoading] = useState(false);
+  const [careersPagination, setCareersPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [careersFilters, setCareersFilters] = useState<{ q: string; faculty: string; area: string; incluir_inactivas: boolean }>({ q: "", faculty: "", area: "", incluir_inactivas: false });
+  const [modalCarreraAbierto, setModalCarreraAbierto] = useState(false);
+  const [carreraEdit, setCarreraEdit] = useState<CareerListItem | null>(null);
+  const [formCarrera, setFormCarrera] = useState<CrearCarreraBody & { is_active?: boolean }>({
+    name: "",
+    faculty: "",
+    code: "",
+    area: "",
+    description: "",
+    duration: "",
+    modality: "",
+  });
+  const [guardandoCarrera, setGuardandoCarrera] = useState(false);
+
   const [carrerasDisponibles] = useState([
     {
       nombre: 'Ingeniería de Sistemas',
@@ -186,16 +263,18 @@ const DashboardEspecialist = () => {
     navigate("/");
   };
 
-  // Función para formatear fecha
+  // Función para formatear fecha (evita NaN Invalid Date)
   const formatDate = (dateString: string) => {
+    if (!dateString || String(dateString).trim() === "" || dateString === "null" || dateString === "undefined") return "—";
     try {
       const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return "—";
       const day = date.getDate();
       const month = date.toLocaleString('es-ES', { month: 'short' });
       const year = date.getFullYear();
       return `${day} ${month} ${year}`;
     } catch {
-      return dateString;
+      return "—";
     }
   };
 
@@ -426,6 +505,16 @@ const DashboardEspecialist = () => {
       module: "campanas"
     },
     {
+      title: "Preguntas de tests",
+      icon: FileQuestion,
+      module: "preguntas"
+    },
+    {
+      title: "Carreras",
+      icon: BookMarked,
+      module: "carreras"
+    },
+    {
       title: "Mi Perfil",
       icon: User,
       module: "perfil"
@@ -560,6 +649,79 @@ const DashboardEspecialist = () => {
 
     cargarCitas();
   }, [activeModule, tokens, navigate, toast, filtroEstadoCita]);
+
+  // Cargar preguntas cuando se active el módulo de preguntas
+  useEffect(() => {
+    if (activeModule !== "preguntas") return;
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+    if (!accessToken) return;
+
+    const cargar = async () => {
+      setPreguntasLoading(true);
+      try {
+        const params: { tipo_test?: TipoTestPregunta; dimension_principal?: DimensionRIASEC; activa?: boolean; page: number; limit: number } = {
+          page: preguntasPagination.page,
+          limit: preguntasPagination.limit,
+        };
+        if (preguntasFilters.tipo_test) params.tipo_test = preguntasFilters.tipo_test as TipoTestPregunta;
+        if (preguntasFilters.dimension_principal) params.dimension_principal = preguntasFilters.dimension_principal as DimensionRIASEC;
+        if (preguntasFilters.activa !== "") params.activa = preguntasFilters.activa as boolean;
+
+        const res = await listarPreguntas(accessToken, params);
+        setPreguntasList(res.data.items);
+        setPreguntasPagination(prev => ({
+          ...prev,
+          total: res.data.pagination.total,
+          totalPages: res.data.pagination.totalPages,
+        }));
+      } catch (e: unknown) {
+        toast({
+          title: "Error",
+          description: e instanceof Error ? e.message : "Error al cargar preguntas",
+          variant: "destructive",
+        });
+      } finally {
+        setPreguntasLoading(false);
+      }
+    };
+    cargar();
+  }, [activeModule, tokens, preguntasPagination.page, preguntasPagination.limit, preguntasFilters.tipo_test, preguntasFilters.dimension_principal, preguntasFilters.activa, toast]);
+
+  // Cargar carreras cuando se active el módulo de carreras
+  useEffect(() => {
+    if (activeModule !== "carreras") return;
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+    const cargar = async () => {
+      setCareersLoading(true);
+      try {
+        const params = {
+          page: careersPagination.page,
+          limit: careersPagination.limit,
+          q: careersFilters.q || undefined,
+          faculty: careersFilters.faculty || undefined,
+          area: careersFilters.area || undefined,
+          incluir_inactivas: careersFilters.incluir_inactivas,
+        };
+        const res = await listarCareers(accessToken, params);
+        setCareersList(res.data);
+        setCareersPagination(prev => ({
+          ...prev,
+          total: res.total,
+          totalPages: res.totalPages,
+        }));
+      } catch (e: unknown) {
+        toast({
+          title: "Error",
+          description: e instanceof Error ? e.message : "Error al cargar carreras",
+          variant: "destructive",
+        });
+      } finally {
+        setCareersLoading(false);
+      }
+    };
+    cargar();
+  }, [activeModule, tokens, careersPagination.page, careersPagination.limit, careersFilters.q, careersFilters.faculty, careersFilters.area, careersFilters.incluir_inactivas, toast]);
 
   // Función para abrir el modal de edición de campaña
   const handleAbrirModalCampana = (
@@ -2036,6 +2198,856 @@ Te invitamos a conocer más sobre:
               ))}
             </div>
           )}
+        </div>
+      );
+    }
+
+    if (activeModule === "preguntas") {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+      const TIPOS_TEST: { value: TipoTestPregunta; label: string }[] = [
+        { value: "Holland_RIASEC", label: "Holland RIASEC" },
+        { value: "Kuder", label: "Kuder" },
+        { value: "ICO", label: "ICO" },
+        { value: "Personalizado", label: "Personalizado" },
+      ];
+      const DIMENSIONES: { value: DimensionRIASEC; label: string }[] = [
+        { value: "Realista", label: "Realista" },
+        { value: "Investigador", label: "Investigador" },
+        { value: "Artístico", label: "Artístico" },
+        { value: "Social", label: "Social" },
+        { value: "Emprendedor", label: "Emprendedor" },
+        { value: "Convencional", label: "Convencional" },
+      ];
+
+      const abrirModalPregunta = (p?: PreguntaItem) => {
+        if (p) {
+          setPreguntaEdit(p);
+          setFormPregunta({
+            codigo_pregunta: p.codigo_pregunta,
+            tipo_test: p.tipo_test,
+            dimension_principal: p.dimension_principal,
+            texto__pregunta: p.texto__pregunta,
+            tipo_pregunta: p.tipo_pregunta,
+            peso_pregunta: p.peso_pregunta,
+            instrucciones_pregunta: p.instrucciones_pregunta ?? undefined,
+            instrucciones_respuesta: p.instrucciones_respuesta ?? [],
+            dimension_secundaria: p.dimension_secundaria ?? [],
+            activa: p.activa,
+          });
+        } else {
+          setPreguntaEdit(null);
+          setFormPregunta({
+            codigo_pregunta: "",
+            tipo_test: "Holland_RIASEC",
+            dimension_principal: "Realista",
+            texto__pregunta: "",
+            tipo_pregunta: "directa",
+            peso_pregunta: "media",
+            activa: true,
+          });
+        }
+        setModalPreguntaAbierto(true);
+      };
+
+      const guardarPregunta = async () => {
+        if (!accessToken) return;
+        if (!formPregunta.codigo_pregunta.trim() || !formPregunta.texto__pregunta.trim()) {
+          toast({ title: "Campos requeridos", description: "Código y texto de la pregunta son obligatorios", variant: "destructive" });
+          return;
+        }
+        const existe = await existeCodigoPregunta(
+          accessToken,
+          formPregunta.tipo_test,
+          formPregunta.codigo_pregunta,
+          preguntaEdit?.id
+        );
+        if (existe) {
+          toast({
+            title: "Código duplicado",
+            description: preguntaEdit
+              ? `Ya existe otra pregunta con el código "${formPregunta.codigo_pregunta.trim()}" para el tipo de test ${formPregunta.tipo_test}. Elige otro código.`
+              : `Ya existe una pregunta con el código "${formPregunta.codigo_pregunta.trim()}" para el tipo de test ${formPregunta.tipo_test}. Elige otro código.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        setGuardandoPregunta(true);
+        try {
+          if (preguntaEdit) {
+            await actualizarPregunta(accessToken, preguntaEdit.id, {
+              codigo_pregunta: formPregunta.codigo_pregunta,
+              tipo_test: formPregunta.tipo_test,
+              dimension_principal: formPregunta.dimension_principal,
+              texto__pregunta: formPregunta.texto__pregunta,
+              tipo_pregunta: formPregunta.tipo_pregunta,
+              peso_pregunta: formPregunta.peso_pregunta,
+              instrucciones_pregunta: formPregunta.instrucciones_pregunta,
+              instrucciones_respuesta: formPregunta.instrucciones_respuesta,
+              dimension_secundaria: formPregunta.dimension_secundaria,
+              activa: formPregunta.activa,
+            });
+            toast({ title: "Pregunta actualizada", description: "Se guardaron los cambios correctamente." });
+          } else {
+            await crearPregunta(accessToken, {
+              codigo_pregunta: formPregunta.codigo_pregunta,
+              tipo_test: formPregunta.tipo_test,
+              dimension_principal: formPregunta.dimension_principal,
+              texto__pregunta: formPregunta.texto__pregunta,
+              tipo_pregunta: formPregunta.tipo_pregunta,
+              peso_pregunta: formPregunta.peso_pregunta,
+              instrucciones_pregunta: formPregunta.instrucciones_pregunta,
+              instrucciones_respuesta: formPregunta.instrucciones_respuesta,
+              dimension_secundaria: formPregunta.dimension_secundaria,
+              activa: formPregunta.activa ?? true,
+            });
+            toast({ title: "Pregunta creada", description: "La pregunta se agregó correctamente." });
+          }
+          setModalPreguntaAbierto(false);
+          const res = await listarPreguntas(accessToken, {
+            page: 1,
+            limit: preguntasPagination.limit,
+            tipo_test: preguntasFilters.tipo_test || undefined,
+            dimension_principal: preguntasFilters.dimension_principal || undefined,
+            activa: preguntasFilters.activa === "" ? undefined : preguntasFilters.activa,
+          });
+          setPreguntasList(res.data.items);
+          setPreguntasPagination(prev => ({
+            ...prev,
+            page: 1,
+            total: res.data.pagination.total,
+            totalPages: res.data.pagination.totalPages,
+          }));
+        } catch (e: unknown) {
+          toast({ title: "Error", description: e instanceof Error ? e.message : "Error al guardar", variant: "destructive" });
+        } finally {
+          setGuardandoPregunta(false);
+        }
+      };
+
+      const abrirConfirmDesactivarPregunta = (p: PreguntaItem) => setPreguntaADesactivar(p);
+      const confirmarDesactivarPregunta = async () => {
+        if (!preguntaADesactivar || !accessToken) return;
+        setDesactivandoPregunta(true);
+        try {
+          await desactivarPregunta(accessToken, preguntaADesactivar.id);
+          toast({ title: "Pregunta desactivada", description: "Se desactivó correctamente." });
+          setPreguntasList(prev => prev.map(x => x.id === preguntaADesactivar.id ? { ...x, activa: false } : x));
+          setPreguntaADesactivar(null);
+        } catch (e: unknown) {
+          toast({ title: "Error", description: e instanceof Error ? e.message : "Error al desactivar", variant: "destructive" });
+        } finally {
+          setDesactivandoPregunta(false);
+        }
+      };
+
+      const TIPOS_TEST_CSV = ["Holland_RIASEC", "Kuder", "ICO", "Personalizado"] as const;
+      const DIMENSIONES_CSV = ["Realista", "Investigador", "Artístico", "Social", "Emprendedor", "Convencional"] as const;
+
+      const preguntasFiltradasPorCodigo = busquedaCodigoPregunta.trim()
+        ? preguntasList.filter((p) =>
+            p.codigo_pregunta.toLowerCase().includes(busquedaCodigoPregunta.trim().toLowerCase())
+          )
+        : preguntasList;
+
+      const descargarPlantillaVacia = () => {
+        const header = "codigo_pregunta;tipo_test;dimension_principal;texto__pregunta;tipo_pregunta;peso_pregunta;activa";
+        const ejemplo = "H-R-01;Holland_RIASEC;Realista;¿Te gusta trabajar con herramientas?;directa;alta;true";
+        const csv = [header, ejemplo].join("\n");
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "plantilla_preguntas_vacia.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const exportarPreguntas = async () => {
+        if (!accessToken) return;
+        setExportandoPreguntas(true);
+        try {
+          const todas: PreguntaItem[] = [];
+          let page = 1;
+          const limit = 100;
+          let totalPages = 1;
+          do {
+            const res = await listarPreguntas(accessToken, {
+              page,
+              limit,
+              tipo_test: preguntasFilters.tipo_test || undefined,
+              dimension_principal: preguntasFilters.dimension_principal || undefined,
+              activa: preguntasFilters.activa === "" ? undefined : preguntasFilters.activa,
+            });
+            todas.push(...res.data.items);
+            totalPages = res.data.pagination.totalPages;
+            page++;
+          } while (page <= totalPages);
+          const header = "codigo_pregunta;tipo_test;dimension_principal;texto__pregunta;tipo_pregunta;peso_pregunta;activa";
+          const filas = todas.map((p) =>
+            [
+              p.codigo_pregunta,
+              p.tipo_test,
+              p.dimension_principal,
+              (p.texto__pregunta || "").replace(/;/g, ","),
+              p.tipo_pregunta,
+              p.peso_pregunta,
+              p.activa ? "true" : "false",
+            ].join(";")
+          );
+          const csv = [header, ...filas].join("\n");
+          const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = preguntasFilters.tipo_test || preguntasFilters.dimension_principal
+            ? `preguntas_exportadas_${new Date().toISOString().slice(0, 10)}.csv`
+            : "preguntas_todas.csv";
+          a.click();
+          URL.revokeObjectURL(url);
+          toast({
+            title: "Exportación lista",
+            description: `Se descargaron ${todas.length} pregunta(s). Sin filtros = todas; con filtros = solo las que coinciden.`,
+          });
+        } catch (e: unknown) {
+          toast({
+            title: "Error al exportar",
+            description: e instanceof Error ? e.message : "No se pudieron cargar las preguntas",
+            variant: "destructive",
+          });
+        } finally {
+          setExportandoPreguntas(false);
+        }
+      };
+
+      const parsearLineaCSV = (linea: string): string[] => {
+        const campos: string[] = [];
+        let campo = "";
+        let entreComillas = false;
+        for (let i = 0; i < linea.length; i++) {
+          const c = linea[i];
+          if (c === '"') {
+            entreComillas = !entreComillas;
+          } else if ((c === ";" && !entreComillas) || (c === "\t" && !entreComillas)) {
+            campos.push(campo.trim());
+            campo = "";
+          } else {
+            campo += c;
+          }
+        }
+        campos.push(campo.trim());
+        return campos;
+      };
+
+      const cargarPreguntasDesdeArchivo = async (file: File) => {
+        if (!accessToken) return;
+        setUploadPreguntasResult(null);
+        setUploadPreguntasLoading(true);
+        const resultado = { creadas: 0, duplicados: 0, errores: [] as string[] };
+        try {
+          const texto = await file.text();
+          const lineas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const esCabecera = (linea: string) =>
+            linea.toLowerCase().startsWith("codigo") || linea.toLowerCase().includes("codigo_pregunta");
+          const filas = lineas.filter((l) => !esCabecera(l));
+          for (let i = 0; i < filas.length; i++) {
+            const campos = parsearLineaCSV(filas[i]);
+            if (campos.length < 4) {
+              resultado.errores.push(`Fila ${i + 1}: faltan columnas (mínimo: código, tipo_test, dimensión, texto)`);
+              continue;
+            }
+            const [codigo, tipoTest, dimension, textoPregunta] = campos.map((c) => c.trim());
+            const tipoPregunta = (campos[4]?.trim() || "directa") as "directa" | "comparativa" | "situacional" | "proyectiva";
+            const pesoPregunta = (campos[5]?.trim() || "media") as "alta" | "media" | "baja";
+            const activa = campos[6]?.trim().toLowerCase() !== "false";
+            if (!codigo || !tipoTest || !dimension || !textoPregunta) {
+              resultado.errores.push(`Fila ${i + 1}: código, tipo_test, dimension_principal y texto son obligatorios`);
+              continue;
+            }
+            if (!TIPOS_TEST_CSV.includes(tipoTest as typeof TIPOS_TEST_CSV[number])) {
+              resultado.errores.push(`Fila ${i + 1}: tipo_test debe ser uno de: ${TIPOS_TEST_CSV.join(", ")}`);
+              continue;
+            }
+            if (!DIMENSIONES_CSV.includes(dimension as typeof DIMENSIONES_CSV[number])) {
+              resultado.errores.push(`Fila ${i + 1}: dimension_principal debe ser una de: ${DIMENSIONES_CSV.join(", ")}`);
+              continue;
+            }
+            try {
+              await crearPregunta(accessToken, {
+                codigo_pregunta: codigo,
+                tipo_test: tipoTest as TipoTestPregunta,
+                dimension_principal: dimension as DimensionRIASEC,
+                texto__pregunta: textoPregunta,
+                tipo_pregunta: ["directa", "comparativa", "situacional", "proyectiva"].includes(tipoPregunta) ? tipoPregunta : "directa",
+                peso_pregunta: ["alta", "media", "baja"].includes(pesoPregunta) ? pesoPregunta : "media",
+                activa,
+              });
+              resultado.creadas++;
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err);
+              if (msg.includes("Ya existe") || msg.includes("409") || msg.includes("duplicado")) {
+                resultado.duplicados++;
+              } else {
+                resultado.errores.push(`Fila ${i + 1} (${codigo}): ${msg}`);
+              }
+            }
+          }
+          setUploadPreguntasResult(resultado);
+          setPreguntasPagination(prev => ({ ...prev, page: 1 }));
+          const res = await listarPreguntas(accessToken, {
+            page: 1,
+            limit: preguntasPagination.limit,
+            tipo_test: preguntasFilters.tipo_test || undefined,
+            dimension_principal: preguntasFilters.dimension_principal || undefined,
+            activa: preguntasFilters.activa === "" ? undefined : preguntasFilters.activa,
+          });
+          setPreguntasList(res.data.items);
+          setPreguntasPagination(p => ({ ...p, total: res.data.pagination.total, totalPages: res.data.pagination.totalPages }));
+          toast({
+            title: "Carga completada",
+            description: `Creadas: ${resultado.creadas}. Duplicados omitidos: ${resultado.duplicados}.${resultado.errores.length ? ` Errores: ${resultado.errores.length}.` : ""}`,
+            variant: resultado.errores.length ? "destructive" : "default",
+          });
+        } catch (e: unknown) {
+          toast({
+            title: "Error al procesar el archivo",
+            description: e instanceof Error ? e.message : "No se pudo leer el archivo",
+            variant: "destructive",
+          });
+          setUploadPreguntasResult({ creadas: 0, duplicados: 0, errores: [e instanceof Error ? e.message : String(e)] });
+        } finally {
+          setUploadPreguntasLoading(false);
+          if (fileInputPreguntasRef.current) fileInputPreguntasRef.current.value = "";
+        }
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">Preguntas de los tests</h2>
+            <p className="text-sm text-slate-600">Gestión de preguntas para Holland RIASEC, Kuder, ICO y Personalizado. Crear, editar y desactivar (soft delete). Puedes agregar una por una o cargar varias desde un CSV (descarga la plantilla y usa punto y coma como separador).</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por código..."
+                className="pl-8 rounded-md border border-slate-200"
+                value={busquedaCodigoPregunta}
+                onChange={(e) => setBusquedaCodigoPregunta(e.target.value)}
+              />
+            </div>
+            <select
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={preguntasFilters.tipo_test}
+              onChange={e => setPreguntasFilters(f => ({ ...f, tipo_test: (e.target.value || "") as TipoTestPregunta | "" }))}
+            >
+              <option value="">Todos los tipos</option>
+              {TIPOS_TEST.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <select
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={preguntasFilters.dimension_principal}
+              onChange={e => setPreguntasFilters(f => ({ ...f, dimension_principal: (e.target.value || "") as DimensionRIASEC | "" }))}
+            >
+              <option value="">Todas las dimensiones</option>
+              {DIMENSIONES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+            <select
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={preguntasFilters.activa === "" ? "" : preguntasFilters.activa ? "true" : "false"}
+              onChange={e => setPreguntasFilters(f => ({ ...f, activa: e.target.value === "" ? "" : e.target.value === "true" }))}
+            >
+              <option value="">Todas</option>
+              <option value="true">Activas</option>
+              <option value="false">Inactivas</option>
+            </select>
+            <Button onClick={() => abrirModalPregunta()} className="bg-primary text-primary-foreground">Agregar pregunta</Button>
+          </div>
+
+          <Card className="border-orange/20 bg-slate-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Guía: usar archivos CSV
+              </CardTitle>
+              <CardDescription>
+                Elige qué quieres hacer: descargar una plantilla o exportar preguntas, o subir un archivo con nuevas preguntas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Tabs value={guiaCSVPreguntasTab ?? "descargar"} onValueChange={(v) => setGuiaCSVPreguntasTab(v as "descargar" | "subir")}>
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <TabsTrigger value="descargar" onClick={() => setGuiaCSVPreguntasTab("descargar")}>
+                    Quiero descargar
+                  </TabsTrigger>
+                  <TabsTrigger value="subir" onClick={() => setGuiaCSVPreguntasTab("subir")}>
+                    Quiero subir un CSV
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="descargar" className="mt-4 space-y-3">
+                  <p className="text-sm font-medium text-slate-700">Pasos para descargar:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm text-slate-600">
+                    <li><strong>Plantilla vacía:</strong> si vas a crear preguntas nuevas en Excel o similar, descarga la plantilla vacía (solo cabecera y un ejemplo).</li>
+                    <li><strong>Exportar preguntas:</strong> si quieres ver todas las preguntas en CSV o editarlas fuera del sistema, exporta. Sin filtros = todas las preguntas; con tipo/dimensión/estado = solo las que coinciden.</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={descargarPlantillaVacia} className="gap-1">
+                      <Download className="h-4 w-4" /> Descargar plantilla vacía
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportarPreguntas} disabled={exportandoPreguntas} className="gap-1">
+                      {exportandoPreguntas ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      {exportandoPreguntas ? "Exportando…" : "Exportar preguntas (según filtros)"}
+                    </Button>
+                  </div>
+                </TabsContent>
+                <TabsContent value="subir" className="mt-4 space-y-3">
+                  <p className="text-sm font-medium text-slate-700">Pasos para subir un CSV:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm text-slate-600">
+                    <li>Descarga la plantilla vacía o exporta preguntas para ver el formato correcto.</li>
+                    <li>El archivo debe ser <strong>CSV con separador punto y coma (;)</strong>. Si el texto de la pregunta lleva punto y coma, envuélvelo entre comillas dobles.</li>
+                    <li><strong>Columnas en este orden:</strong> codigo_pregunta, tipo_test, dimension_principal, texto__pregunta, tipo_pregunta, peso_pregunta, activa.</li>
+                    <li><strong>tipo_test</strong> debe ser uno de: Holland_RIASEC, Kuder, ICO, Personalizado.</li>
+                    <li><strong>dimension_principal</strong> debe ser una de: Realista, Investigador, Artístico, Social, Emprendedor, Convencional.</li>
+                    <li>Haz clic en &quot;Cargar desde CSV&quot; y selecciona tu archivo. Se crearán las preguntas; las que ya existan (mismo código y tipo) se omitirán.</li>
+                  </ol>
+                  <div className="pt-2">
+                    <input
+                      ref={fileInputPreguntasRef}
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) cargarPreguntasDesdeArchivo(f);
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={uploadPreguntasLoading}
+                      onClick={() => fileInputPreguntasRef.current?.click()}
+                      className="gap-1"
+                    >
+                      {uploadPreguntasLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {uploadPreguntasLoading ? "Subiendo…" : "Cargar desde CSV"}
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+          {uploadPreguntasResult && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+              <p className="font-medium text-slate-800 mb-1">Resultado de la carga</p>
+              <p className="text-slate-600">Creadas: {uploadPreguntasResult.creadas} · Duplicados omitidos: {uploadPreguntasResult.duplicados}</p>
+              {uploadPreguntasResult.errores.length > 0 && (
+                <ul className="mt-2 list-disc list-inside text-destructive">
+                  {uploadPreguntasResult.errores.slice(0, 10).map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                  {uploadPreguntasResult.errores.length > 10 && (
+                    <li>… y {uploadPreguntasResult.errores.length - 10} errores más</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+          {preguntasLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Código</th>
+                      <th className="text-left p-3 font-medium">Tipo test</th>
+                      <th className="text-left p-3 font-medium">Dimensión</th>
+                      <th className="text-left p-3 font-medium">Texto</th>
+                      <th className="text-left p-3 font-medium">Estado</th>
+                      <th className="text-right p-3 font-medium">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preguntasFiltradasPorCodigo.length === 0 ? (
+                      <tr><td colSpan={6} className="p-6 text-center text-slate-500">{preguntasList.length === 0 ? "No hay preguntas que coincidan con los filtros." : "Ningún código coincide con la búsqueda. Prueba otro texto."}</td></tr>
+                    ) : (
+                      preguntasFiltradasPorCodigo.map(p => (
+                        <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="p-3">{p.codigo_pregunta}</td>
+                          <td className="p-3">{p.tipo_test}</td>
+                          <td className="p-3">{p.dimension_principal}</td>
+                          <td className="p-3 max-w-[200px] truncate" title={p.texto__pregunta}>{p.texto__pregunta}</td>
+                          <td className="p-3">
+                            <Badge variant={p.activa ? "default" : "secondary"}>{p.activa ? "Activa" : "Inactiva"}</Badge>
+                          </td>
+                          <td className="p-3 text-right">
+                            <Button variant="ghost" size="sm" onClick={() => abrirModalPregunta(p)}>Editar</Button>
+                            {p.activa && (
+                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => abrirConfirmDesactivarPregunta(p)}>Desactivar</Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {preguntasPagination.totalPages > 1 && (
+                <div className="flex items-center justify-between p-3 border-t border-slate-200">
+                  <span className="text-sm text-slate-600">Total: {preguntasPagination.total}</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={preguntasPagination.page <= 1} onClick={() => setPreguntasPagination(prev => ({ ...prev, page: prev.page - 1 }))}>Anterior</Button>
+                    <span className="py-2 text-sm">Pág. {preguntasPagination.page} de {preguntasPagination.totalPages}</span>
+                    <Button variant="outline" size="sm" disabled={preguntasPagination.page >= preguntasPagination.totalPages} onClick={() => setPreguntasPagination(prev => ({ ...prev, page: prev.page + 1 }))}>Siguiente</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <Dialog open={modalPreguntaAbierto} onOpenChange={setModalPreguntaAbierto}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{preguntaEdit ? "Editar pregunta" : "Nueva pregunta"}</DialogTitle>
+                <DialogDescription>Los campos código, tipo de test, dimensión y texto son obligatorios.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Código pregunta</Label>
+                    <Input value={formPregunta.codigo_pregunta} onChange={e => setFormPregunta(f => ({ ...f, codigo_pregunta: e.target.value }))} placeholder="Ej. H-R-01" />
+                  </div>
+                  <div>
+                    <Label>Tipo de test</Label>
+                    <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.tipo_test} onChange={e => setFormPregunta(f => ({ ...f, tipo_test: e.target.value as TipoTestPregunta }))}>
+                      {TIPOS_TEST.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Label>Dimensión principal</Label>
+                  <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.dimension_principal} onChange={e => setFormPregunta(f => ({ ...f, dimension_principal: e.target.value as DimensionRIASEC }))}>
+                    {DIMENSIONES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label>Texto de la pregunta</Label>
+                  <Textarea value={formPregunta.texto__pregunta} onChange={e => setFormPregunta(f => ({ ...f, texto__pregunta: e.target.value }))} rows={3} placeholder="¿Te gusta...?" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tipo pregunta</Label>
+                    <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.tipo_pregunta} onChange={e => setFormPregunta(f => ({ ...f, tipo_pregunta: e.target.value as "directa" | "comparativa" | "situacional" | "proyectiva" }))}>
+                      <option value="directa">Directa</option>
+                      <option value="comparativa">Comparativa</option>
+                      <option value="situacional">Situacional</option>
+                      <option value="proyectiva">Proyectiva</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Peso</Label>
+                    <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.peso_pregunta} onChange={e => setFormPregunta(f => ({ ...f, peso_pregunta: e.target.value as "alta" | "media" | "baja" }))}>
+                      <option value="alta">Alta</option>
+                      <option value="media">Media</option>
+                      <option value="baja">Baja</option>
+                    </select>
+                  </div>
+                </div>
+                {preguntaEdit && (
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="activa-pregunta" checked={formPregunta.activa ?? true} onChange={e => setFormPregunta(f => ({ ...f, activa: e.target.checked }))} />
+                    <Label htmlFor="activa-pregunta">Activa</Label>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setModalPreguntaAbierto(false)}>Cancelar</Button>
+                <Button onClick={guardarPregunta} disabled={guardandoPregunta}>{guardandoPregunta ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar"}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <AlertDialog open={!!preguntaADesactivar} onOpenChange={(open) => !open && setPreguntaADesactivar(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Desactivar pregunta</AlertDialogTitle>
+                <AlertDialogDescription>
+                  ¿Desactivar la pregunta &quot;{preguntaADesactivar?.codigo_pregunta}&quot;? No se borrará; dejará de usarse en nuevos tests.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    confirmarDesactivarPregunta();
+                  }}
+                  disabled={desactivandoPregunta}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {desactivandoPregunta ? <Loader2 className="h-4 w-4 animate-spin" /> : "Desactivar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      );
+    }
+
+    if (activeModule === "carreras") {
+      const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
+
+      const abrirModalCarrera = (c?: CareerListItem) => {
+        if (c) {
+          setCarreraEdit(c);
+          setFormCarrera({
+            name: c.name,
+            faculty: c.faculty,
+            code: c.code ?? "",
+            area: c.area ?? "",
+            description: (c as { description?: string }).description ?? "",
+            duration: (c as { duration?: string }).duration ?? "",
+            modality: (c as { modality?: string }).modality ?? "",
+            is_active: (c as { is_active?: boolean }).is_active ?? true,
+          });
+        } else {
+          setCarreraEdit(null);
+          setFormCarrera({
+            name: "",
+            faculty: "",
+            code: "",
+            area: "",
+            description: "",
+            duration: "",
+            modality: "",
+          });
+        }
+        setModalCarreraAbierto(true);
+      };
+
+      const guardarCarrera = async () => {
+        if (!accessToken) return;
+        if (!formCarrera.name.trim() || !formCarrera.faculty.trim()) {
+          toast({ title: "Campos requeridos", description: "Nombre y facultad son obligatorios", variant: "destructive" });
+          return;
+        }
+        setGuardandoCarrera(true);
+        try {
+          if (carreraEdit) {
+            await actualizarCareer(accessToken, carreraEdit.id, {
+              name: formCarrera.name,
+              faculty: formCarrera.faculty,
+              code: formCarrera.code || undefined,
+              area: formCarrera.area || undefined,
+              description: formCarrera.description,
+              duration: formCarrera.duration,
+              modality: formCarrera.modality,
+              is_active: formCarrera.is_active,
+            });
+            toast({ title: "Carrera actualizada", description: "Se guardaron los cambios." });
+          } else {
+            await crearCareer(accessToken, {
+              name: formCarrera.name,
+              faculty: formCarrera.faculty,
+              code: formCarrera.code || undefined,
+              area: formCarrera.area || undefined,
+              description: formCarrera.description,
+              duration: formCarrera.duration,
+              modality: formCarrera.modality,
+            });
+            toast({ title: "Carrera creada", description: "La carrera se agregó correctamente." });
+          }
+          setModalCarreraAbierto(false);
+          setCareersPagination(prev => ({ ...prev, page: 1 }));
+          const res = await listarCareers(accessToken, {
+            page: careersPagination.page,
+            limit: careersPagination.limit,
+            q: careersFilters.q || undefined,
+            faculty: careersFilters.faculty || undefined,
+            area: careersFilters.area || undefined,
+            incluir_inactivas: careersFilters.incluir_inactivas,
+          });
+          setCareersList(res.data);
+          setCareersPagination(p => ({ ...p, total: res.total, totalPages: res.totalPages }));
+        } catch (e: unknown) {
+          toast({ title: "Error", description: e instanceof Error ? e.message : "Error al guardar", variant: "destructive" });
+        } finally {
+          setGuardandoCarrera(false);
+        }
+      };
+
+      const abrirConfirmDesactivarCarrera = (c: CareerListItem) => setCarreraADesactivar(c);
+      const confirmarDesactivarCarrera = async () => {
+        if (!carreraADesactivar || !accessToken) return;
+        setDesactivandoCarrera(true);
+        try {
+          await desactivarCareer(accessToken, carreraADesactivar.id);
+          toast({ title: "Carrera desactivada", description: "Se desactivó correctamente." });
+          setCareersList(prev => prev.map(x => x.id === carreraADesactivar.id ? { ...x, is_active: false } : x));
+          setCarreraADesactivar(null);
+        } catch (e: unknown) {
+          toast({ title: "Error", description: e instanceof Error ? e.message : "Error al desactivar", variant: "destructive" });
+        } finally {
+          setDesactivandoCarrera(false);
+        }
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">Catálogo de carreras</h2>
+            <p className="text-sm text-slate-600">Agregar, editar y desactivar carreras. Las desactivadas no se muestran en el listado público salvo con "Incluir inactivas".</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Input
+              placeholder="Buscar por nombre o descripción"
+              className="max-w-xs"
+              value={careersFilters.q}
+              onChange={e => setCareersFilters(f => ({ ...f, q: e.target.value }))}
+            />
+            <Input placeholder="Facultad" className="max-w-[140px]" value={careersFilters.faculty} onChange={e => setCareersFilters(f => ({ ...f, faculty: e.target.value }))} />
+            <Input placeholder="Área" className="max-w-[140px]" value={careersFilters.area} onChange={e => setCareersFilters(f => ({ ...f, area: e.target.value }))} />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={careersFilters.incluir_inactivas} onChange={e => setCareersFilters(f => ({ ...f, incluir_inactivas: e.target.checked }))} />
+              Incluir inactivas
+            </label>
+            <Button onClick={() => abrirModalCarrera()} className="bg-primary text-primary-foreground">Agregar carrera</Button>
+          </div>
+          {careersLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Código</th>
+                      <th className="text-left p-3 font-medium">Nombre</th>
+                      <th className="text-left p-3 font-medium">Facultad</th>
+                      <th className="text-left p-3 font-medium">Área</th>
+                      <th className="text-left p-3 font-medium">Estado</th>
+                      <th className="text-right p-3 font-medium">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {careersList.length === 0 ? (
+                      <tr><td colSpan={6} className="p-6 text-center text-slate-500">No hay carreras que coincidan con los filtros.</td></tr>
+                    ) : (
+                      careersList.map(c => (
+                        <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="p-3">{c.code || "—"}</td>
+                          <td className="p-3">{c.name}</td>
+                          <td className="p-3">{c.faculty}</td>
+                          <td className="p-3">{c.area || "—"}</td>
+                          <td className="p-3">
+                            <Badge variant={(c as { is_active?: boolean }).is_active !== false ? "default" : "secondary"}>
+                              {(c as { is_active?: boolean }).is_active !== false ? "Activa" : "Inactiva"}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-right">
+                            <Button variant="ghost" size="sm" onClick={() => abrirModalCarrera(c)}>Editar</Button>
+                            {(c as { is_active?: boolean }).is_active !== false && (
+                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => abrirConfirmDesactivarCarrera(c)}>Desactivar</Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {careersPagination.totalPages > 1 && (
+                <div className="flex items-center justify-between p-3 border-t border-slate-200">
+                  <span className="text-sm text-slate-600">Total: {careersPagination.total}</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={careersPagination.page <= 1} onClick={() => setCareersPagination(prev => ({ ...prev, page: prev.page - 1 }))}>Anterior</Button>
+                    <span className="py-2 text-sm">Pág. {careersPagination.page} de {careersPagination.totalPages}</span>
+                    <Button variant="outline" size="sm" disabled={careersPagination.page >= careersPagination.totalPages} onClick={() => setCareersPagination(prev => ({ ...prev, page: prev.page + 1 }))}>Siguiente</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <Dialog open={modalCarreraAbierto} onOpenChange={setModalCarreraAbierto}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{carreraEdit ? "Editar carrera" : "Nueva carrera"}</DialogTitle>
+                <DialogDescription>Nombre y facultad son obligatorios.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nombre *</Label>
+                    <Input value={formCarrera.name} onChange={e => setFormCarrera(f => ({ ...f, name: e.target.value }))} placeholder="Ej. Ingeniería de Sistemas" />
+                  </div>
+                  <div>
+                    <Label>Facultad *</Label>
+                    <Input value={formCarrera.faculty} onChange={e => setFormCarrera(f => ({ ...f, faculty: e.target.value }))} placeholder="Ej. Ingeniería" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Código</Label>
+                    <Input value={formCarrera.code} onChange={e => setFormCarrera(f => ({ ...f, code: e.target.value }))} placeholder="Ej. ING-SIS" />
+                  </div>
+                  <div>
+                    <Label>Área</Label>
+                    <Input value={formCarrera.area} onChange={e => setFormCarrera(f => ({ ...f, area: e.target.value }))} placeholder="Ej. Tecnología" />
+                  </div>
+                </div>
+                <div>
+                  <Label>Descripción</Label>
+                  <Textarea value={formCarrera.description} onChange={e => setFormCarrera(f => ({ ...f, description: e.target.value }))} rows={2} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Duración</Label>
+                    <Input value={formCarrera.duration} onChange={e => setFormCarrera(f => ({ ...f, duration: e.target.value }))} placeholder="Ej. 10 trimestres" />
+                  </div>
+                  <div>
+                    <Label>Modalidad</Label>
+                    <Input value={formCarrera.modality} onChange={e => setFormCarrera(f => ({ ...f, modality: e.target.value }))} placeholder="Ej. Presencial" />
+                  </div>
+                </div>
+                {carreraEdit && (
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="activa-carrera" checked={formCarrera.is_active !== false} onChange={e => setFormCarrera(f => ({ ...f, is_active: e.target.checked }))} />
+                    <Label htmlFor="activa-carrera">Activa</Label>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setModalCarreraAbierto(false)}>Cancelar</Button>
+                <Button onClick={guardarCarrera} disabled={guardandoCarrera}>{guardandoCarrera ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar"}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <AlertDialog open={!!carreraADesactivar} onOpenChange={(open) => !open && setCarreraADesactivar(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Desactivar carrera</AlertDialogTitle>
+                <AlertDialogDescription>
+                  ¿Desactivar la carrera &quot;{carreraADesactivar?.name}&quot;? Dejará de mostrarse en listados públicos.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    confirmarDesactivarCarrera();
+                  }}
+                  disabled={desactivandoCarrera}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {desactivandoCarrera ? <Loader2 className="h-4 w-4 animate-spin" /> : "Desactivar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       );
     }

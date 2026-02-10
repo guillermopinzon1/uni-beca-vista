@@ -151,17 +151,36 @@ export interface PerfilVocacionalResponse {
   };
 }
 
+/** Ítem de sesión en el historial (backend: historial y sesionesEnProgreso) */
+export interface HistorialItem {
+  id: string;
+  tipoTest: TipoTest;
+  tipo_test?: TipoTest;
+  estado: string;
+  fechaInicio: string;
+  fechaFin?: string;
+  fechaCompletada?: string | null;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  fecha_completada?: string | null;
+  perfilDominante?: string;
+  perfil_dominante?: string;
+  codigoHolland?: string;
+  codigo_holland?: string;
+  tieneResultado?: boolean;
+  puntuacionesRonda1?: Record<string, number>;
+  puntuacionesRonda2?: Record<string, number> | null;
+}
+
+/** Respuesta GET /v1/orientacion/historial (historial + sesionesEnProgreso) */
 export interface HistorialResponse {
   success: boolean;
-  data: Array<{
-    id: string;
-    tipoTest: TipoTest;
-    estado: string;
-    fechaInicio: string;
-    fechaFin?: string;
-    perfilDominante?: string;
-    tieneResultado?: boolean;
-  }>;
+  data: {
+    historial: HistorialItem[];
+    sesionesEnProgreso: HistorialItem[];
+    total?: number;
+    totalEnProgreso?: number;
+  };
 }
 
 /** Ítem del historial para especialista: puede incluir desglose por tipo de test (Holland e ICO) */
@@ -648,38 +667,67 @@ export async function obtenerHistorial(
     throw new Error('El servidor no devolvió datos');
   }
 
-  // Si el backend devuelve directamente un array en lugar de { success, data }
-  if (Array.isArray(payload)) {
-    console.log('⚠️ [Frontend] El backend devolvió un array directamente, ajustando estructura');
-    return {
-      success: true,
-      data: payload
-    } as HistorialResponse;
-  }
-
-  // Normalizar data a array (backend puede enviar data como array o como { historial: [...] } / { sesiones: [...] })
-  function toHistorialArray(d: unknown): unknown[] {
-    if (Array.isArray(d)) return d;
+  // Normalizar a la estructura { historial, sesionesEnProgreso }
+  function toHistorialArray(d: unknown): HistorialItem[] {
+    if (Array.isArray(d)) return d as HistorialItem[];
     if (d && typeof d === 'object') {
       const obj = d as Record<string, unknown>;
-      if (Array.isArray(obj.historial)) return obj.historial;
-      if (Array.isArray(obj.sesiones)) return obj.sesiones;
-      if (Array.isArray(obj.data)) return obj.data;
+      if (Array.isArray(obj.historial)) return obj.historial as HistorialItem[];
+      if (Array.isArray(obj.sesiones)) return obj.sesiones as HistorialItem[];
+      if (Array.isArray(obj.data)) return obj.data as HistorialItem[];
       const firstArrayKey = Object.keys(obj).find((k) => Array.isArray(obj[k]));
-      if (firstArrayKey && Array.isArray(obj[firstArrayKey])) return obj[firstArrayKey] as unknown[];
+      if (firstArrayKey && Array.isArray(obj[firstArrayKey])) return obj[firstArrayKey] as HistorialItem[];
     }
     return [];
   }
 
-  if (payload.data !== undefined) {
+  const isCompleted = (s: HistorialItem) => {
+    const e = (s.estado ?? '').toString().toLowerCase();
+    return e === 'finalizada' || e === 'ronda_2_completada' || s.tieneResultado === true;
+  };
+
+  if (payload.data !== undefined && payload.data !== null && typeof payload.data === 'object') {
+    const d = payload.data as Record<string, unknown>;
+    if (Array.isArray(d.historial) && Array.isArray(d.sesionesEnProgreso)) {
+      return {
+        success: true,
+        data: {
+          historial: d.historial as HistorialItem[],
+          sesionesEnProgreso: d.sesionesEnProgreso as HistorialItem[],
+          total: typeof d.total === 'number' ? d.total : (d.historial as unknown[]).length,
+          totalEnProgreso: typeof d.totalEnProgreso === 'number' ? d.totalEnProgreso : (d.sesionesEnProgreso as unknown[]).length,
+        },
+      } as HistorialResponse;
+    }
     const arr = toHistorialArray(payload.data);
-    return { success: true, data: arr } as HistorialResponse;
+    return {
+      success: true,
+      data: {
+        historial: arr,
+        sesionesEnProgreso: arr.filter((s) => !isCompleted(s as HistorialItem)),
+        total: arr.length,
+        totalEnProgreso: arr.filter((s) => !isCompleted(s as HistorialItem)).length,
+      },
+    } as HistorialResponse;
   }
 
-  console.warn('⚠️ [Frontend] Estructura inesperada, devolviendo array vacío');
+  if (Array.isArray(payload)) {
+    const arr = payload as HistorialItem[];
+    return {
+      success: true,
+      data: {
+        historial: arr,
+        sesionesEnProgreso: arr.filter((s) => !isCompleted(s)),
+        total: arr.length,
+        totalEnProgreso: arr.filter((s) => !isCompleted(s)).length,
+      },
+    } as HistorialResponse;
+  }
+
+  console.warn('⚠️ [Frontend] Estructura inesperada, devolviendo vacío');
   return {
     success: true,
-    data: []
+    data: { historial: [], sesionesEnProgreso: [], total: 0, totalEnProgreso: 0 },
   } as HistorialResponse;
 }
 
