@@ -91,7 +91,7 @@ const App = () => (
 
               {/* Rutas protegidas - Orientación Vocacional */}
               <Route path="/vocational-test" element={<ProtectedRoute><VocationalTest/></ProtectedRoute>}/>
-              <Route path="/vocational-explorer" element={<ProtectedRoute><VocationalExplorer/></ProtectedRoute>}/>
+              <Route path="/vocational-explorer" element={<VocationalExplorer/>}/>
               <Route path="/vocational-crm" element={<ProtectedRoute allowedRoles={['admin', 'especialista']}><VocationalCrm/></ProtectedRoute>}/>
               <Route path="/vocational-analytics" element={<ProtectedRoute allowedRoles={['admin', 'especialista']}><VocationalAnalytics/></ProtectedRoute>}/>
 

@@ -57,7 +57,12 @@ const Ronda2 = () => {
             
             const respuestasGuardadas = localStorage.getItem('respuestasRonda2');
             if (respuestasGuardadas) {
-              setRespuestas(JSON.parse(respuestasGuardadas));
+              const respuestasParseadas = JSON.parse(respuestasGuardadas) as Record<string, { respuesta: unknown }>;
+              setRespuestas(respuestasParseadas);
+              // Restaurar la pregunta donde se quedó (primera sin responder, o última si ya respondió todas)
+              const primeraSinResponder = listaPreguntas.findIndex((p: Pregunta) => !respuestasParseadas[p.id]);
+              const indiceInicial = primeraSinResponder >= 0 ? primeraSinResponder : Math.max(0, listaPreguntas.length - 1);
+              setPreguntaActual(indiceInicial);
             }
             setCargandoPreguntas(false);
             return;

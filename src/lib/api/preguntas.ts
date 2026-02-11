@@ -7,6 +7,16 @@ export type DimensionRIASEC = 'Realista' | 'Investigador' | 'Artístico' | 'Soci
 export type TipoPregunta = 'directa' | 'comparativa' | 'situacional' | 'proyectiva';
 export type PesoPregunta = 'alta' | 'media' | 'baja';
 
+/** Backend acepta array de strings o objeto con tipo + opciones (JSONB) */
+export type TipoInstruccionesRespuesta = 'si_no' | 'opciones_multiples' | 'dos_opciones' | 'mas_de_dos_opciones';
+
+export interface InstruccionesRespuestaObjeto {
+  tipo: TipoInstruccionesRespuesta;
+  opciones: string[];
+}
+
+export type InstruccionesRespuestaValue = string[] | InstruccionesRespuestaObjeto;
+
 export interface PreguntaItem {
   id: string;
   codigo_pregunta: string;
@@ -17,7 +27,8 @@ export interface PreguntaItem {
   tipo_pregunta: TipoPregunta;
   peso_pregunta: PesoPregunta;
   instrucciones_pregunta: string | null;
-  instrucciones_respuesta: string[];
+  /** Backend: array de strings o objeto { tipo, opciones } (JSONB) */
+  instrucciones_respuesta: InstruccionesRespuestaValue;
   carreras_relacionadas: string[];
   correlaciones_academicas: Record<string, unknown>;
   activa: boolean;
@@ -60,13 +71,50 @@ export interface CrearPreguntaBody {
   peso_pregunta?: PesoPregunta;
   dimension_secundaria?: string[];
   instrucciones_pregunta?: string;
-  instrucciones_respuesta?: string[];
+  /** Array de strings o objeto { tipo, opciones } */
+  instrucciones_respuesta?: InstruccionesRespuestaValue;
   carreras_relacionadas?: string[];
   correlaciones_academicas?: Record<string, unknown>;
   activa?: boolean;
 }
 
 export interface ActualizarPreguntaBody extends Partial<CrearPreguntaBody> {}
+
+/**
+ * Obtiene el array de opciones desde instrucciones_respuesta (array u objeto).
+ * El backend puede devolver array de strings o { tipo, opciones }.
+ */
+export function getOpcionesFromInstrucciones(instrucciones: InstruccionesRespuestaValue | null | undefined): string[] {
+  if (instrucciones == null) return [];
+  if (Array.isArray(instrucciones)) return instrucciones;
+  if (typeof instrucciones === 'object' && Array.isArray((instrucciones as InstruccionesRespuestaObjeto).opciones)) {
+    return (instrucciones as InstruccionesRespuestaObjeto).opciones;
+  }
+  return [];
+}
+
+/**
+ * Normaliza instrucciones_respuesta del backend a { tipo, opciones } para el formulario.
+ * Si viene como array, infiere tipo por cantidad (2 → dos_opciones, >2 → mas_de_dos_opciones) o si_no si son ["Sí","No"].
+ */
+export function normalizarInstruccionesParaForm(instrucciones: InstruccionesRespuestaValue | null | undefined): {
+  tipo: TipoInstruccionesRespuesta;
+  opciones: string[];
+} {
+  const opciones = getOpcionesFromInstrucciones(instrucciones);
+  if (typeof instrucciones === 'object' && instrucciones !== null && !Array.isArray(instrucciones) && 'tipo' in instrucciones) {
+    return {
+      tipo: (instrucciones as InstruccionesRespuestaObjeto).tipo,
+      opciones: opciones.length ? opciones : ['Sí', 'No'],
+    };
+  }
+  if (opciones.length === 2 && opciones[0]?.toLowerCase().includes('sí') && opciones[1]?.toLowerCase().includes('no')) {
+    return { tipo: 'si_no', opciones };
+  }
+  if (opciones.length === 2) return { tipo: 'dos_opciones', opciones };
+  if (opciones.length > 2) return { tipo: 'mas_de_dos_opciones', opciones };
+  return { tipo: 'si_no', opciones: opciones.length ? opciones : ['Sí', 'No'] };
+}
 
 // ==================== FUNCIONES ====================
 

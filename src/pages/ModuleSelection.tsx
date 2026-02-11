@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { GraduationCap, LogOut, CheckCircle2, Clock, AlertCircle, FileCheck, Compass } from "lucide-react";
+import { GraduationCap, LogOut, CheckCircle2, Compass, ArrowUp, ChevronRight, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { verificarPostulacionesPorEmail, PostulacionPublicData } from "@/lib/api/postulacionesBecas";
@@ -14,7 +14,6 @@ const ModuleSelection = () => {
   const [loadingPostulaciones, setLoadingPostulaciones] = useState(false);
   const [errorPostulaciones, setErrorPostulaciones] = useState<string | null>(null);
 
-  // Check if user just registered
   const newRegistration = location.state?.newRegistration === true;
   const userEmail = location.state?.userEmail || user?.email;
 
@@ -22,85 +21,50 @@ const ModuleSelection = () => {
     navigate("/");
   };
 
-  // Verificar postulaciones al cargar la página (solo si hay email)
   useEffect(() => {
     const verificarPostulaciones = async () => {
       if (!userEmail) return;
-
       setLoadingPostulaciones(true);
       setErrorPostulaciones(null);
-
       try {
-        console.log('📋 Verificando postulaciones para:', userEmail);
         const response = await verificarPostulacionesPorEmail(userEmail);
-
-        console.log('✅ Postulaciones encontradas:', response.data);
         setPostulaciones(response.data || []);
-      } catch (error) {
-        console.log('ℹ️ No se encontraron postulaciones o error:', error);
+      } catch {
         setPostulaciones([]);
-        setErrorPostulaciones(null); // No mostrar error, simplemente no hay postulaciones
+        setErrorPostulaciones(null);
       } finally {
         setLoadingPostulaciones(false);
       }
     };
-
     verificarPostulaciones();
   }, [userEmail]);
-
-  const getEstadoColor = (estado: string) => {
-    switch (estado.toLowerCase()) {
-      case 'pendiente':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-      case 'aprobada':
-      case 'aprobado':
-        return 'bg-green-50 border-green-200 text-green-800';
-      case 'rechazada':
-      case 'rechazado':
-        return 'bg-red-50 border-red-200 text-red-800';
-      default:
-        return 'bg-gray-50 border-gray-200 text-gray-800';
-    }
-  };
-
-  const getEstadoIcon = (estado: string) => {
-    switch (estado.toLowerCase()) {
-      case 'pendiente':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
-      case 'aprobada':
-      case 'aprobado':
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
-      case 'rechazada':
-      case 'rechazado':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
-      default:
-        return <FileCheck className="h-5 w-5 text-gray-600" />;
-    }
-  };
 
   const modules = [
     {
       id: 1,
       title: "Gestión de Becas",
-      description: "Centraliza la postulación, evaluación y seguimiento de todas las becas y ayudantías.",
+      description: "Postula, da seguimiento a becas y ayudantías. Todo en un solo lugar.",
       icon: GraduationCap,
       route: "/scholarship-programs",
-      available: true
+      available: true,
+      accent: "from-primary/30 to-primary/10",
+      bg: "bg-primary/5",
     },
     {
       id: 2,
-      title: "Gestión de Orientación Vocacional",
-      description: "Centraliza la realización, analisis y seguimiento de orientación vocacional.",
+      title: "Orientación Vocacional",
+      description: "Realiza tests, conoce tu perfil y recibe recomendaciones de carreras.",
       icon: Compass,
       route: "/dashboard-aspirante",
-      available: true
-    }
-    // Future modules can be added here
+      available: true,
+      accent: "from-primary/25 to-primary/5",
+      bg: "bg-orange-accent/10",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - sin cambios */}
       <header className="border-b border-orange/20 bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -112,7 +76,7 @@ const ModuleSelection = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-            <Button
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
@@ -126,22 +90,20 @@ const ModuleSelection = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Success Message for New Registration */}
+      {/* Contenido: estilo carrusel / módulos visuales */}
+      <main className="container mx-auto px-4 py-8 pb-12">
+        {/* Mensaje registro exitoso */}
         {newRegistration && (
           <div className="max-w-3xl mx-auto mb-8">
-            <Card className="border-green-200 bg-green-50">
+            <Card className="border-orange/20 bg-gradient-card">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <div className="p-2 bg-green-100 rounded-full">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <CheckCircle2 className="h-6 w-6 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-green-900 mb-2">
-                      ¡Registro Exitoso!
-                    </h3>
-                    <p className="text-green-800">
+                    <h3 className="text-lg font-semibold text-foreground mb-2">¡Registro Exitoso!</h3>
+                    <p className="text-muted-foreground">
                       Tu cuenta ha sido creada correctamente.
                       {!loadingPostulaciones && postulaciones.length === 0 ? (
                         <> Si deseas postularte para una beca, entra en el módulo de <strong>Gestión de Becas</strong> a continuación.</>
@@ -156,42 +118,62 @@ const ModuleSelection = () => {
           </div>
         )}
 
-        {/* Modules Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {modules.map((module) => (
-            <Card 
-              key={module.id} 
-              className="bg-gradient-card border-orange/20 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-              onClick={() => navigate(module.route)}
-            >
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-4 bg-primary/10 rounded-full w-fit group-hover:bg-primary/20 transition-colors">
-                  <module.icon className="h-8 w-8 text-primary" />
-                </div>
-                <CardTitle className="text-xl text-foreground">{module.title}</CardTitle>
-                {module.description && (
-                  <CardDescription className="text-muted-foreground">
-                    {module.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="text-center pb-6">
-                <Button 
-                  className="bg-gradient-primary hover:opacity-90 w-full"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(module.route);
-                  }}
-                >
-                  Acceder
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Intro + título (estilo referencia) */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-1.5 text-sm font-medium text-primary mb-3">
+            <ArrowUp className="h-4 w-4" />
+            <span className="uppercase tracking-wider">UNIMET</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground max-w-3xl mx-auto leading-tight mb-3">
+            Becas, ayudantías y orientación vocacional en un solo lugar
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-4">
+            Elige el módulo con el que deseas continuar y accede a todas las herramientas.
+          </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-orange/20">
+            <Star className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">La mejor forma de postularte y orientar tu carrera</span>
+          </div>
         </div>
 
-        {/* Future modules placeholder */}
-        <div className="mt-12 text-center">
+        {/* Carrusel horizontal de módulos */}
+        <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scroll-smooth md:flex-wrap md:justify-center md:overflow-visible md:max-w-5xl md:mx-auto">
+            {modules.map((module) => (
+              <Card
+                key={module.id}
+                className={`flex-shrink-0 w-[min(100%,320px)] snap-center border-orange/20 bg-gradient-card hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden ${module.bg}`}
+                onClick={() => navigate(module.route)}
+              >
+                {/* Zona superior tipo “imagen” con gradiente e icono */}
+                <div className={`h-36 bg-gradient-to-br ${module.accent} flex items-center justify-center relative`}>
+                  <module.icon className="h-16 w-16 text-primary/90 group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                <CardHeader className="pb-2 pt-5">
+                  <CardTitle className="text-xl text-primary">{module.title}</CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm leading-relaxed">
+                    {module.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 pb-6">
+                  <Button
+                    className="w-full bg-gradient-primary hover:opacity-90 text-primary-foreground font-medium gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(module.route);
+                    }}
+                  >
+                    Acceder al módulo
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Nota inferior */}
+        <div className="mt-10 text-center">
           <div className="inline-flex items-center px-4 py-2 bg-orange-accent/20 rounded-lg">
             <span className="text-sm text-muted-foreground">
               Más módulos estarán disponibles próximamente

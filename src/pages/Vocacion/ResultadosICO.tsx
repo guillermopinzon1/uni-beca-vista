@@ -289,14 +289,18 @@ const ResultadosICO = () => {
                   {carrerasRecomendadas.map(
                     (c: { nombre?: string; name?: string; razon: string; facultad?: string; area?: string }, index: number) => {
                       const titulo = c.nombre ?? c.name ?? "Carrera recomendada";
-                      const tituloConFacultad = c.facultad ? `${titulo} — Facultad de ${c.facultad}` : titulo;
+                      const tituloYaTieneFacultad = /facultad/i.test(titulo);
+                      const mostrarFacultadAparte = c.facultad && !tituloYaTieneFacultad;
                       return (
                         <div
                           key={index}
                           className="p-6 rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-md transition-all bg-white"
                         >
                           <div className="border-l-4 border-orange-500 pl-3 mb-3">
-                            <h4 className="text-xl font-bold text-gray-900">{tituloConFacultad}</h4>
+                            <h4 className="text-xl font-bold text-gray-900">{titulo}</h4>
+                            {mostrarFacultadAparte && (
+                              <p className="text-orange-600 text-sm font-medium mt-1">Facultad de {c.facultad}</p>
+                            )}
                             {c.area && (
                               <p className="text-orange-600 text-sm font-medium mt-1">{c.area}</p>
                             )}

@@ -79,6 +79,10 @@ const Ronda1 = () => {
         if (Object.keys(respuestasFiltradas).length > 0) {
           localStorage.setItem('respuestasRonda1', JSON.stringify(respuestasFiltradas));
         }
+        // Restaurar la pregunta donde se quedó (primera sin responder, o última si ya respondió todas)
+        const primeraSinResponder = listaPreguntas.findIndex((p: Pregunta) => !respuestasFiltradas[p.id]);
+        const indiceInicial = primeraSinResponder >= 0 ? primeraSinResponder : Math.max(0, listaPreguntas.length - 1);
+        setPreguntaActual(indiceInicial);
       }
     } catch (error) {
       console.error('Error al cargar preguntas:', error);

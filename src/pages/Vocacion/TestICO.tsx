@@ -51,7 +51,18 @@ const TestICO = () => {
           Object.keys(parsed).forEach((id) => {
             if (idsValidos.has(id)) filtrado[id] = parsed[id];
           });
-          if (Object.keys(filtrado).length > 0) setRespuestas(filtrado);
+          if (Object.keys(filtrado).length > 0) {
+            setRespuestas(filtrado);
+            // Restaurar la pregunta donde se quedó (primera sin responder, o última si ya respondió todas)
+            const primeraSinResponder = listaPreguntas.findIndex(
+              (p: Pregunta) => filtrado[p.id] === undefined
+            );
+            const indiceInicial =
+              primeraSinResponder >= 0
+                ? primeraSinResponder
+                : Math.max(0, listaPreguntas.length - 1);
+            setPreguntaActual(indiceInicial);
+          }
         } catch {
           // ignorar si no se puede parsear
         }

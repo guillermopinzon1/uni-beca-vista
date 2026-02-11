@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Compass, LogIn, Search, ArrowRight } from "lucide-react";
@@ -14,14 +14,16 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans antialiased text-slate-900">
-      {/* Header como estaba: claro, logo sin invertir */}
-      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+      {/* Encabezado de la app: logo a home, Entrar y Registrarse */}
+      <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-md border-b border-slate-100 font-sans antialiased text-slate-900 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-          <img
-            src="/lovable-uploads/UNIMETLogo.png"
-            alt="UNIMET"
-            className="h-10 w-auto object-contain"
-          />
+          <Link to="/" className="hover:opacity-90 transition-opacity">
+            <img
+              src="/lovable-uploads/UNIMETLogo.png"
+              alt="UNIMET"
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
           <div className="flex gap-4">
             <Button variant="ghost" className="text-slate-600 font-semibold" onClick={() => navigate("/login")}>
               <LogIn className="w-4 h-4 mr-2" /> Entrar

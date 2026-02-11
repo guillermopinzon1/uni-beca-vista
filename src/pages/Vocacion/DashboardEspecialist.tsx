@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, FileQuestion, BookMarked, Bold, Italic, Underline, List } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, Plus, FileQuestion, BookMarked, Bold, Italic, Underline, List } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect, useRef } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
@@ -41,10 +41,13 @@ import {
   actualizarPregunta,
   desactivarPregunta,
   existeCodigoPregunta,
+  normalizarInstruccionesParaForm,
   type PreguntaItem,
   type CrearPreguntaBody,
   type TipoTestPregunta,
   type DimensionRIASEC,
+  type TipoInstruccionesRespuesta,
+  type InstruccionesRespuestaValue,
 } from "@/lib/api/preguntas";
 import {
   listarCareers,
@@ -261,7 +264,13 @@ const DashboardEspecialist = () => {
   const [preguntasFilters, setPreguntasFilters] = useState<{ tipo_test: TipoTestPregunta | ""; dimension_principal: DimensionRIASEC | ""; activa: "" | boolean }>({ tipo_test: "", dimension_principal: "", activa: "" });
   const [modalPreguntaAbierto, setModalPreguntaAbierto] = useState(false);
   const [preguntaEdit, setPreguntaEdit] = useState<PreguntaItem | null>(null);
-  const [formPregunta, setFormPregunta] = useState<CrearPreguntaBody & { id?: string }>({
+  const [formPregunta, setFormPregunta] = useState<
+    CrearPreguntaBody & {
+      id?: string;
+      instrucciones_respuesta_tipo?: TipoInstruccionesRespuesta;
+      instrucciones_respuesta_opciones?: string[];
+    }
+  >({
     codigo_pregunta: "",
     tipo_test: "Holland_RIASEC",
     dimension_principal: "Realista",
@@ -269,6 +278,8 @@ const DashboardEspecialist = () => {
     tipo_pregunta: "directa",
     peso_pregunta: "media",
     activa: true,
+    instrucciones_respuesta_tipo: "si_no",
+    instrucciones_respuesta_opciones: ["Sí", "No"],
   });
   const [guardandoPregunta, setGuardandoPregunta] = useState(false);
   const [uploadPreguntasLoading, setUploadPreguntasLoading] = useState(false);
@@ -2433,6 +2444,7 @@ Te invitamos a conocer más sobre:
       ];
 
       const abrirModalPregunta = (p?: PreguntaItem) => {
+        const { tipo, opciones } = p ? normalizarInstruccionesParaForm(p.instrucciones_respuesta) : { tipo: "si_no" as TipoInstruccionesRespuesta, opciones: ["Sí", "No"] };
         if (p) {
           setPreguntaEdit(p);
           setFormPregunta({
@@ -2443,9 +2455,10 @@ Te invitamos a conocer más sobre:
             tipo_pregunta: p.tipo_pregunta,
             peso_pregunta: p.peso_pregunta,
             instrucciones_pregunta: p.instrucciones_pregunta ?? undefined,
-            instrucciones_respuesta: p.instrucciones_respuesta ?? [],
             dimension_secundaria: p.dimension_secundaria ?? [],
             activa: p.activa,
+            instrucciones_respuesta_tipo: tipo,
+            instrucciones_respuesta_opciones: opciones.length ? opciones : ["Sí", "No"],
           });
         } else {
           setPreguntaEdit(null);
@@ -2457,6 +2470,8 @@ Te invitamos a conocer más sobre:
             tipo_pregunta: "directa",
             peso_pregunta: "media",
             activa: true,
+            instrucciones_respuesta_tipo: tipo,
+            instrucciones_respuesta_opciones: opciones,
           });
         }
         setModalPreguntaAbierto(true);
@@ -2485,6 +2500,10 @@ Te invitamos a conocer más sobre:
           return;
         }
         setGuardandoPregunta(true);
+        const tipoInst = formPregunta.instrucciones_respuesta_tipo ?? "si_no";
+        const opcionesInst = (formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"]).filter(Boolean);
+        const instruccionesRespuesta = { tipo: tipoInst, opciones: opcionesInst.length ? opcionesInst : ["Sí", "No"] };
+
         try {
           if (preguntaEdit) {
             await actualizarPregunta(accessToken, preguntaEdit.id, {
@@ -2495,7 +2514,7 @@ Te invitamos a conocer más sobre:
               tipo_pregunta: formPregunta.tipo_pregunta,
               peso_pregunta: formPregunta.peso_pregunta,
               instrucciones_pregunta: formPregunta.instrucciones_pregunta,
-              instrucciones_respuesta: formPregunta.instrucciones_respuesta,
+              instrucciones_respuesta: instruccionesRespuesta,
               dimension_secundaria: formPregunta.dimension_secundaria,
               activa: formPregunta.activa,
             });
@@ -2509,7 +2528,7 @@ Te invitamos a conocer más sobre:
               tipo_pregunta: formPregunta.tipo_pregunta,
               peso_pregunta: formPregunta.peso_pregunta,
               instrucciones_pregunta: formPregunta.instrucciones_pregunta,
-              instrucciones_respuesta: formPregunta.instrucciones_respuesta,
+              instrucciones_respuesta: instruccionesRespuesta,
               dimension_secundaria: formPregunta.dimension_secundaria,
               activa: formPregunta.activa ?? true,
             });
@@ -2562,9 +2581,14 @@ Te invitamos a conocer más sobre:
           )
         : preguntasList;
 
+      const csvCell = (val: string) => {
+        if (val.includes(";") || val.includes('"') || val.includes("\n")) return '"' + val.replace(/"/g, '""') + '"';
+        return val;
+      };
+
       const descargarPlantillaVacia = () => {
-        const header = "codigo_pregunta;tipo_test;dimension_principal;texto__pregunta;tipo_pregunta;peso_pregunta;activa";
-        const ejemplo = "H-R-01;Holland_RIASEC;Realista;¿Te gusta trabajar con herramientas?;directa;alta;true";
+        const header = "codigo_pregunta;tipo_test;dimension_principal;texto__pregunta;tipo_pregunta;peso_pregunta;activa;instrucciones_respuesta";
+        const ejemplo = "H-R-01;Holland_RIASEC;Realista;¿Te gusta trabajar con herramientas?;directa;alta;true;{\"tipo\":\"si_no\",\"opciones\":[\"Sí\",\"No\"]}";
         const csv = [header, ejemplo].join("\n");
         const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -2595,18 +2619,21 @@ Te invitamos a conocer más sobre:
             totalPages = res.data.pagination.totalPages;
             page++;
           } while (page <= totalPages);
-          const header = "codigo_pregunta;tipo_test;dimension_principal;texto__pregunta;tipo_pregunta;peso_pregunta;activa";
-          const filas = todas.map((p) =>
-            [
-              p.codigo_pregunta,
-              p.tipo_test,
-              p.dimension_principal,
-              (p.texto__pregunta || "").replace(/;/g, ","),
-              p.tipo_pregunta,
-              p.peso_pregunta,
-              p.activa ? "true" : "false",
-            ].join(";")
-          );
+          const header = "codigo_pregunta;tipo_test;dimension_principal;texto__pregunta;tipo_pregunta;peso_pregunta;activa;instrucciones_respuesta";
+          const filas = todas.map((p) => {
+            const instResp = p.instrucciones_respuesta;
+            const instStr = instResp != null ? JSON.stringify(instResp) : "";
+            return [
+              csvCell(p.codigo_pregunta),
+              csvCell(p.tipo_test),
+              csvCell(p.dimension_principal),
+              csvCell((p.texto__pregunta || "").replace(/;/g, ",")),
+              csvCell(p.tipo_pregunta),
+              csvCell(p.peso_pregunta),
+              csvCell(p.activa ? "true" : "false"),
+              csvCell(instStr),
+            ].join(";");
+          });
           const csv = [header, ...filas].join("\n");
           const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
           const url = URL.createObjectURL(blob);
@@ -2672,6 +2699,18 @@ Te invitamos a conocer más sobre:
             const tipoPregunta = (campos[4]?.trim() || "directa") as "directa" | "comparativa" | "situacional" | "proyectiva";
             const pesoPregunta = (campos[5]?.trim() || "media") as "alta" | "media" | "baja";
             const activa = campos[6]?.trim().toLowerCase() !== "false";
+            let instruccionesRespuesta: InstruccionesRespuestaValue | undefined;
+            const instStr = campos[7]?.trim();
+            if (instStr) {
+              try {
+                const parsed = JSON.parse(instStr);
+                if (Array.isArray(parsed) || (typeof parsed === "object" && parsed !== null && "opciones" in parsed)) {
+                  instruccionesRespuesta = parsed as InstruccionesRespuestaValue;
+                }
+              } catch {
+                // ignorar: se crea sin instrucciones_respuesta
+              }
+            }
             if (!codigo || !tipoTest || !dimension || !textoPregunta) {
               resultado.errores.push(`Fila ${i + 1}: código, tipo_test, dimension_principal y texto son obligatorios`);
               continue;
@@ -2693,6 +2732,7 @@ Te invitamos a conocer más sobre:
                 tipo_pregunta: ["directa", "comparativa", "situacional", "proyectiva"].includes(tipoPregunta) ? tipoPregunta : "directa",
                 peso_pregunta: ["alta", "media", "baja"].includes(pesoPregunta) ? pesoPregunta : "media",
                 activa,
+                ...(instruccionesRespuesta != null && (Array.isArray(instruccionesRespuesta) ? instruccionesRespuesta.length > 0 : true) ? { instrucciones_respuesta: instruccionesRespuesta } : {}),
               });
               resultado.creadas++;
             } catch (err: unknown) {
@@ -2965,6 +3005,66 @@ Te invitamos a conocer más sobre:
                       <option value="media">Media</option>
                       <option value="baja">Baja</option>
                     </select>
+                  </div>
+                </div>
+                <div className="space-y-3 border-t border-slate-200 pt-4">
+                  <Label>Instrucciones de respuesta</Label>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Tipo</Label>
+                    <select
+                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 mt-1"
+                      value={formPregunta.instrucciones_respuesta_tipo ?? "si_no"}
+                      onChange={e => setFormPregunta(f => ({ ...f, instrucciones_respuesta_tipo: e.target.value as TipoInstruccionesRespuesta }))}
+                    >
+                      <option value="si_no">Sí / No</option>
+                      <option value="dos_opciones">Dos opciones</option>
+                      <option value="mas_de_dos_opciones">Más de dos opciones</option>
+                      <option value="opciones_multiples">Opciones múltiples (escala)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Opciones (etiquetas que verá el usuario)</Label>
+                    <div className="space-y-2 mt-1">
+                      {(formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"]).map((opcion, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <Input
+                            value={opcion}
+                            onChange={e => {
+                              const list = [...(formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"])];
+                              list[idx] = e.target.value;
+                              setFormPregunta(f => ({ ...f, instrucciones_respuesta_opciones: list }));
+                            }}
+                            placeholder={`Opción ${idx + 1}`}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() => {
+                              const list = (formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"]).filter((_, i) => i !== idx);
+                              setFormPregunta(f => ({ ...f, instrucciones_respuesta_opciones: list.length ? list : ["Sí", "No"] }));
+                            }}
+                            disabled={(formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"]).length <= 1}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          const list = [...(formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"]), ""];
+                          setFormPregunta(f => ({ ...f, instrucciones_respuesta_opciones: list }));
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2" /> Añadir opción
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 {preguntaEdit && (

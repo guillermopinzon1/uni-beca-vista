@@ -683,7 +683,10 @@ export async function obtenerHistorial(
 
   const isCompleted = (s: HistorialItem) => {
     const e = (s.estado ?? '').toString().toLowerCase();
-    return e === 'finalizada' || e === 'ronda_2_completada' || s.tieneResultado === true;
+    // Solo considerar completado si el estado es explícitamente finalizado; nunca ronda_2 ni ronda_1_completada
+    if (e === 'ronda_2' || e === 'ronda_1_completada') return false;
+    if (e === 'finalizada' || e === 'ronda_2_completada') return true;
+    return s.tieneResultado === true;
   };
 
   if (payload.data !== undefined && payload.data !== null && typeof payload.data === 'object') {

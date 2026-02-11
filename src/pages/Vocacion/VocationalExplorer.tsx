@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  BookOpen,
   Building2,
   ChevronRight,
   Clock,
@@ -16,8 +15,8 @@ import {
   MapPin,
   Palette,
   Search,
-  UserPlus,
 } from "lucide-react";
+import { API_BASE } from "@/lib/api/config";
 
 const vocationalBg = "https://www.unimet.edu.ve/wp-content/uploads/2021/03/MODULO-DE-AULAS-ahora-1030x687.jpg";
 
@@ -64,7 +63,6 @@ async function fetchCareers(params: {
   page?: number;
   limit?: number;
 }) {
-  const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
   const qs = new URLSearchParams();
   if (params.q) qs.set("q", params.q);
   if (params.faculty) qs.set("faculty", params.faculty);
@@ -72,12 +70,29 @@ async function fetchCareers(params: {
   qs.set("page", String(params.page ?? 1));
   qs.set("limit", String(params.limit ?? 50));
 
-  const res = await fetch(`${base}/careers?${qs.toString()}`);
+  const res = await fetch(`${API_BASE}/careers?${qs.toString()}`, {
+    headers: { Accept: "application/json" },
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `Error ${res.status} cargando carreras`);
   }
-  return (await res.json()) as CareersListResponse;
+  const json = (await res.json()) as CareersListResponse | { success?: boolean; data?: { items?: Career[] } };
+  // Backend puede devolver { data: Career[] } o { data: { items: Career[] } }
+  if (Array.isArray((json as CareersListResponse).data)) {
+    return json as CareersListResponse;
+  }
+  const wrapped = json as { data?: { items?: Career[] }; page?: number; limit?: number; total?: number; totalPages?: number };
+  if (wrapped.data?.items) {
+    return {
+      data: wrapped.data.items,
+      page: wrapped.page ?? 1,
+      limit: wrapped.limit ?? 50,
+      total: (wrapped as { total?: number }).total ?? wrapped.data.items.length,
+      totalPages: (wrapped as { totalPages?: number }).totalPages ?? 1,
+    } as CareersListResponse;
+  }
+  return { data: [], page: 1, limit: 50, total: 0, totalPages: 0 };
 }
 
 const VocationalExplorer = () => {
@@ -150,93 +165,90 @@ const VocationalExplorer = () => {
   }, [careers, selectedCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-orange/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img
-                src="/lovable-uploads/8f3cd009-b095-4b62-9526-09516381421e.png"
-                alt="Universidad Metropolitana"
-                className="h-12"
-              />
-            </div>
-            <nav className="flex items-center space-x-4">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => navigate("/login")}
-                className="text-primary hover:text-primary-foreground hover:bg-primary"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Iniciar Sesión
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/register")}
-                className="bg-gradient-primary hover:opacity-90 transition-opacity"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Registrarse
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/postulaciones-becas")}
-                className="bg-white text-primary hover:bg-white/90"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Postularme a Beca
-              </Button>
-            </nav>
+    <div className="min-h-screen bg-white font-sans antialiased text-slate-900">
+      {/* Encabezado igual al Home: mismo fondo, fuente y estilo */}
+      <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-md border-b border-slate-100 font-sans antialiased text-slate-900 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+          <Link to="/" className="hover:opacity-90 transition-opacity">
+            <img
+              src="/lovable-uploads/UNIMETLogo.png"
+              alt="UNIMET"
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
+          <div className="flex gap-4">
+            <Button variant="ghost" className="text-slate-600 font-semibold" onClick={() => navigate("/login")}>
+              <LogIn className="w-4 h-4 mr-2" /> Entrar
+            </Button>
+            <Button className="bg-[#f37021] hover:bg-[#d65f1a] text-white px-6 rounded-full shadow-lg shadow-orange-200" onClick={() => navigate("/register")}>
+              Registrarse
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero Header */}
-      <div className="relative bg-slate-900 py-20 overflow-hidden">
-        <div
-          className="absolute inset-0 z-0 opacity-40 mix-blend-overlay"
-          style={{ backgroundImage: `url(${vocationalBg})`, backgroundSize: "cover", backgroundPosition: "center" }}
-        />
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Badge variant="outline" className="text-blue-300 border-blue-500/30 mb-4 px-4 py-1">
-              Catálogo Académico 2025
-            </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">Explora tu Futuro</h1>
-            <p className="text-slate-300 text-lg max-w-2xl mx-auto mb-10">
-              Descubre nuestra oferta académica diseñada para formar a los líderes del mañana.
-              Filtra por facultad y encuentra la carrera perfecta para ti.
+      {/* Hero: mismo estilo que Home (imagen + overlay + texto a la izquierda) */}
+      <section className="relative min-h-[75vh] flex flex-col justify-end pt-20">
+        <div className="absolute inset-0">
+          <img src={vocationalBg} alt="Campus UNIMET" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/85 via-slate-900/50 to-transparent" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pb-24 pt-28">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <p className="text-white/90 text-sm font-medium uppercase tracking-wide mb-2">
+              Catálogo Académico
             </p>
+            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-4">
+              Explora tu futuro
+            </h1>
+            <p className="text-lg text-white/90 mb-8">
+              Descubre nuestra oferta académica. Filtra por facultad y encuentra la carrera que mejor se adapte a ti.
+            </p>
+          </motion.div>
+        </div>
+      </section>
 
-            {/* Search Bar */}
-            <div className="max-w-xl mx-auto relative">
-              <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+      {/* Barra flotante con búsqueda (estilo Home) */}
+      <div className="relative z-20 max-w-4xl mx-auto px-6 -mt-12">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4"
+        >
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+            <span className="text-slate-600 font-medium text-sm sm:text-base shrink-0">Buscar carrera</span>
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
-                placeholder="Buscar carrera (ej. Ingeniería, Psicología...)"
-                className="pl-12 h-12 bg-white/10 border-white/20 text-white placeholder:text-slate-400 rounded-full focus:bg-white/20 transition-all"
+                placeholder="Ej. Ingeniería, Psicología..."
+                className="pl-12 h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Main Content */}
-      <div className="bg-slate-50 min-h-screen py-12">
-        <div className="container mx-auto px-4">
+      <section className="bg-slate-50 py-20">
+        <div className="max-w-7xl mx-auto px-6">
           {/* Categories Filter */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
             {categories.map((cat) => (
               <Button
                 key={cat}
                 variant={selectedCategory === cat ? "default" : "outline"}
                 onClick={() => setSelectedCategory(cat)}
-                className={`rounded-full px-6 ${
+                className={`rounded-xl px-6 ${
                   selectedCategory === cat
-                    ? "bg-blue-600 hover:bg-blue-700"
+                    ? "bg-[#f37021] hover:bg-[#d65f1a]"
                     : "bg-white hover:bg-slate-100 text-slate-600 border-slate-200"
                 }`}
               >
@@ -264,8 +276,8 @@ const VocationalExplorer = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card className="h-full hover:shadow-xl transition-all duration-300 group border-slate-200 overflow-hidden flex flex-col">
-                      <div className={`h-2 w-full ${visuals.color}`} />
+                    <Card className="h-full hover:shadow-lg transition-all duration-300 group border border-slate-200 overflow-hidden flex flex-col bg-white">
+                      <div className={`h-1.5 w-full ${visuals.color}`} />
                       <CardHeader>
                         <div className="flex justify-between items-start mb-2">
                           <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal">
@@ -275,7 +287,7 @@ const VocationalExplorer = () => {
                             <div className="text-slate-700">{visuals.icon}</div>
                           </div>
                         </div>
-                        <CardTitle className="text-xl font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                        <CardTitle className="text-xl font-bold text-slate-900 group-hover:text-[#d65f1a] transition-colors">
                           {career.name}
                         </CardTitle>
                       </CardHeader>
@@ -295,7 +307,7 @@ const VocationalExplorer = () => {
                       <CardFooter className="pt-4 border-t border-slate-100 bg-slate-50/50">
                         <Button
                           variant="ghost"
-                          className="w-full justify-between text-blue-600 hover:text-blue-700 hover:bg-blue-50 group-hover:pr-2 transition-all"
+                          className="w-full justify-between text-[#f37021] hover:text-[#d65f1a] hover:bg-orange-50 group-hover:pr-2 transition-all font-semibold"
                           onClick={() => navigate(`/career/${career.id}`)}
                         >
                           Ver detalle
@@ -315,7 +327,7 @@ const VocationalExplorer = () => {
                 <p className="text-slate-500">Intenta ajustar tu búsqueda o filtros.</p>
                 <Button
                   variant="link"
-                  className="mt-2 text-blue-600"
+                  className="mt-2 text-[#f37021] hover:text-[#d65f1a]"
                   onClick={() => {
                     setSelectedCategory("Todas");
                     setSearchQuery("");
@@ -327,16 +339,23 @@ const VocationalExplorer = () => {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-orange/20 py-8 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center mb-4">
-            <GraduationCap className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold text-primary">Universidad Metropolitana</span>
+      {/* Footer igual al Home */}
+      <footer className="bg-slate-50 border-t border-slate-200 py-16">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="flex justify-center items-center gap-3 mb-8">
+            <div className="w-10 h-1 bg-orange-500" />
+            <img
+              src="/lovable-uploads/UNIMETLogo.png"
+              alt="UNIMET Logo"
+              className="h-12 object-contain"
+            />
+            <div className="w-10 h-1 bg-orange-500" />
           </div>
-          <p className="text-muted-foreground">© 2025 Universidad Metropolitana. Sistema Multiplataforma.</p>
+          <p className="text-slate-400 text-sm font-medium">
+            © {new Date().getFullYear()} Universidad Metropolitana | Dirección de Bienestar y Desarrollo Estudiantil
+          </p>
         </div>
       </footer>
     </div>

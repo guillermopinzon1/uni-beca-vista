@@ -1,16 +1,12 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  GraduationCap,
   LogIn,
   UserPlus,
-  BookOpen,
-  Calendar,
   MapPin,
   Clock,
   ChevronRight,
-  Sparkles,
   Compass,
   Bell,
 } from "lucide-react";
@@ -63,106 +59,108 @@ const VocationalIndex = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-orange/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img
-                src="/lovable-uploads/UNIMETLogo.png"
-                alt="Universidad Metropolitana"
-                className="h-12 object-contain"
-              />
-            </div>
-            <nav className="flex items-center gap-2 sm:gap-4">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => navigate("/login")}
-                className="text-primary hover:bg-primary/10"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Iniciar sesión
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate("/register")}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Registrarse
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="border-primary/30 text-primary hover:bg-primary/10"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Volver al portal
-              </Button>
-            </nav>
+    <div className="min-h-screen bg-white font-sans antialiased text-slate-900">
+      {/* Encabezado igual al Home: mismo fondo, fuente y estilo */}
+      <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-md border-b border-slate-100 font-sans antialiased text-slate-900 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+          <Link to="/" className="hover:opacity-90 transition-opacity">
+            <img
+              src="/lovable-uploads/UNIMETLogo.png"
+              alt="UNIMET"
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
+          <div className="flex gap-4">
+            <Button variant="ghost" className="text-slate-600 font-semibold" onClick={() => navigate("/login")}>
+              <LogIn className="w-4 h-4 mr-2" /> Entrar
+            </Button>
+            <Button className="bg-[#f37021] hover:bg-[#d65f1a] text-white px-6 rounded-full shadow-lg shadow-orange-200" onClick={() => navigate("/register")}>
+              Registrarse
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero: Regístrate para realizar el test */}
-      <section className="relative pt-28 pb-16 px-4 overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 z-0">
-          <img
-            src={vocationalBg}
-            alt="Campus"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-slate-900/70" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/50 to-slate-900" />
+      {/* Hero: mismo estilo que Home (imagen + overlay + texto a la izquierda) */}
+      <section className="relative min-h-[75vh] flex flex-col justify-end pt-20">
+        <div className="absolute inset-0">
+          <img src={vocationalBg} alt="Campus UNIMET" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/85 via-slate-900/50 to-transparent" />
         </div>
-        <div className="relative z-10 max-w-4xl mx-auto text-center text-white space-y-6">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2">
-            <Sparkles className="w-4 h-4 text-amber-300" />
-            <span className="text-sm font-medium">Orientación Vocacional UNIMET</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
-            Descubre tu camino profesional
-          </h1>
-          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto">
-            Regístrate y realiza tu test de orientación vocacional. Obtén recomendaciones personalizadas y explora las carreras de la Universidad Metropolitana.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <button
-              type="button"
-              onClick={() => navigate("/register")}
-              className="inline-flex items-center justify-center h-12 px-6 text-base font-medium rounded-lg bg-white text-slate-900 border border-slate-200/50 transition-colors hover:bg-slate-100"
-            >
-              <UserPlus className="mr-2 h-4 w-4 shrink-0" />
-              <span>Registrarme para hacer el test</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="inline-flex items-center justify-center h-12 px-6 text-base font-medium rounded-lg border border-white/60 bg-white/10 text-white transition-colors hover:bg-white/20"
-            >
-              <LogIn className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-              <span>Ya tengo cuenta</span>
-            </button>
-          </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 w-full pb-24 pt-28">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <p className="text-white/90 text-sm font-medium uppercase tracking-wide mb-2">
+              Orientación Vocacional
+            </p>
+            <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-4">
+              Descubre tu camino profesional
+            </h1>
+            <p className="text-lg text-white/90 mb-8">
+              Regístrate y realiza tu test de orientación vocacional. Obtén recomendaciones personalizadas y explora las carreras de la Universidad Metropolitana.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Button
+                size="lg"
+                className="bg-[#f37021] hover:bg-orange-600 text-white rounded-xl px-6 h-12 font-semibold shadow-xl"
+                onClick={() => navigate("/register")}
+              >
+                <UserPlus className="w-4 h-4 mr-2" /> Registrarme para el test
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-white text-white bg-white/15 hover:bg-white/25 rounded-xl px-6 h-12 font-semibold shadow-lg"
+                onClick={() => navigate("/login")}
+              >
+                <LogIn className="w-5 h-5 mr-2" /> Ya tengo cuenta
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Eventos públicos (estilo CRM, para todas las personas) */}
-      <section className="py-16 px-4 bg-slate-50">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-2 mb-8">
-            <Calendar className="w-8 h-8 text-primary" />
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                Eventos y actividades
-              </h2>
-              <p className="text-slate-600 text-sm sm:text-base">
-                Actividades abiertas que puedes ver sin iniciar sesión
-              </p>
-            </div>
+      {/* Barra de acceso rápido (estilo Home) */}
+      <div className="relative z-20 max-w-4xl mx-auto px-6 -mt-12">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between"
+        >
+          <span className="text-slate-600 font-medium text-sm sm:text-base shrink-0">¿Qué quieres hacer?</span>
+          <div className="flex flex-wrap gap-3 items-center">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 sm:flex-none rounded-xl font-medium bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+              onClick={() => navigate("/vocational-explorer")}
+            >
+              <Compass className="w-4 h-4 mr-2 shrink-0" /> Ver carreras
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 sm:flex-none bg-[#f37021] text-white border-[#f37021] rounded-xl font-medium shadow-md hover:bg-[#d65f1a]"
+              onClick={() => navigate("/register")}
+            >
+              <UserPlus className="w-4 h-4 mr-2 shrink-0" /> Hacer test vocacional
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Eventos públicos */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Eventos y actividades</h2>
+            <p className="text-slate-600 max-w-lg mx-auto">
+              Actividades abiertas que puedes ver sin iniciar sesión
+            </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {EVENTOS_PUBLICOS.map((evento, index) => (
@@ -172,8 +170,8 @@ const VocationalIndex = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.08 }}
               >
-                <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden h-full flex flex-col">
-                  <div className={`h-2 ${evento.colorBar} w-full`} />
+                <Card className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full flex flex-col bg-white">
+                  <div className={`h-1.5 ${evento.colorBar} w-full`} />
                   <CardContent className="p-6 flex-1 flex flex-col">
                     <div className="flex gap-4 mb-4">
                       <div className="text-center px-3 py-2 bg-slate-100 rounded-xl shrink-0">
@@ -204,7 +202,7 @@ const VocationalIndex = () => {
                       </div>
                     </div>
                     <Button
-                      className="w-full rounded-full mt-auto"
+                      className="w-full rounded-xl mt-auto bg-[#f37021] hover:bg-orange-600 text-white"
                       variant={index === 0 ? "default" : "outline"}
                       onClick={() => navigate("/register")}
                     >
@@ -219,35 +217,36 @@ const VocationalIndex = () => {
         </div>
       </section>
 
-      {/* Accesos: Ver carreras y Centro de novedades (CRM) */}
-      <section className="py-16 px-4 bg-white border-t border-slate-100">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">
-            Explora más
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-6">
+      {/* Accesos: Ver carreras y Centro de novedades (estilo Home) */}
+      <section className="py-20 bg-white border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Explora más</h2>
+            <p className="text-slate-600 max-w-lg mx-auto">Accede al catálogo de carreras o al centro de novedades.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
             <motion.div
               whileHover={{ y: -4 }}
               className="group"
             >
               <Card
-                className="rounded-2xl border-slate-200 shadow-sm overflow-hidden cursor-pointer h-full transition-shadow hover:shadow-md"
+                className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden cursor-pointer h-full transition-all hover:shadow-lg hover:border-orange-200"
                 onClick={() => navigate("/vocational-explorer")}
               >
-                <div className="h-2 bg-blue-500 w-full" />
+                <div className="h-1.5 bg-[#f37021] w-full" />
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
-                    <Compass className="w-7 h-7 text-blue-600" />
+                  <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
+                    <Compass className="w-7 h-7 text-[#f37021]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                    <h3 className="font-bold text-slate-900 group-hover:text-[#d65f1a] transition-colors">
                       Ver carreras
                     </h3>
                     <p className="text-sm text-slate-500 mt-0.5">
                       Conoce las carreras de la UNIMET, perfiles y campo laboral
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#f37021] shrink-0" />
                 </CardContent>
               </Card>
             </motion.div>
@@ -257,23 +256,23 @@ const VocationalIndex = () => {
               className="group"
             >
               <Card
-                className="rounded-2xl border-slate-200 shadow-sm overflow-hidden cursor-pointer h-full transition-shadow hover:shadow-md"
+                className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden cursor-pointer h-full transition-all hover:shadow-lg hover:border-orange-200"
                 onClick={() => navigate("/vocational-crm")}
               >
-                <div className="h-2 bg-pink-500 w-full" />
+                <div className="h-1.5 bg-slate-600 w-full" />
                 <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center shrink-0 group-hover:bg-pink-100 transition-colors">
-                    <Bell className="w-7 h-7 text-pink-600" />
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 group-hover:bg-slate-200 transition-colors">
+                    <Bell className="w-7 h-7 text-slate-600" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-slate-900 group-hover:text-pink-700 transition-colors">
+                    <h3 className="font-bold text-slate-900 group-hover:text-slate-700 transition-colors">
                       Centro de novedades
                     </h3>
                     <p className="text-sm text-slate-500 mt-0.5">
                       Notificaciones, eventos y comunicación (requiere sesión)
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-pink-500 shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 shrink-0" />
                 </CardContent>
               </Card>
             </motion.div>
@@ -281,17 +280,20 @@ const VocationalIndex = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-orange/20 py-8 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center mb-4">
-            <GraduationCap className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold text-primary">
-              Universidad Metropolitana
-            </span>
+      {/* Footer igual al Home */}
+      <footer className="bg-slate-50 border-t border-slate-200 py-16">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="flex justify-center items-center gap-3 mb-8">
+            <div className="w-10 h-1 bg-orange-500" />
+            <img
+              src="/lovable-uploads/UNIMETLogo.png"
+              alt="UNIMET Logo"
+              className="h-12 object-contain"
+            />
+            <div className="w-10 h-1 bg-orange-500" />
           </div>
-          <p className="text-muted-foreground">
-            © 2025 Universidad Metropolitana. Sistema Multiplataforma.
+          <p className="text-slate-400 text-sm font-medium">
+            © {new Date().getFullYear()} Universidad Metropolitana | Dirección de Bienestar y Desarrollo Estudiantil
           </p>
         </div>
       </footer>
