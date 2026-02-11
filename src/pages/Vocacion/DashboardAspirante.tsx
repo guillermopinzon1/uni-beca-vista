@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2, Save, Edit2, GraduationCap, Bell, Calendar, MessageSquare, Mail, Megaphone } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Settings, Download, Clock, Sparkles, Compass, Link, CheckCircle2, ListChecks, ChevronRight, Plus, X, Loader2, Save, Edit2, GraduationCap, Bell, Calendar, MessageSquare, Mail, Megaphone, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +24,7 @@ import { fetchUserById } from "@/lib/api/users";
 import { convertirAspiranteAEstudiante } from "@/lib/api/auth";
 import { RIASEC_LABELS, RIASEC_DESCRIPTIONS } from "@/lib/riasec";
 import { obtenerMisNotificaciones, marcarComoLeida, marcarTodasComoLeidas, type Notificacion } from "@/lib/api/notificaciones";
-import { obtenerCitasEstudiante, type Cita } from "@/lib/api/citas";
+import { obtenerCitasEstudiante, actualizarCita, cancelarCita, type Cita } from "@/lib/api/citas";
 
 import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
 
@@ -115,6 +115,7 @@ const DashboardAspirante = () => {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [cargandoNotif, setCargandoNotif] = useState(false);
   const [citasProximas, setCitasProximas] = useState<Cita[]>([]);
+  const [citaAccionLoading, setCitaAccionLoading] = useState<string | null>(null);
 
   // Detectar la ruta actual para mostrar navegación
   const [currentStep, setCurrentStep] = useState<string>("seleccionar");
@@ -293,6 +294,37 @@ const DashboardAspirante = () => {
       setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
     } catch (error) {
       console.error("Error al marcar todas las notificaciones como leídas:", error);
+    }
+  };
+
+  // Handlers para acciones sobre citas (confirmar / cancelar)
+  const handleConfirmarCita = async (citaId: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+    if (!accessToken) return;
+    setCitaAccionLoading(citaId);
+    try {
+      await actualizarCita(accessToken, citaId, { estado: "confirmada" });
+      setCitasProximas(prev => prev.map(c => c.id === citaId ? { ...c, estado: "confirmada" } : c));
+      toast({ title: "Cita confirmada", description: "Tu asistencia ha sido confirmada." });
+    } catch (error) {
+      toast({ title: "Error", description: (error as Error).message || "No se pudo confirmar la cita.", variant: "destructive" });
+    } finally {
+      setCitaAccionLoading(null);
+    }
+  };
+
+  const handleCancelarCita = async (citaId: string) => {
+    const accessToken = tokens?.accessToken || JSON.parse(localStorage.getItem("auth_tokens") || "null")?.accessToken;
+    if (!accessToken) return;
+    setCitaAccionLoading(citaId);
+    try {
+      await cancelarCita(accessToken, citaId);
+      setCitasProximas(prev => prev.filter(c => c.id !== citaId));
+      toast({ title: "Cita cancelada", description: "Tu cita ha sido cancelada." });
+    } catch (error) {
+      toast({ title: "Error", description: (error as Error).message || "No se pudo cancelar la cita.", variant: "destructive" });
+    } finally {
+      setCitaAccionLoading(null);
     }
   };
 
@@ -1396,10 +1428,22 @@ const DashboardAspirante = () => {
                     seguimiento: "Seguimiento",
                     otro: "Otro",
                   } as Record<string, string>)[cita.motivo] ?? cita.motivo;
+                  const googleCalendarUrl = (() => {
+                    const [hh, mm] = cita.hora.split(":").map(Number);
+                    const start = new Date(y, m - 1, d, hh, mm, 0);
+                    const end = new Date(y, m - 1, d, hh + 1, mm, 0);
+                    const fmt = (dt: Date) =>
+                      `${dt.getFullYear()}${String(dt.getMonth() + 1).padStart(2, "0")}${String(dt.getDate()).padStart(2, "0")}T${String(dt.getHours()).padStart(2, "0")}${String(dt.getMinutes()).padStart(2, "0")}00`;
+                    const location = ({ presencial: "UNIMET - Oficina de Orientación Vocacional", virtual: "Virtual (enlace a enviar)", telefonica: "Telefónica" } as Record<string, string>)[cita.modalidad] ?? "";
+                    const details = cita.especialista
+                      ? `Cita de ${motivoLabel} con ${cita.especialista.nombre} ${cita.especialista.apellido}. Modalidad: ${modalidadLabel}.`
+                      : `Cita de ${motivoLabel}. Modalidad: ${modalidadLabel}.`;
+                    return `https://calendar.google.com/calendar/render?${new URLSearchParams({ action: "TEMPLATE", text: `Cita UNIMET: ${motivoLabel}`, dates: `${fmt(start)}/${fmt(end)}`, details, location })}`;
+                  })();
                   return (
                     <Card key={cita.id} className="border-primary/20 overflow-hidden">
                       <div className={`h-1.5 w-full ${cita.estado === "confirmada" ? "bg-green-500" : "bg-primary"}`} />
-                      <CardContent className="p-4">
+                      <CardContent className="p-4 space-y-3">
                         <div className="flex gap-3">
                           <div className="text-center px-2.5 py-1 bg-slate-100 rounded-lg shrink-0">
                             <div className="text-xs font-bold text-slate-500 uppercase">{mes}</div>
@@ -1418,6 +1462,38 @@ const DashboardAspirante = () => {
                             {cita.estado === "confirmada" ? "Confirmada" : "Pendiente"}
                           </Badge>
                         </div>
+                        {cita.estado === "pendiente" && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="flex-1 h-7 rounded-full text-xs bg-green-600 hover:bg-green-700 text-white gap-1"
+                              disabled={citaAccionLoading === cita.id}
+                              onClick={() => handleConfirmarCita(cita.id)}
+                            >
+                              {citaAccionLoading === cita.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+                              Confirmar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-7 rounded-full text-xs border-red-200 text-red-600 hover:bg-red-50 gap-1"
+                              disabled={citaAccionLoading === cita.id}
+                              onClick={() => handleCancelarCita(cita.id)}
+                            >
+                              {citaAccionLoading === cita.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+                              Cancelar
+                            </Button>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => window.open(googleCalendarUrl, "_blank")}
+                          title="Agregar a Google Calendar"
+                          className="flex items-center gap-1 text-xs text-slate-400 hover:text-primary transition-colors"
+                        >
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>Añadir al calendario</span>
+                          <ExternalLink className="h-2.5 w-2.5" />
+                        </button>
                       </CardContent>
                     </Card>
                   );

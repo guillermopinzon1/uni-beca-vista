@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, FileQuestion, BookMarked } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, FileQuestion, BookMarked, Bold, Italic, Underline, List } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect, useRef } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
@@ -67,6 +67,62 @@ const MOTIVOS_LEGIBLES: Record<string, string> = {
 
 const formatearMotivo = (motivo: string): string =>
   MOTIVOS_LEGIBLES[motivo] || motivo.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+
+// Templates visuales para campañas de correo
+const TEMPLATES_EMAIL = [
+  {
+    id: 'clasico',
+    nombre: 'Clásico',
+    descripcion: 'Verde institucional',
+    headerColor: '#0d9488',
+    btnColor: '#0d9488',
+    bgColor: '#f0fdfa',
+    previewBg: 'bg-teal-600',
+    previewAccent: 'bg-teal-100',
+  },
+  {
+    id: 'universitario',
+    nombre: 'Universitario',
+    descripcion: 'Azul académico',
+    headerColor: '#1d4ed8',
+    btnColor: '#1d4ed8',
+    bgColor: '#eff6ff',
+    previewBg: 'bg-blue-700',
+    previewAccent: 'bg-blue-100',
+  },
+  {
+    id: 'motivacional',
+    nombre: 'Motivacional',
+    descripcion: 'Púrpura dinámico',
+    headerColor: '#7c3aed',
+    btnColor: '#7c3aed',
+    bgColor: '#f5f3ff',
+    previewBg: 'bg-violet-600',
+    previewAccent: 'bg-violet-100',
+  },
+  {
+    id: 'profesional',
+    nombre: 'Profesional',
+    descripcion: 'Elegante oscuro',
+    headerColor: '#1e293b',
+    btnColor: '#334155',
+    bgColor: '#f8fafc',
+    previewBg: 'bg-slate-800',
+    previewAccent: 'bg-slate-200',
+  },
+  {
+    id: 'calido',
+    nombre: 'Cálido',
+    descripcion: 'Naranja amigable',
+    headerColor: '#ea580c',
+    btnColor: '#ea580c',
+    bgColor: '#fff7ed',
+    previewBg: 'bg-orange-500',
+    previewAccent: 'bg-orange-100',
+  },
+] as const;
+
+type TemplateId = typeof TEMPLATES_EMAIL[number]['id'];
 
 // Interface para mapear datos del backend (soporta Holland e ICO)
 interface StudentData {
@@ -136,6 +192,7 @@ const DashboardEspecialist = () => {
     contenido: string;
     ctaTexto: string;
     ctaUrl: string;
+    templateId: TemplateId;
   } | null>(null);
 
   // Estados para segmentación personalizada
@@ -149,13 +206,17 @@ const DashboardEspecialist = () => {
     contenido: string;
     ctaTexto: string;
     ctaUrl: string;
+    templateId: TemplateId;
   }>({
     titulo: "",
     asunto: "",
     contenido: "",
     ctaTexto: "",
-    ctaUrl: ""
+    ctaUrl: "",
+    templateId: "clasico"
   });
+  const textareaSegmentadaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaGrupoRef = useRef<HTMLTextAreaElement>(null);
   const [perfilCompleto, setPerfilCompleto] = useState<UserProfileResponse['data'] | null>(null);
   const [loadingPerfil, setLoadingPerfil] = useState(false);
 
@@ -806,7 +867,8 @@ Fecha: Próximo martes, 5:00 PM`,
     setCampanaSeleccionada({
       grupo,
       nombreGrupo,
-      ...datosPredeterminados
+      ...datosPredeterminados,
+      templateId: 'clasico'
     });
 
     setModalCampanaAbierto(true);
@@ -831,17 +893,7 @@ Fecha: Próximo martes, 5:00 PM`,
     setLoadingCampanas(true);
 
     try {
-      // Convertir el contenido de texto plano a HTML
-      const contenidoHTML = campanaSeleccionada.contenido
-        .split('\n')
-        .map(line => {
-          if (line.trim().startsWith('•')) {
-            return `<li>${line.trim().substring(1).trim()}</li>`;
-          }
-          return line.trim() ? `<p>${line.trim()}</p>` : '';
-        })
-        .join('\n')
-        .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+      const contenidoHTML = convertirContenidoAHTML(campanaSeleccionada.contenido);
 
       const resultado = await enviarGrupoPredefinido(accessToken, {
         grupo: campanaSeleccionada.grupo,
@@ -849,7 +901,8 @@ Fecha: Próximo martes, 5:00 PM`,
         asunto: campanaSeleccionada.asunto,
         contenido: contenidoHTML,
         ctaTexto: campanaSeleccionada.ctaTexto,
-        ctaUrl: campanaSeleccionada.ctaUrl
+        ctaUrl: campanaSeleccionada.ctaUrl,
+        templateId: campanaSeleccionada.templateId
       });
 
       toast({
@@ -969,17 +1022,7 @@ Te invitamos a conocer más sobre:
     setLoadingCampanas(true);
 
     try {
-      // Convertir el contenido de texto plano a HTML
-      const contenidoHTML = campanaPersonalizada.contenido
-        .split('\n')
-        .map(line => {
-          if (line.trim().startsWith('•')) {
-            return `<li>${line.trim().substring(1).trim()}</li>`;
-          }
-          return line.trim() ? `<p>${line.trim()}</p>` : '';
-        })
-        .join('\n')
-        .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+      const contenidoHTML = convertirContenidoAHTML(campanaPersonalizada.contenido);
 
       const destinatarios = resultadoSegmentacion.map(est => est.id);
 
@@ -990,7 +1033,8 @@ Te invitamos a conocer más sobre:
         titulo: campanaPersonalizada.titulo,
         ctaTexto: campanaPersonalizada.ctaTexto,
         ctaUrl: campanaPersonalizada.ctaUrl,
-        usarTemplate: true
+        usarTemplate: true,
+        templateId: campanaPersonalizada.templateId
       });
 
       toast({
@@ -1017,6 +1061,73 @@ Te invitamos a conocer más sobre:
     } finally {
       setLoadingCampanas(false);
     }
+  };
+
+  // Función para aplicar formato (negrita, cursiva, subrayado, lista) al textarea
+  const aplicarFormato = (
+    tipo: 'bold' | 'italic' | 'underline' | 'list',
+    ref: React.RefObject<HTMLTextAreaElement>,
+    getValue: () => string,
+    setValue: (v: string) => void
+  ) => {
+    const textarea = ref.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = getValue();
+    const selected = value.substring(start, end);
+
+    let before = '';
+    let after = '';
+    let replacement = '';
+
+    if (tipo === 'bold') { before = '**'; after = '**'; replacement = selected || 'texto'; }
+    else if (tipo === 'italic') { before = '_'; after = '_'; replacement = selected || 'texto'; }
+    else if (tipo === 'underline') { before = '__'; after = '__'; replacement = selected || 'texto'; }
+    else if (tipo === 'list') {
+      // Prefija cada línea seleccionada con "• "
+      replacement = selected
+        ? selected.split('\n').map(l => `• ${l}`).join('\n')
+        : '• elemento';
+      setValue(value.substring(0, start) + replacement + value.substring(end));
+      setTimeout(() => {
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + replacement.length;
+        textarea.focus();
+      }, 0);
+      return;
+    }
+
+    const newValue = value.substring(0, start) + before + replacement + after + value.substring(end);
+    setValue(newValue);
+    setTimeout(() => {
+      textarea.selectionStart = start + before.length;
+      textarea.selectionEnd = start + before.length + replacement.length;
+      textarea.focus();
+    }, 0);
+  };
+
+  // Convierte texto con marcadores de formato a HTML
+  const convertirContenidoAHTML = (texto: string): string => {
+    return texto
+      .split('\n')
+      .map(line => {
+        if (line.trim().startsWith('•')) {
+          let content = line.trim().substring(1).trim();
+          content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+          content = content.replace(/__(.+?)__/g, '<u>$1</u>');
+          content = content.replace(/_(.+?)_/g, '<em>$1</em>');
+          return `<li>${content}</li>`;
+        }
+        if (!line.trim()) return '';
+        let content = line.trim();
+        content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        content = content.replace(/__(.+?)__/g, '<u>$1</u>');
+        content = content.replace(/_(.+?)_/g, '<em>$1</em>');
+        return `<p>${content}</p>`;
+      })
+      .join('\n')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
   };
 
   // Función para abrir el modal de agendar cita
@@ -3169,6 +3280,33 @@ Te invitamos a conocer más sobre:
 
           {campanaSeleccionada && (
             <div className="space-y-4 mt-4">
+
+              {/* Selector de template */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Estilo visual del correo</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {TEMPLATES_EMAIL.map(tpl => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => setCampanaSeleccionada({ ...campanaSeleccionada, templateId: tpl.id })}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${
+                        campanaSeleccionada.templateId === tpl.id
+                          ? 'border-teal-500 bg-teal-50 shadow-md'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      {/* Vista previa del color */}
+                      <div className={`w-full h-8 rounded-lg ${tpl.previewBg} flex items-end justify-center pb-1`}>
+                        <div className={`w-4 h-1.5 rounded-sm ${tpl.previewAccent}`} />
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-700 leading-tight text-center">{tpl.nombre}</span>
+                      <span className="text-[9px] text-slate-400 leading-tight text-center">{tpl.descripcion}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="titulo" className="text-sm font-semibold">
                   Título de la campaña
@@ -3199,16 +3337,50 @@ Te invitamos a conocer más sobre:
                 <Label htmlFor="contenido" className="text-sm font-semibold">
                   Contenido del mensaje
                 </Label>
+                {/* Toolbar de formato */}
+                <div className="flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-t-lg">
+                  <button
+                    type="button"
+                    title="Negrita (**texto**)"
+                    onClick={() => aplicarFormato('bold', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
+                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                  >
+                    <Bold className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Cursiva (_texto_)"
+                    onClick={() => aplicarFormato('italic', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
+                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                  >
+                    <Italic className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Subrayado (__texto__)"
+                    onClick={() => aplicarFormato('underline', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
+                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                  >
+                    <Underline className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-px h-4 bg-slate-300 mx-0.5" />
+                  <button
+                    type="button"
+                    title="Lista con viñetas"
+                    onClick={() => aplicarFormato('list', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
+                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <Textarea
                   id="contenido"
+                  ref={textareaGrupoRef}
                   value={campanaSeleccionada.contenido}
                   onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: e.target.value })}
                   placeholder="Escribe el contenido del correo..."
-                  className="min-h-[200px] bg-slate-50"
+                  className="min-h-[200px] bg-slate-50 rounded-t-none border-t-0"
                 />
-                <p className="text-xs text-slate-500">
-                  Usa • para crear listas con viñetas
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -3283,6 +3455,32 @@ Te invitamos a conocer más sobre:
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
+
+            {/* Selector de template */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Estilo visual del correo</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {TEMPLATES_EMAIL.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setCampanaPersonalizada({ ...campanaPersonalizada, templateId: tpl.id })}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${
+                      campanaPersonalizada.templateId === tpl.id
+                        ? 'border-teal-500 bg-teal-50 shadow-md'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className={`w-full h-8 rounded-lg ${tpl.previewBg} flex items-end justify-center pb-1`}>
+                      <div className={`w-4 h-1.5 rounded-sm ${tpl.previewAccent}`} />
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-700 leading-tight text-center">{tpl.nombre}</span>
+                    <span className="text-[9px] text-slate-400 leading-tight text-center">{tpl.descripcion}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="titulo-segmentado" className="text-sm font-semibold">
                 Título de la campaña
@@ -3313,16 +3511,50 @@ Te invitamos a conocer más sobre:
               <Label htmlFor="contenido-segmentado" className="text-sm font-semibold">
                 Contenido del mensaje
               </Label>
+              {/* Toolbar de formato */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-t-lg">
+                <button
+                  type="button"
+                  title="Negrita (**texto**)"
+                  onClick={() => aplicarFormato('bold', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
+                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                >
+                  <Bold className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Cursiva (_texto_)"
+                  onClick={() => aplicarFormato('italic', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
+                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                >
+                  <Italic className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Subrayado (__texto__)"
+                  onClick={() => aplicarFormato('underline', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
+                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                >
+                  <Underline className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-px h-4 bg-slate-300 mx-0.5" />
+                <button
+                  type="button"
+                  title="Lista con viñetas"
+                  onClick={() => aplicarFormato('list', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
+                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <Textarea
                 id="contenido-segmentado"
+                ref={textareaSegmentadaRef}
                 value={campanaPersonalizada.contenido}
                 onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: e.target.value })}
                 placeholder="Escribe el contenido del correo..."
-                className="min-h-[200px] bg-slate-50"
+                className="min-h-[200px] bg-slate-50 rounded-t-none border-t-0"
               />
-              <p className="text-xs text-slate-500">
-                Usa • para crear listas con viñetas
-              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -41,6 +41,7 @@ export interface EnviarCampanaRequest {
   ctaTexto?: string;
   ctaUrl?: string;
   usarTemplate?: boolean;
+  templateId?: string;
 }
 
 export interface EnviarCampanaResponse {
@@ -68,6 +69,7 @@ export interface EnviarGrupoPredefinidoRequest {
   titulo?: string;
   ctaTexto?: string;
   ctaUrl?: string;
+  templateId?: string;
 }
 
 export interface EstadisticasResponse {
