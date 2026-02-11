@@ -166,6 +166,8 @@ const DashboardEspecialist = () => {
     perfilHolland: ''
   });
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const STUDENTS_PER_PAGE = 15;
+  const [studentsPage, setStudentsPage] = useState(1);
   const [admissionsData, setAdmissionsData] = useState<HistorialEspecialistaResponse['data']>([]);
   const [notasColegio, setNotasColegio] = useState({
     primerAno: "",
@@ -1274,32 +1276,47 @@ Te invitamos a conocer más sobre:
   const limpiarFiltros = () => {
     setFiltrosEstudiantes({ nivelRiesgo: '', perfilHolland: '' });
     setFiltrosAbiertos(false);
+    setStudentsPage(1);
   };
+
+  // Estudiantes de la página actual
+  const totalStudentsPages = Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE);
+  const paginatedStudents = filteredStudents.slice(
+    (studentsPage - 1) * STUDENTS_PER_PAGE,
+    studentsPage * STUDENTS_PER_PAGE
+  );
  
   const renderContent = () => {
     if (activeModule === "estudiantes") {
       return (
-        <div className="space-y-6">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900 mb-1">Gestión de Estudiantes</h2>
-                <p className="text-sm text-slate-600">
-                  Lista de aspirantes que han realizado tests de orientación vocacional (Holland RIASEC e ICO). Las sesiones se actualizan con ambos tipos de test. Selecciona un estudiante para ver su perfil Holland, recomendaciones de carreras y estado de seguimiento.
-                </p>
-              </div>
-              <div className="flex flex-col lg:flex-row gap-8">
-                {/* Student List Sidebar */}
-                <div className="w-full lg:w-1/3 space-y-4">
-                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-24">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                        <Input 
-                          placeholder="Buscar por nombre, email o carrera..." 
-                          className="pl-9 bg-slate-50 border-slate-200"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </div>
+        <div className="flex flex-col h-[calc(100vh-10rem)]">
+          {/* Compact header */}
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Gestión de Estudiantes</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Aspirantes con tests de orientación vocacional · Holland RIASEC e ICO
+              </p>
+            </div>
+            <span className="text-sm text-slate-400">{students.length} estudiante{students.length !== 1 ? "s" : ""}</span>
+          </div>
+
+          {/* Two-panel app layout */}
+          <div className="flex gap-4 flex-1 min-h-0">
+            {/* ── Sidebar ── */}
+            <div className="w-80 shrink-0 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              {/* Search + filter — fijo */}
+              <div className="p-3 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Buscar estudiante..."
+                      className="pl-9 bg-slate-50 border-slate-200 h-9 text-sm"
+                      value={searchTerm}
+                      onChange={(e) => { setSearchTerm(e.target.value); setStudentsPage(1); }}
+                    />
+                  </div>
                       <Popover open={filtrosAbiertos} onOpenChange={setFiltrosAbiertos}>
                         <PopoverTrigger asChild>
                           <Button
@@ -1337,7 +1354,7 @@ Te invitamos a conocer más sobre:
                               <select
                                 className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
                                 value={filtrosEstudiantes.nivelRiesgo}
-                                onChange={(e) => setFiltrosEstudiantes(prev => ({ ...prev, nivelRiesgo: e.target.value }))}
+                                onChange={(e) => { setFiltrosEstudiantes(prev => ({ ...prev, nivelRiesgo: e.target.value })); setStudentsPage(1); }}
                               >
                                 <option value="">Todos los niveles</option>
                                 <option value="Alto">Riesgo Alto</option>
@@ -1351,7 +1368,7 @@ Te invitamos a conocer más sobre:
                               <select
                                 className="w-full p-2 rounded-md border border-slate-200 bg-white text-sm"
                                 value={filtrosEstudiantes.perfilHolland}
-                                onChange={(e) => setFiltrosEstudiantes(prev => ({ ...prev, perfilHolland: e.target.value }))}
+                                onChange={(e) => { setFiltrosEstudiantes(prev => ({ ...prev, perfilHolland: e.target.value })); setStudentsPage(1); }}
                               >
                                 <option value="">Todos los perfiles</option>
                                 <option value="R">R - Realista</option>
@@ -1372,223 +1389,310 @@ Te invitamos a conocer más sobre:
                         </PopoverContent>
                       </Popover>
                     </div>
+              </div>
 
-                    {loading ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3">
-                        <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
-                        <p className="text-sm text-slate-500">Cargando estudiantes...</p>
-                      </div>
-                    ) : filteredStudents.length === 0 ? (
-                      <div className="text-center py-12 px-4 text-slate-500">
-                        <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium text-slate-600 mb-1">
-                          {students.length === 0 ? "Aún no hay estudiantes" : "No hay coincidencias"}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {students.length === 0
-                            ? "Los aspirantes que completen tests de orientación aparecerán aquí."
-                            : "Prueba con otro término de búsqueda."}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
-                        {filteredStudents.map(student => (
-                        <div 
-                          key={student.id}
-                          onClick={() => setSelectedStudent(student)}
-                          className={`p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                            selectedStudent?.id === student.id 
-                              ? 'bg-teal-50 border-teal-200 shadow-sm' 
-                              : 'bg-white border-slate-100 hover:border-teal-100'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9 bg-slate-100 text-slate-600 border border-slate-200">
-                                <AvatarFallback>{student.avatar}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-bold text-sm text-slate-900">{student.name}</p>
-                                <p className="text-xs text-slate-500">{student.career_interest}</p>
-                              </div>
-                            </div>
-                            <Badge variant={student.risk_level === "Alto" ? "destructive" : "secondary"} className="text-[10px] px-1.5 h-5">
-                              Riesgo {student.risk_level}
+              {/* Lista scrollable */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
+                    <p className="text-xs text-slate-500">Cargando estudiantes...</p>
+                  </div>
+                ) : filteredStudents.length === 0 ? (
+                  <div className="text-center py-12 px-4">
+                    <Users className="w-10 h-10 mx-auto mb-2 opacity-20 text-slate-400" />
+                    <p className="text-sm font-medium text-slate-600">
+                      {students.length === 0 ? "Sin estudiantes aún" : "Sin resultados"}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {students.length === 0
+                        ? "Aparecerán cuando completen un test."
+                        : "Intenta con otro término."}
+                    </p>
+                  </div>
+                ) : (
+                  paginatedStudents.map(student => (
+                    <div
+                      key={student.id}
+                      onClick={() => setSelectedStudent(student)}
+                      className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
+                        selectedStudent?.id === student.id
+                          ? 'bg-teal-50 border-teal-200'
+                          : 'border-transparent hover:bg-slate-50 hover:border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-8 w-8 shrink-0 bg-slate-100 text-slate-600 border border-slate-200">
+                          <AvatarFallback className="text-xs">{student.avatar}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-semibold text-sm text-slate-900 truncate">{student.name}</p>
+                            <Badge
+                              variant={student.risk_level === "Alto" ? "destructive" : "secondary"}
+                              className="text-[9px] px-1 h-4 shrink-0"
+                            >
+                              {student.risk_level}
                             </Badge>
                           </div>
-                          <div className="flex justify-between items-center text-xs text-slate-400 pl-12">
-                            <span>
-                              Último: {student.last_test}
-                              {student.ultimoTipoTestLabel && (
-                                <span className="ml-1 text-slate-500">({student.ultimoTipoTestLabel})</span>
-                              )}
-                            </span>
-                            <ChevronRight className={`w-4 h-4 ${selectedStudent?.id === student.id ? 'text-teal-500' : 'text-slate-300'}`} />
-                          </div>
+                          <p className="text-xs text-slate-400 truncate">{student.career_interest || student.email}</p>
                         </div>
-                      ))}
+                        <ChevronRight className={`w-3.5 h-3.5 shrink-0 ${selectedStudent?.id === student.id ? 'text-teal-500' : 'text-slate-300'}`} />
                       </div>
-                    )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Paginación — fija al fondo */}
+              {totalStudentsPages > 1 && (
+                <div className="border-t border-slate-100 px-3 py-2 shrink-0 flex items-center justify-between bg-white">
+                  <p className="text-[11px] text-slate-400">
+                    {(studentsPage - 1) * STUDENTS_PER_PAGE + 1}–{Math.min(studentsPage * STUDENTS_PER_PAGE, filteredStudents.length)} / {filteredStudents.length}
+                  </p>
+                  <div className="flex gap-0.5">
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-xs" disabled={studentsPage === 1} onClick={() => setStudentsPage(p => p - 1)}>‹</Button>
+                    {Array.from({ length: totalStudentsPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalStudentsPages || Math.abs(p - studentsPage) <= 1)
+                      .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((item, idx) =>
+                        item === "…" ? (
+                          <span key={`e-${idx}`} className="h-6 w-5 flex items-center justify-center text-[11px] text-slate-400">…</span>
+                        ) : (
+                          <Button
+                            key={item}
+                            variant={studentsPage === item ? "default" : "ghost"}
+                            size="sm"
+                            className={`h-6 w-6 p-0 text-[11px] ${studentsPage === item ? 'bg-teal-600 hover:bg-teal-700 text-white' : ''}`}
+                            onClick={() => setStudentsPage(item as number)}
+                          >
+                            {item}
+                          </Button>
+                        )
+                      )}
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-xs" disabled={studentsPage === totalStudentsPages} onClick={() => setStudentsPage(p => p + 1)}>›</Button>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Main Detail View */}
-                <div className="w-full lg:w-2/3">
-                  {selectedStudent ? (
-                    <motion.div 
-                      initial={{ opacity: 0, x: 20 }}
+            {/* ── Panel de detalle ── */}
+            <div className="flex-1 overflow-y-auto">
+              {selectedStudent ? (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       key={selectedStudent.id}
                       className="space-y-6"
                     >
-                      {/* Student Header Card */}
-                      <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
-                        <div className="h-2 bg-teal-500 w-full" />
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-16 w-16 bg-slate-100 text-slate-600 border-2 border-white shadow-md">
-                              <AvatarFallback className="text-xl">{selectedStudent.avatar}</AvatarFallback>
+                      {/* Student Header — compacto */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="h-1 bg-teal-500 w-full" />
+                        <div className="p-4 flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Avatar className="h-11 w-11 shrink-0 bg-slate-100 text-slate-600 border border-slate-200">
+                              <AvatarFallback className="text-base">{selectedStudent.avatar}</AvatarFallback>
                             </Avatar>
-                            <div>
-                              <CardTitle className="text-2xl text-slate-900">{selectedStudent.name}</CardTitle>
-                              <CardDescription>{selectedStudent.email} | {selectedStudent.career_interest}</CardDescription>
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 truncate">{selectedStudent.name}</p>
+                              <p className="text-xs text-slate-500 truncate">{selectedStudent.email}</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                              selectedStudent.risk_level === "Alto" ? "bg-red-100 text-red-700" :
+                              selectedStudent.risk_level === "Medio" ? "bg-yellow-100 text-yellow-700" :
+                              "bg-green-100 text-green-700"
+                            }`}>
+                              Riesgo {selectedStudent.risk_level}
+                            </div>
                             <Button
                               variant="outline"
                               size="sm"
-                              className="rounded-full"
+                              className="h-8"
                               onClick={() => window.location.href = `mailto:${selectedStudent.email}`}
                             >
-                              <Mail className="w-4 h-4 mr-2" /> Contactar
+                              <Mail className="w-3.5 h-3.5 mr-1.5" /> Correo
                             </Button>
                             <Button
                               size="sm"
-                              className="bg-teal-600 hover:bg-teal-700 rounded-full"
+                              className="bg-teal-600 hover:bg-teal-700 h-8"
                               onClick={handleAbrirModalCita}
                             >
-                              <Calendar className="w-4 h-4 mr-2" /> Agendar Cita
+                              <Calendar className="w-3.5 h-3.5 mr-1.5" /> Cita
                             </Button>
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-3 gap-4 mt-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                            <div className="text-center border-r border-slate-200 last:border-0">
-                              <p className="text-xs text-slate-500 uppercase font-bold">Estado</p>
-                              <p className="text-sm font-semibold text-slate-900 mt-1">{selectedStudent.status}</p>
-                            </div>
-                            <div className="text-center border-r border-slate-200 last:border-0">
-                              <p className="text-xs text-slate-500 uppercase font-bold">Perfil Detectado</p>
-                              <p className="text-sm font-semibold text-teal-600 mt-1">{selectedStudent.result}</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-slate-500 uppercase font-bold">Última Actividad</p>
-                              <p className="text-sm font-semibold text-slate-900 mt-1">{selectedStudent.last_test}</p>
-                              {selectedStudent.ultimoTipoTestLabel && (
-                                <p className="text-xs text-slate-500 mt-0.5">Test {selectedStudent.ultimoTipoTestLabel}</p>
-                              )}
-                            </div>
+                        </div>
+                        <div className="px-4 pb-3 flex gap-4 border-t border-slate-50 pt-3">
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-400 uppercase font-semibold">Estado</p>
+                            <p className="text-xs font-semibold text-slate-800 mt-0.5">{selectedStudent.status}</p>
                           </div>
-                          <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <p className="text-xs text-slate-500 uppercase font-bold mb-2">Código Holland</p>
-                            <Badge variant="outline" className="text-sm font-mono">{selectedStudent.codigoHolland}</Badge>
-                            <p className="text-xs text-slate-500 mt-3 mb-1">Tests completados (Holland + ICO)</p>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {selectedStudent.totalSesiones} test{selectedStudent.totalSesiones !== 1 ? "s" : ""}
-                              {(selectedStudent.sesionesHolland != null || selectedStudent.sesionesIco != null) && (
-                                <span className="text-slate-600 font-normal ml-1">
-                                  ({[
-                                    selectedStudent.sesionesHolland != null && selectedStudent.sesionesHolland > 0
-                                      ? `${selectedStudent.sesionesHolland} Holland`
-                                      : null,
-                                    selectedStudent.sesionesIco != null && selectedStudent.sesionesIco > 0
-                                      ? `${selectedStudent.sesionesIco} ICO`
-                                      : null,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(", ")})
-                                </span>
-                              )}
+                          <div className="w-px bg-slate-100" />
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-400 uppercase font-semibold">Perfil</p>
+                            <p className="text-xs font-semibold text-teal-600 mt-0.5">{selectedStudent.result || "—"}</p>
+                          </div>
+                          <div className="w-px bg-slate-100" />
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-400 uppercase font-semibold">Último test</p>
+                            <p className="text-xs font-semibold text-slate-800 mt-0.5">
+                              {selectedStudent.last_test}
+                              {selectedStudent.ultimoTipoTestLabel && <span className="text-slate-400 ml-1">({selectedStudent.ultimoTipoTestLabel})</span>}
                             </p>
                           </div>
-                        </CardContent>
-                      </Card>
+                          <div className="w-px bg-slate-100" />
+                          <div className="text-center">
+                            <p className="text-[10px] text-slate-400 uppercase font-semibold">Holland</p>
+                            <p className="text-xs font-mono font-bold text-slate-800 mt-0.5">{selectedStudent.codigoHolland || "—"}</p>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* Analysis Tabs */}
                       <Tabs defaultValue="results" className="w-full">
                         <TabsList className="w-full justify-start bg-white border border-slate-200 p-1 rounded-xl mb-6">
                           <TabsTrigger value="results" className="rounded-lg px-6">Resultados del Test</TabsTrigger>
                           <TabsTrigger value="notes" className="rounded-lg px-6">Notas del Orientador</TabsTrigger>
-                          <TabsTrigger value="campaigns" className="rounded-lg px-6">Campañas de Correo</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="results">
-                          <Card className="rounded-2xl border-slate-200 shadow-sm">
-                            <CardHeader>
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <BarChart className="w-5 h-5 text-teal-500" />
-                                Análisis Psicométrico
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                              <div>
-                                <div className="flex justify-between mb-2">
-                                  <span className="text-sm font-medium text-slate-700">Aptitud Lógica</span>
-                                  <span className="text-sm font-bold text-slate-900">85%</span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-blue-500 w-[85%]" />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between mb-2">
-                                  <span className="text-sm font-medium text-slate-700">Creatividad</span>
-                                  <span className="text-sm font-bold text-slate-900">60%</span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-purple-500 w-[60%]" />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between mb-2">
-                                  <span className="text-sm font-medium text-slate-700">Habilidades Sociales</span>
-                                  <span className="text-sm font-bold text-slate-900">45%</span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-green-500 w-[45%]" />
-                                </div>
-                              </div>
-
-                              <div className="mt-6 p-4 bg-teal-50 border border-teal-100 rounded-xl">
-                                <h4 className="font-bold text-teal-800 mb-2 flex items-center">
-                                  <BrainCircuit className="w-4 h-4 mr-2" />
-                                  Carreras Recomendadas
-                                </h4>
-                                <div className="space-y-3">
-                                  {selectedStudent.recomendacionesCarreras && selectedStudent.recomendacionesCarreras.length > 0 ? (
-                                    selectedStudent.recomendacionesCarreras.map((carrera, index) => (
-                                      <div key={carrera.id} className="bg-white p-3 rounded-lg border border-teal-200">
-                                        <p className="font-semibold text-teal-900 text-sm mb-1">
-                                          {index + 1}. {carrera.name}
-                                        </p>
-                                        {((carrera as any).faculty ?? (carrera as any).facultad ?? (carrera as any).area) && (
-                                          <p className="text-xs text-teal-600 font-medium mb-1">
-                                            {[(carrera as any).faculty ?? (carrera as any).facultad, (carrera as any).area].filter(Boolean).join(" · ")}
-                                          </p>
-                                        )}
-                                        <p className="text-xs text-teal-700 leading-relaxed">
-                                          {carrera.razon}
-                                        </p>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="text-sm text-teal-700">No hay recomendaciones disponibles</p>
+                          <div className="space-y-4">
+                            {/* RIASEC Profile Card */}
+                            <Card className="rounded-2xl border-slate-200 shadow-sm">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  <BarChart className="w-5 h-5 text-teal-500" />
+                                  Perfil RIASEC — Holland
+                                </CardTitle>
+                                <CardDescription>
+                                  Código dominante: <span className="font-mono font-bold text-slate-900">{selectedStudent.codigoHolland || "—"}</span>
+                                  {" · "}
+                                  {selectedStudent.totalSesiones} test{selectedStudent.totalSesiones !== 1 ? "s" : ""}
+                                  {(selectedStudent.sesionesHolland != null || selectedStudent.sesionesIco != null) && (
+                                    <span className="text-slate-400 ml-1">
+                                      ({[
+                                        selectedStudent.sesionesHolland && selectedStudent.sesionesHolland > 0 ? `${selectedStudent.sesionesHolland} Holland` : null,
+                                        selectedStudent.sesionesIco && selectedStudent.sesionesIco > 0 ? `${selectedStudent.sesionesIco} ICO` : null,
+                                      ].filter(Boolean).join(", ")})
+                                    </span>
                                   )}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                {(() => {
+                                  const RIASEC_META: Record<string, { label: string; color: string; bar: string; desc: string }> = {
+                                    R: { label: "Realista", color: "text-orange-700", bar: "bg-orange-500", desc: "Práctico, manual, técnico" },
+                                    I: { label: "Investigativo", color: "text-blue-700", bar: "bg-blue-500", desc: "Analítico, científico, curioso" },
+                                    A: { label: "Artístico", color: "text-purple-700", bar: "bg-purple-500", desc: "Creativo, expresivo, original" },
+                                    S: { label: "Social", color: "text-green-700", bar: "bg-green-500", desc: "Cooperativo, empático, educador" },
+                                    E: { label: "Emprendedor", color: "text-yellow-700", bar: "bg-yellow-500", desc: "Líder, persuasivo, ambicioso" },
+                                    C: { label: "Convencional", color: "text-slate-600", bar: "bg-slate-400", desc: "Ordenado, metódico, detallista" },
+                                  };
+                                  // Weight by position in code: 1st=100%, 2nd=70%, 3rd=45%, rest=15%
+                                  const code = (selectedStudent.codigoHolland || "").toUpperCase().replace(/[^RIASCE]/g, "");
+                                  const weights: Record<string, number> = {};
+                                  ["R","I","A","S","C","E"].forEach(l => { weights[l] = 15; });
+                                  if (code[0]) weights[code[0]] = 100;
+                                  if (code[1]) weights[code[1]] = 70;
+                                  if (code[2]) weights[code[2]] = 45;
+                                  const sorted = Object.entries(weights).sort((a, b) => b[1] - a[1]);
+                                  return (
+                                    <div className="space-y-3">
+                                      {sorted.map(([letter, pct]) => {
+                                        const meta = RIASEC_META[letter];
+                                        const rank = code.indexOf(letter);
+                                        return (
+                                          <div key={letter}>
+                                            <div className="flex items-center justify-between mb-1">
+                                              <div className="flex items-center gap-2">
+                                                <span className={`font-mono font-bold text-sm w-4 ${meta.color}`}>{letter}</span>
+                                                <span className="text-sm font-medium text-slate-700">{meta.label}</span>
+                                                <span className="text-xs text-slate-400 hidden sm:inline">{meta.desc}</span>
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                {rank >= 0 && rank <= 2 && (
+                                                  <Badge variant="outline" className={`text-[10px] px-1.5 h-4 ${meta.color} border-current`}>
+                                                    #{rank + 1}
+                                                  </Badge>
+                                                )}
+                                                <span className="text-xs font-semibold text-slate-500 w-8 text-right">{pct}%</span>
+                                              </div>
+                                            </div>
+                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                              <div
+                                                className={`h-full ${meta.bar} rounded-full transition-all duration-500`}
+                                                style={{ width: `${pct}%` }}
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Risk level indicator */}
+                                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                  <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Nivel de Riesgo Detectado</p>
+                                    <p className="text-sm text-slate-700">{selectedStudent.result}</p>
+                                  </div>
+                                  <div className={`px-4 py-2 rounded-xl text-sm font-bold ${
+                                    selectedStudent.risk_level === "Alto"
+                                      ? "bg-red-100 text-red-700 border border-red-200"
+                                      : selectedStudent.risk_level === "Medio"
+                                      ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                                      : "bg-green-100 text-green-700 border border-green-200"
+                                  }`}>
+                                    {selectedStudent.risk_level}
+                                  </div>
                                 </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+                              </CardContent>
+                            </Card>
+
+                            {/* Career Recommendations */}
+                            <Card className="rounded-2xl border-slate-200 shadow-sm">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                  <BrainCircuit className="w-5 h-5 text-teal-500" />
+                                  Carreras Recomendadas
+                                </CardTitle>
+                                <CardDescription>Basadas en el perfil vocacional detectado</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                {selectedStudent.recomendacionesCarreras && selectedStudent.recomendacionesCarreras.length > 0 ? (
+                                  <div className="space-y-3">
+                                    {selectedStudent.recomendacionesCarreras.map((carrera, index) => (
+                                      <div key={carrera.id} className="flex gap-3 p-3 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/30 transition-colors">
+                                        <div className="w-7 h-7 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                                          {index + 1}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="font-semibold text-slate-900 text-sm">{carrera.name}</p>
+                                          {(carrera.faculty ?? carrera.facultad ?? carrera.area) && (
+                                            <p className="text-xs text-teal-600 font-medium mt-0.5">
+                                              {[carrera.faculty ?? carrera.facultad, carrera.area].filter(Boolean).join(" · ")}
+                                            </p>
+                                          )}
+                                          <p className="text-xs text-slate-500 leading-relaxed mt-1">{carrera.razon}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-8 text-slate-400">
+                                    <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">No hay recomendaciones disponibles</p>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          </div>
                         </TabsContent>
 
                         <TabsContent value="notes">
@@ -1616,64 +1720,17 @@ Te invitamos a conocer más sobre:
                           </Card>
                         </TabsContent>
 
-                        <TabsContent value="campaigns">
-                          <Card className="rounded-2xl border-slate-200 shadow-sm">
-                            <CardHeader>
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <Mail className="w-5 h-5 text-teal-500" />
-                                Campañas de Interés
-                              </CardTitle>
-                              <CardDescription>
-                                Envía información personalizada basada en el perfil vocacional del estudiante.
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
-                                      <BrainCircuit className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-semibold text-slate-900 text-sm">Webinar: Futuro de la IA</h4>
-                                      <p className="text-xs text-slate-500">Recomendado para perfiles Lógicos y Científicos</p>
-                                    </div>
-                                  </div>
-                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                                    Enviar Invitación
-                                  </Button>
-                                </div>
-
-                                <div className="mt-4 pt-4 border-t border-slate-100">
-                                  <h4 className="text-sm font-semibold text-slate-900 mb-3">Redactar Correo Personalizado</h4>
-                                  <div className="space-y-3">
-                                    <Input placeholder="Asunto: Oportunidad para tu carrera en Ingeniería..." className="bg-slate-50" />
-                                    <textarea 
-                                      className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                                      placeholder="Escribe un mensaje personalizado para el estudiante..."
-                                    />
-                                    <div className="flex justify-end">
-                                      <Button className="bg-slate-900 text-white hover:bg-slate-800">
-                                        <Mail className="w-4 h-4 mr-2" /> Enviar Correo
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </TabsContent>
                       </Tabs>
                     </motion.div>
-                  ) : (
-                    <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-                      <User className="w-16 h-16 mb-4 opacity-20" />
-                      <h3 className="text-lg font-medium text-slate-900">Selecciona un estudiante</h3>
-                      <p>Haz clic en la lista para ver los detalles del caso</p>
-                    </div>
-                  )}
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                  <User className="w-12 h-12 mb-3 opacity-20" />
+                  <p className="font-medium text-slate-600">Selecciona un estudiante</p>
+                  <p className="text-sm mt-1">Haz clic en la lista para ver su perfil</p>
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
         </div>
       );
     }
