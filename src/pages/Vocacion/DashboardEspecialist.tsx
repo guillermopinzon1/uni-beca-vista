@@ -217,6 +217,8 @@ const DashboardEspecialist = () => {
   });
   const textareaSegmentadaRef = useRef<HTMLTextAreaElement>(null);
   const textareaGrupoRef = useRef<HTMLTextAreaElement>(null);
+  const [seleccionGrupo, setSeleccionGrupo] = useState({ start: 0, end: 0 });
+  const [seleccionSegmentada, setSeleccionSegmentada] = useState({ start: 0, end: 0 });
   const [perfilCompleto, setPerfilCompleto] = useState<UserProfileResponse['data'] | null>(null);
   const [loadingPerfil, setLoadingPerfil] = useState(false);
 
@@ -1063,7 +1065,7 @@ Te invitamos a conocer más sobre:
     }
   };
 
-  // Función para aplicar formato (negrita, cursiva, subrayado, lista) al textarea
+  // Función para aplicar/quitar formato (negrita, cursiva, subrayado, lista) al textarea
   const aplicarFormato = (
     tipo: 'bold' | 'italic' | 'underline' | 'list',
     ref: React.RefObject<HTMLTextAreaElement>,
@@ -1077,16 +1079,8 @@ Te invitamos a conocer más sobre:
     const value = getValue();
     const selected = value.substring(start, end);
 
-    let before = '';
-    let after = '';
-    let replacement = '';
-
-    if (tipo === 'bold') { before = '**'; after = '**'; replacement = selected || 'texto'; }
-    else if (tipo === 'italic') { before = '_'; after = '_'; replacement = selected || 'texto'; }
-    else if (tipo === 'underline') { before = '__'; after = '__'; replacement = selected || 'texto'; }
-    else if (tipo === 'list') {
-      // Prefija cada línea seleccionada con "• "
-      replacement = selected
+    if (tipo === 'list') {
+      const replacement = selected
         ? selected.split('\n').map(l => `• ${l}`).join('\n')
         : '• elemento';
       setValue(value.substring(0, start) + replacement + value.substring(end));
@@ -1098,13 +1092,64 @@ Te invitamos a conocer más sobre:
       return;
     }
 
-    const newValue = value.substring(0, start) + before + replacement + after + value.substring(end);
-    setValue(newValue);
+    const markers: Record<string, string> = { bold: '**', italic: '_', underline: '__' };
+    const marker = markers[tipo];
+
+    // Toggle: el texto seleccionado ya tiene el marcador dentro → quitarlo
+    if (selected.startsWith(marker) && selected.endsWith(marker) && selected.length > marker.length * 2) {
+      const unwrapped = selected.slice(marker.length, -marker.length);
+      setValue(value.substring(0, start) + unwrapped + value.substring(end));
+      setTimeout(() => {
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + unwrapped.length;
+        textarea.focus();
+      }, 0);
+      return;
+    }
+
+    // Toggle: el marcador está alrededor de la selección en el texto completo → quitarlo
+    if (value.substring(start - marker.length, start) === marker &&
+        value.substring(end, end + marker.length) === marker) {
+      const newValue = value.substring(0, start - marker.length) + selected + value.substring(end + marker.length);
+      setValue(newValue);
+      setTimeout(() => {
+        textarea.selectionStart = start - marker.length;
+        textarea.selectionEnd = end - marker.length;
+        textarea.focus();
+      }, 0);
+      return;
+    }
+
+    // Aplicar formato
+    const inner = selected || 'texto';
+    setValue(value.substring(0, start) + marker + inner + marker + value.substring(end));
     setTimeout(() => {
-      textarea.selectionStart = start + before.length;
-      textarea.selectionEnd = start + before.length + replacement.length;
+      textarea.selectionStart = start + marker.length;
+      textarea.selectionEnd = start + marker.length + inner.length;
       textarea.focus();
     }, 0);
+  };
+
+  // Verifica si el cursor/selección está dentro de un fragmento con ese formato
+  const isFormatoActivo = (
+    tipo: 'bold' | 'italic' | 'underline',
+    content: string,
+    start: number,
+    end: number
+  ): boolean => {
+    const regexMap: Record<string, RegExp> = {
+      bold: /\*\*(.+?)\*\*/gs,
+      underline: /__(.+?)__/gs,
+      italic: /(?<![_*])_(?!_)(.+?)_(?![_*])/gs,
+    };
+    const regex = regexMap[tipo];
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(content)) !== null) {
+      const mStart = match.index;
+      const mEnd = match.index + match[0].length;
+      if (start <= mEnd && end >= mStart) return true;
+    }
+    return false;
   };
 
   // Convierte texto con marcadores de formato a HTML
@@ -3339,30 +3384,23 @@ Te invitamos a conocer más sobre:
                 </Label>
                 {/* Toolbar de formato */}
                 <div className="flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-t-lg">
-                  <button
-                    type="button"
-                    title="Negrita (**texto**)"
-                    onClick={() => aplicarFormato('bold', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
-                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
-                  >
-                    <Bold className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Cursiva (_texto_)"
-                    onClick={() => aplicarFormato('italic', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
-                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
-                  >
-                    <Italic className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Subrayado (__texto__)"
-                    onClick={() => aplicarFormato('underline', textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
-                    className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
-                  >
-                    <Underline className="w-3.5 h-3.5" />
-                  </button>
+                  {(['bold', 'italic', 'underline'] as const).map((tipo) => {
+                    const activo = isFormatoActivo(tipo, campanaSeleccionada.contenido, seleccionGrupo.start, seleccionGrupo.end);
+                    const Icon = tipo === 'bold' ? Bold : tipo === 'italic' ? Italic : Underline;
+                    const titulo = tipo === 'bold' ? 'Negrita' : tipo === 'italic' ? 'Cursiva' : 'Subrayado';
+                    return (
+                      <button
+                        key={tipo}
+                        type="button"
+                        title={titulo}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => aplicarFormato(tipo, textareaGrupoRef, () => campanaSeleccionada.contenido, (v) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: v }))}
+                        className={`p-1.5 rounded transition-all ${activo ? 'bg-teal-100 text-teal-700 shadow-inner' : 'hover:bg-white hover:shadow-sm text-slate-700'}`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </button>
+                    );
+                  })}
                   <div className="w-px h-4 bg-slate-300 mx-0.5" />
                   <button
                     type="button"
@@ -3377,7 +3415,11 @@ Te invitamos a conocer más sobre:
                   id="contenido"
                   ref={textareaGrupoRef}
                   value={campanaSeleccionada.contenido}
-                  onChange={(e) => setCampanaSeleccionada({ ...campanaSeleccionada, contenido: e.target.value })}
+                  onChange={(e) => { setCampanaSeleccionada({ ...campanaSeleccionada, contenido: e.target.value }); const t = e.currentTarget; setSeleccionGrupo({ start: t.selectionStart, end: t.selectionEnd }); }}
+                  onSelect={(e) => { const t = e.currentTarget; setSeleccionGrupo({ start: t.selectionStart, end: t.selectionEnd }); }}
+                  onKeyUp={(e) => { const t = e.currentTarget; setSeleccionGrupo({ start: t.selectionStart, end: t.selectionEnd }); }}
+                  onMouseUp={(e) => { const t = e.currentTarget; setSeleccionGrupo({ start: t.selectionStart, end: t.selectionEnd }); }}
+                  onClick={(e) => { const t = e.currentTarget; setSeleccionGrupo({ start: t.selectionStart, end: t.selectionEnd }); }}
                   placeholder="Escribe el contenido del correo..."
                   className="min-h-[200px] bg-slate-50 rounded-t-none border-t-0"
                 />
@@ -3513,30 +3555,23 @@ Te invitamos a conocer más sobre:
               </Label>
               {/* Toolbar de formato */}
               <div className="flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-t-lg">
-                <button
-                  type="button"
-                  title="Negrita (**texto**)"
-                  onClick={() => aplicarFormato('bold', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
-                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
-                >
-                  <Bold className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  title="Cursiva (_texto_)"
-                  onClick={() => aplicarFormato('italic', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
-                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
-                >
-                  <Italic className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  title="Subrayado (__texto__)"
-                  onClick={() => aplicarFormato('underline', textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
-                  className="p-1.5 rounded hover:bg-white hover:shadow-sm transition-all text-slate-700"
-                >
-                  <Underline className="w-3.5 h-3.5" />
-                </button>
+                {(['bold', 'italic', 'underline'] as const).map((tipo) => {
+                  const activo = isFormatoActivo(tipo, campanaPersonalizada.contenido, seleccionSegmentada.start, seleccionSegmentada.end);
+                  const Icon = tipo === 'bold' ? Bold : tipo === 'italic' ? Italic : Underline;
+                  const titulo = tipo === 'bold' ? 'Negrita' : tipo === 'italic' ? 'Cursiva' : 'Subrayado';
+                  return (
+                    <button
+                      key={tipo}
+                      type="button"
+                      title={titulo}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => aplicarFormato(tipo, textareaSegmentadaRef, () => campanaPersonalizada.contenido, (v) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: v }))}
+                      className={`p-1.5 rounded transition-all ${activo ? 'bg-teal-100 text-teal-700 shadow-inner' : 'hover:bg-white hover:shadow-sm text-slate-700'}`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  );
+                })}
                 <div className="w-px h-4 bg-slate-300 mx-0.5" />
                 <button
                   type="button"
@@ -3551,7 +3586,11 @@ Te invitamos a conocer más sobre:
                 id="contenido-segmentado"
                 ref={textareaSegmentadaRef}
                 value={campanaPersonalizada.contenido}
-                onChange={(e) => setCampanaPersonalizada({ ...campanaPersonalizada, contenido: e.target.value })}
+                onChange={(e) => { setCampanaPersonalizada({ ...campanaPersonalizada, contenido: e.target.value }); const t = e.currentTarget; setSeleccionSegmentada({ start: t.selectionStart, end: t.selectionEnd }); }}
+                onSelect={(e) => { const t = e.currentTarget; setSeleccionSegmentada({ start: t.selectionStart, end: t.selectionEnd }); }}
+                onKeyUp={(e) => { const t = e.currentTarget; setSeleccionSegmentada({ start: t.selectionStart, end: t.selectionEnd }); }}
+                onMouseUp={(e) => { const t = e.currentTarget; setSeleccionSegmentada({ start: t.selectionStart, end: t.selectionEnd }); }}
+                onClick={(e) => { const t = e.currentTarget; setSeleccionSegmentada({ start: t.selectionStart, end: t.selectionEnd }); }}
                 placeholder="Escribe el contenido del correo..."
                 className="min-h-[200px] bg-slate-50 rounded-t-none border-t-0"
               />

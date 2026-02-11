@@ -246,7 +246,7 @@ const DashboardAspirante = () => {
     }
     setCargandoNotif(true);
     const promesas: Promise<void>[] = [
-      obtenerMisNotificaciones(accessToken, 20)
+      obtenerMisNotificaciones(accessToken, 10)
         .then((res) => setNotificaciones(res.data.notificaciones))
         .catch(() => setNotificaciones([])),
     ];
