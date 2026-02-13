@@ -16,13 +16,21 @@ export interface RecomendacionCarrera {
 
 export interface Pregunta {
   id: string;
-  codigo: string;
-  texto: string;
-  tipoPregunta: string; // 'directa', 'comparativa', 'situacional'
-  peso?: string; // 'alta', 'media', 'baja'
+  codigo?: string;
+  codigo_pregunta?: string;
+  texto?: string;
+  /** ICO: texto de la pregunta (snake_case desde API) */
+  texto__pregunta?: string;
+  tipoPregunta?: string;
+  tipo_pregunta?: string;
+  peso?: string;
+  peso_pregunta?: string;
   dimensionPrincipal?: string;
+  dimension_principal?: string;
   dimensionSecundaria?: string[];
   opcionesRespuesta?: string[] | null;
+  /** ICO: opciones Likert desde API, ej. ["Frecuentemente", "A veces", "Nunca"] */
+  instrucciones_respuesta?: string[];
 }
 
 export interface RespuestaPregunta {
@@ -244,7 +252,8 @@ export interface PreguntasIcoResponse {
 /** Elemento de respuestas para guardar-respuestas-ico (snake_case en body) */
 export interface RespuestaIcoBody {
   pregunta_id: string;
-  respuesta: boolean; // true = Sí, false = No
+  /** Opción seleccionada: "Frecuentemente" | "A veces" | "Nunca" (o 2/1/0 si el backend lo acepta) */
+  respuesta: string;
   tiempo_respuesta?: number;
   nivel_seguridad?: 'seguro' | 'no_seguro';
 }

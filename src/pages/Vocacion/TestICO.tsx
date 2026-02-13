@@ -19,8 +19,11 @@ const TestICO = () => {
 
   const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
   const [preguntaActual, setPreguntaActual] = useState(0);
-  const [respuestas, setRespuestas] = useState<Record<string, boolean>>({});
+  const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [cargando, setCargando] = useState(false);
+
+  /** Opciones de respuesta Likert (desde API o por defecto) */
+  const opcionesPorDefecto = ["Frecuentemente", "A veces", "Nunca"];
 
   const accessToken =
     tokens?.accessToken ||
@@ -45,15 +48,17 @@ const TestICO = () => {
       const guardadas = localStorage.getItem("respuestasIco");
       if (guardadas && listaPreguntas.length > 0) {
         try {
-          const parsed = JSON.parse(guardadas) as Record<string, boolean>;
+          const parsed = JSON.parse(guardadas) as Record<string, string | boolean>;
           const idsValidos = new Set(listaPreguntas.map((p: Pregunta) => p.id));
-          const filtrado: Record<string, boolean> = {};
+          const filtrado: Record<string, string> = {};
           Object.keys(parsed).forEach((id) => {
-            if (idsValidos.has(id)) filtrado[id] = parsed[id];
+            if (idsValidos.has(id)) {
+              const v = parsed[id];
+              filtrado[id] = typeof v === "string" ? v : v ? "Sí" : "No";
+            }
           });
           if (Object.keys(filtrado).length > 0) {
             setRespuestas(filtrado);
-            // Restaurar la pregunta donde se quedó (primera sin responder, o última si ya respondió todas)
             const primeraSinResponder = listaPreguntas.findIndex(
               (p: Pregunta) => filtrado[p.id] === undefined
             );
@@ -82,14 +87,14 @@ const TestICO = () => {
     localStorage.setItem("respuestasIco", JSON.stringify(respuestas));
   }, [respuestas]);
 
-  const responderPregunta = (preguntaId: string, valor: boolean) => {
+  const responderPregunta = (preguntaId: string, valor: string) => {
     setRespuestas((prev) => {
       const next = { ...prev, [preguntaId]: valor };
       return next;
     });
   };
 
-  const enviarRespuestas = async (respuestasParaEnviar: Record<string, boolean>) => {
+  const enviarRespuestas = async (respuestasParaEnviar: Record<string, string>) => {
     const sesionId = localStorage.getItem("sesionId");
     if (!sesionId || !accessToken) {
       toast({
@@ -103,7 +108,7 @@ const TestICO = () => {
 
     const respuestasArray: RespuestaIcoBody[] = preguntas.map((p) => ({
       pregunta_id: p.id,
-      respuesta: respuestasParaEnviar[p.id] ?? false,
+      respuesta: respuestasParaEnviar[p.id] ?? "",
     }));
 
     setCargando(true);
@@ -173,7 +178,7 @@ const TestICO = () => {
           </div>
         </div>
 
-        {/* Pregunta + Sí/No: zona con scroll si hace falta */}
+        {/* Pregunta + opciones Likert (ej. Frecuentemente / A veces / Nunca) */}
         <Card className="border-none shadow-sm rounded-xl bg-white flex-1 min-h-0 flex flex-col overflow-hidden">
           <CardContent className="p-5 md:p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
             <span className="text-orange-500 text-xs font-bold uppercase tracking-widest mb-2 block shrink-0">
@@ -181,28 +186,26 @@ const TestICO = () => {
             </span>
             <div className="flex-1 min-h-0 overflow-y-auto mb-4">
               <h3 className="text-xl font-bold text-gray-900 leading-tight pr-2">
-                {pregunta?.texto}
+                {pregunta?.texto__pregunta ?? pregunta?.texto ?? ""}
               </h3>
             </div>
             <div className="space-y-3 shrink-0">
-              <Button
-                onClick={() => responderPregunta(pregunta.id, true)}
-                disabled={cargando}
-                className={`w-full h-14 text-base font-medium border-2 transition-all ${
-                  respuestas[pregunta.id] === true ? "bg-green-200 border-green-500 shadow-sm" : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                }`}
-              >
-                Sí
-              </Button>
-              <Button
-                onClick={() => responderPregunta(pregunta.id, false)}
-                disabled={cargando}
-                className={`w-full h-14 text-base font-medium border-2 transition-all ${
-                  respuestas[pregunta.id] === false ? "bg-red-200 border-red-500 shadow-sm" : "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                }`}
-              >
-                No
-              </Button>
+              {(pregunta?.instrucciones_respuesta ?? pregunta?.opcionesRespuesta ?? opcionesPorDefecto).map(
+                (opcion: string) => (
+                  <Button
+                    key={opcion}
+                    onClick={() => responderPregunta(pregunta.id, opcion)}
+                    disabled={cargando}
+                    className={`w-full h-14 text-base font-medium border-2 transition-all ${
+                      respuestas[pregunta.id] === opcion
+                        ? "bg-orange-200 border-orange-500 shadow-sm text-orange-900"
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    {opcion}
+                  </Button>
+                )
+              )}
             </div>
           </CardContent>
         </Card>
@@ -233,7 +236,7 @@ const TestICO = () => {
           {preguntaActual < preguntas.length - 1 ? (
             <Button
               onClick={() => setPreguntaActual((p) => p + 1)}
-              disabled={respuestas[pregunta?.id] === undefined}
+              disabled={!pregunta?.id || respuestas[pregunta.id] === undefined || respuestas[pregunta.id] === ""}
               className="bg-orange-600 hover:bg-orange-700 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Siguiente
@@ -244,7 +247,7 @@ const TestICO = () => {
               onClick={() => enviarRespuestas(respuestas)}
               disabled={
                 cargando ||
-                preguntas.some((p) => respuestas[p.id] === undefined)
+                preguntas.some((p) => respuestas[p.id] === undefined || respuestas[p.id] === "")
               }
               className="bg-orange-600 hover:bg-orange-700 rounded-lg shrink-0"
             >

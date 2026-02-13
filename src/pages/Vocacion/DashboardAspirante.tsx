@@ -26,8 +26,6 @@ import { RIASEC_LABELS, RIASEC_DESCRIPTIONS } from "@/lib/riasec";
 import { obtenerMisNotificaciones, marcarComoLeida, marcarTodasComoLeidas, type Notificacion } from "@/lib/api/notificaciones";
 import { obtenerCitasEstudiante, actualizarCita, cancelarCita, type Cita } from "@/lib/api/citas";
 
-import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
-
 // Helpers para notificaciones (estilo CRM)
 const getIconForNotifType = (tipo: string) => {
   switch (tipo) {
@@ -1508,20 +1506,19 @@ const DashboardAspirante = () => {
     if (activeModule === "perfil") {
       return (
         <div className="relative min-h-[calc(100vh-5rem)]">
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-stretch p-4 sm:p-6 lg:p-8">
-            
-            {/* Tarjeta de perfil - sin avatar */}
-            <motion.div 
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+            {/* Columna izquierda: tarjetas de perfil (misma altura que Mi Trayectoria) */}
+            <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="w-full lg:w-1/3 space-y-4"
+              className="w-full lg:col-span-1 flex flex-col gap-4 min-h-0 h-full"
             >
-              <Card className="rounded-2xl overflow-hidden shadow-xl border-0 bg-white/95 backdrop-blur-md">
-                <div className="h-2 bg-gradient-to-r from-primary to-orange-500" />
+              <Card className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#f37021] to-orange-400" />
                 <CardContent className="pt-6 sm:pt-8 pb-6 sm:pb-8 flex flex-col items-center text-center px-4 sm:px-6">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-orange-500/15 flex items-center justify-center mb-4">
-                    <User className="w-7 h-7 text-primary" />
+                  <div className="w-14 h-14 rounded-2xl border border-slate-200 flex items-center justify-center mb-4">
+                    <User className="w-7 h-7 text-[#f37021]" />
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-0.5">
                     {user?.nombre || 'Usuario'} {user?.apellido || ''}
@@ -1530,14 +1527,30 @@ const DashboardAspirante = () => {
                     {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Aspirante'}
                     {user?.trimestre && ` • ${user.trimestre}to Trimestre`}
                   </p>
-                  <Badge className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:opacity-90 mb-4 sm:mb-6 px-3 py-1 shadow-md">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Perfil {user?.emailVerified ? '100%' : '85%'} Completado
-                  </Badge>
+                  {(() => {
+                    const testsCompletados = historialPerfil.filter((s: any) => {
+                      const e = (s.estado ?? s.estado)?.toLowerCase?.() ?? "";
+                      const t = s.tipoTest ?? s.tipo_test;
+                      return t === "ICO" ? (e === "finalizada" || e === "completada") : (e === "finalizada" || e === "ronda_2_completada");
+                    });
+                    const tieneAlMenosUnTest = testsCompletados.length >= 1;
+                    const porcentajeReal = tieneAlMenosUnTest ? 100 : (user?.emailVerified ? 50 : 25);
+                    return (
+                      <>
+                        <Badge className={`mb-4 sm:mb-6 px-3 py-1 ${tieneAlMenosUnTest ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
+                          {tieneAlMenosUnTest ? <CheckCircle className="w-3 h-3 mr-1" /> : <AlertCircle className="w-3 h-3 mr-1" />}
+                          {tieneAlMenosUnTest ? 'Perfil completado' : `Perfil ${porcentajeReal}% completado`}
+                        </Badge>
+                        {!tieneAlMenosUnTest && (
+                          <p className="text-xs text-slate-500 mb-2 -mt-2">Completa al menos un test de orientación para completar tu perfil.</p>
+                        )}
+                      </>
+                    );
+                  })()}
                   
                   <div className="w-full grid grid-cols-2 gap-3 sm:gap-4 py-4 sm:py-6 border-t border-slate-200">
                     <div className="text-center">
-                      <div className="text-xl sm:text-2xl font-bold text-primary mb-1">
+                      <div className="text-xl sm:text-2xl font-bold text-[#f37021] mb-1">
                         {cargandoPerfil ? "—" : historialPerfil.filter((s: any) => {
                           const e = (s.estado ?? s.estado)?.toLowerCase?.() ?? "";
                           const t = s.tipoTest ?? s.tipo_test;
@@ -1547,7 +1560,7 @@ const DashboardAspirante = () => {
                       <div className="text-xs text-slate-500 uppercase">Tests Completados</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl sm:text-2xl font-bold text-primary mb-1">
+                      <div className="text-xl sm:text-2xl font-bold text-[#f37021] mb-1">
                         {cargandoPerfil ? "—" : (perfilVocacionalData?.resultadoActual?.resultado?.recomendacionesCarreras?.length ?? "—")}
                       </div>
                       <div className="text-xs text-slate-500 uppercase">Recomendaciones</div>
@@ -1562,7 +1575,7 @@ const DashboardAspirante = () => {
                       });
                       setEditarPerfilOpen(true);
                     }}
-                    className="w-full bg-gradient-to-r from-primary to-orange-dark text-white hover:opacity-90 rounded-full shadow-md hover:shadow-lg transition-all h-10 sm:h-11"
+                    className="w-full bg-[#f37021] hover:bg-[#d65f1a] text-white rounded-xl shadow-sm hover:shadow-md transition-all h-10 sm:h-11"
                   >
                     <Settings className="w-4 h-4 mr-2" /> Editar Perfil
                   </Button>
@@ -1576,15 +1589,13 @@ const DashboardAspirante = () => {
                         setTrimestreConvertir("");
                         setConvertirEstudianteOpen(true);
                       }}
-                      className="w-full mt-3 rounded-xl h-11 sm:h-12 border-2 border-[#f37021]/40 bg-gradient-to-r from-orange-50 to-amber-50/80 text-[#c45a1a] hover:border-[#f37021] hover:from-orange-100 hover:to-amber-100 hover:text-[#b84f0f] shadow-sm hover:shadow-md transition-all duration-200 font-semibold"
+                      className="w-full mt-3 rounded-xl h-11 sm:h-12 border border-slate-200 text-slate-700 hover:border-[#f37021] hover:bg-orange-50/50 hover:text-[#c45a1a] transition-all font-medium"
                     >
                       <span className="flex items-center justify-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f37021]/15">
-                          <GraduationCap className="h-4 w-4 text-[#f37021]" />
-                        </span>
+                        <GraduationCap className="h-5 w-5 text-[#f37021]" />
                         <span className="text-left">
                           <span className="block leading-tight">Pasar a estudiante</span>
-                          <span className="block text-xs font-normal text-slate-500 opacity-90">Universidad Metropolitana</span>
+                          <span className="block text-xs font-normal text-slate-500">Universidad Metropolitana</span>
                         </span>
                       </span>
                     </Button>
@@ -1592,15 +1603,66 @@ const DashboardAspirante = () => {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl shadow-xl border-0 bg-white/95 backdrop-blur-md overflow-hidden">
-                <div className="h-1.5 bg-gradient-to-r from-primary/80 to-orange-500/80" />
-                <CardHeader className="pb-3 sm:pb-4">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              {/* Información de Contacto - entre Aspirante y Resumen Vocacional */}
+              <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white overflow-hidden">
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#f37021] to-orange-400" />
+                <CardHeader className="px-4 sm:px-6 pt-4 pb-3">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-slate-900">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#f37021]" />
+                    Información de Contacto
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 px-4 sm:px-6 pb-4 pt-0">
+                  <div className="space-y-1 p-2.5 sm:p-3 border border-slate-200 rounded-lg">
+                    <Label className="text-xs text-slate-500 font-medium">Correo Electrónico</Label>
+                    <p className="text-sm font-semibold text-slate-900 break-all">
+                      {user?.email || 'No disponible'}
+                    </p>
+                  </div>
+                  <div className="space-y-1 p-2.5 sm:p-3 border border-slate-200 rounded-lg">
+                    <Label className="text-xs text-slate-500 font-medium">Teléfono</Label>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {user?.telefono || 'No disponible'}
+                    </p>
+                  </div>
+                  <div className="space-y-1 p-2.5 sm:p-3 border border-slate-200 rounded-lg">
+                    <Label className="text-xs text-slate-500 font-medium">Cédula</Label>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {user?.cedula || 'No disponible'}
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-700">Estado de la cuenta:</span>
+                      <Badge className={`${
+                        user?.activo
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {user?.activo ? '✓ Activa' : '⏳ Pendiente'}
+                      </Badge>
+                    </div>
+                    {!user?.emailVerified && (
+                      <div className="flex items-center gap-2 mt-2 p-2 border border-amber-200 rounded-lg">
+                        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-amber-600 flex-shrink-0" />
+                        <p className="text-xs text-amber-800 font-medium">
+                          Correo no verificado
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white overflow-hidden flex-1 flex flex-col min-h-0">
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#f37021] to-orange-400 flex-shrink-0" />
+                <CardHeader className="px-4 sm:px-6 pt-4 pb-3 flex-shrink-0">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-slate-900">
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#f37021]" />
                     Resumen Vocacional
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <CardContent className="px-4 sm:px-6 pb-4 pt-0 flex-1 min-h-0">
                   {cargandoPerfil ? (
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
@@ -1641,18 +1703,12 @@ const DashboardAspirante = () => {
                     const perfilMostrar = perfilDominante || perfilDelHistorial;
                     const codigoMostrar = codigoHolland || (ultimoTestCompletado?.codigoHolland ?? ultimoTestCompletado?.codigo_holland);
 
-                    // Debug: mostrar qué valores se encontraron
-                    console.log('🔍 [Resumen] perfilDominante:', perfilDominante);
-                    console.log('🔍 [Resumen] codigoHolland:', codigoHolland);
-                    console.log('🔍 [Resumen] perfilDelHistorial:', perfilDelHistorial);
-                    console.log('🔍 [Resumen] ultimoTestCompletado:', ultimoTestCompletado);
-
                     if (perfilMostrar || codigoMostrar) {
                       return (
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
                             {perfilMostrar != null && perfilMostrar !== "" && (
-                              <Badge className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 text-xs sm:text-sm">
+                              <Badge className="bg-[#f37021]/10 text-[#c45a1a] border border-[#f37021]/20 px-2.5 py-1 text-xs sm:text-sm">
                                 {String(perfilMostrar)}
                               </Badge>
                             )}
@@ -1679,68 +1735,19 @@ const DashboardAspirante = () => {
                   })()}
                 </CardContent>
               </Card>
-
-              {/* Información Personal Adicional */}
-              <Card className="rounded-xl sm:rounded-2xl shadow-lg border-slate-200">
-                <CardHeader className="pb-3 sm:pb-4">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                    Información de Contacto
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className="space-y-1 p-2.5 sm:p-3 bg-slate-50 rounded-lg">
-                    <Label className="text-xs text-slate-500 font-medium">Correo Electrónico</Label>
-                    <p className="text-sm font-semibold text-slate-900 break-all">
-                      {user?.email || 'No disponible'}
-                    </p>
-                  </div>
-                  <div className="space-y-1 p-2.5 sm:p-3 bg-slate-50 rounded-lg">
-                    <Label className="text-xs text-slate-500 font-medium">Teléfono</Label>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {user?.telefono || 'No disponible'}
-                    </p>
-                  </div>
-                  <div className="space-y-1 p-2.5 sm:p-3 bg-slate-50 rounded-lg">
-                    <Label className="text-xs text-slate-500 font-medium">Cédula</Label>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {user?.cedula || 'No disponible'}
-                    </p>
-                  </div>
-                  <div className="pt-3 border-t border-slate-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-xs sm:text-sm font-semibold text-slate-700">Estado de la cuenta:</span>
-                      <Badge className={`${
-                        user?.activo 
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
-                          : 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
-                      } shadow-sm`}>
-                        {user?.activo ? '✓ Activa' : '⏳ Pendiente'}
-                      </Badge>
-                    </div>
-                    {!user?.emailVerified && (
-                      <div className="flex items-center gap-2 mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600 flex-shrink-0" />
-                        <p className="text-xs text-yellow-800 font-medium">
-                          Correo no verificado
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
             </motion.div>
 
-            {/* Contenido principal Mi Trayectoria */}
-            <motion.div 
+            {/* Columna derecha: Mi Trayectoria (misma altura que columna izquierda) */}
+            <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.05 }}
-              className="w-full lg:w-2/3"
+              className="w-full lg:col-span-2 min-w-0 min-h-0 flex flex-col"
             >
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border-0 min-h-[400px] sm:min-h-[500px] p-4 sm:p-6 md:p-8 overflow-hidden">
-                <div className="h-1.5 w-full bg-gradient-to-r from-primary to-orange-500 rounded-full mb-6" />
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px] overflow-hidden">
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#f37021] to-orange-400 flex-shrink-0" />
+                <div className="p-4 sm:p-6 lg:p-8 flex-1 flex flex-col min-h-0">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 flex-shrink-0">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Mi Trayectoria</h1>
                         <p className="text-sm sm:text-base text-slate-500">Historial académico y resultados vocacionales</p>
@@ -1756,19 +1763,19 @@ const DashboardAspirante = () => {
                     </Button>
                 </div>
 
-                <Tabs defaultValue="tests" className="w-full">
-                  <TabsList className="w-full grid grid-cols-3 bg-slate-100 p-1 rounded-xl sm:rounded-full mb-6 sm:mb-8 h-auto">
-                    <TabsTrigger value="tests" className="rounded-lg sm:rounded-full px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <Tabs defaultValue="tests" className="w-full flex-1 flex flex-col min-h-0">
+                    <TabsList className="w-full grid grid-cols-3 border border-slate-200 p-1 rounded-xl mb-6 h-auto flex-shrink-0">
+                    <TabsTrigger value="tests" className="rounded-lg px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-slate-200">
                       <BrainCircuit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       <span className="hidden sm:inline">Tests Vocacionales</span>
                       <span className="sm:hidden">Tests</span>
                     </TabsTrigger>
-                    <TabsTrigger value="history" className="rounded-lg sm:rounded-full px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <TabsTrigger value="history" className="rounded-lg px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-slate-200">
                       <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       <span className="hidden sm:inline">Historial Académico</span>
                       <span className="sm:hidden">Historial</span>
                     </TabsTrigger>
-                    <TabsTrigger value="preferences" className="rounded-lg sm:rounded-full px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <TabsTrigger value="preferences" className="rounded-lg px-3 sm:px-6 py-2 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border-slate-200">
                       <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       <span className="hidden sm:inline">Preferencias</span>
                       <span className="sm:hidden">Prefs</span>
@@ -1796,7 +1803,7 @@ const DashboardAspirante = () => {
                             <BrainCircuit className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                             <h3 className="font-bold text-slate-700 mb-1">No hay tests completados</h3>
                             <p className="text-sm text-slate-500 mb-4">Completa un test de orientación para ver tus resultados aquí.</p>
-                            <Button onClick={() => { setActiveModule("orientacion"); navigate("/orientacion/seleccionar-test"); }} className="bg-primary hover:bg-primary/90 text-white">
+                            <Button onClick={() => { setActiveModule("orientacion"); navigate("/orientacion/seleccionar-test"); }} className="bg-[#f37021] hover:bg-[#d65f1a] text-white">
                               Ir a Orientación Vocacional
                             </Button>
                           </div>
@@ -1819,7 +1826,7 @@ const DashboardAspirante = () => {
                                 return (
                                   <div
                                     key={idVal || `prog-${idx}`}
-                                    className="border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-amber-400 bg-amber-50/50"
+                                    className="border border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-amber-400"
                                   >
                                     <div className="min-w-0 flex-1">
                                       <div className="flex flex-wrap items-center gap-2">
@@ -1868,7 +1875,7 @@ const DashboardAspirante = () => {
                             return (
                               <div
                                 key={idVal || `sesion-${index}`}
-                                className={`border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors border-l-4 ${esIco ? "border-l-blue-500" : "border-l-primary"}`}
+                                className={`border border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition-colors border-l-4 ${esIco ? "border-l-blue-500" : "border-l-[#f37021]"}`}
                               >
                                 <div className="min-w-0 flex-1 space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
@@ -1878,7 +1885,7 @@ const DashboardAspirante = () => {
                                   <p className="text-sm text-slate-600 line-clamp-2">{descripcionCorta}</p>
                                   <div className="flex flex-wrap gap-2">
                                     {perfilVal && (
-                                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                                      <Badge variant="secondary" className="bg-[#f37021]/10 text-[#c45a1a] border-[#f37021]/20">
                                         Dominante: {RIASEC_LABELS[perfilVal] || perfilVal}
                                       </Badge>
                                     )}
@@ -1911,7 +1918,7 @@ const DashboardAspirante = () => {
                     ) : (
                       <div className="space-y-4">
                         {/* Resumen de lo que el usuario colocó en la pestaña Trayectoria académica */}
-                        <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-orange-50 border border-primary/20 shadow-sm">
+                        <div className="p-4 rounded-xl border border-slate-200">
                           <p className="text-sm font-semibold text-slate-700 mb-1">Resumen de lo que registraste en Trayectoria académica</p>
                           <p className="text-xs text-slate-500 mb-3">Esto es lo que tienes guardado en el módulo Trayectoria académica (bachillerato):</p>
                           {(trayectoria.gradoActual || trayectoria.promedioGeneral != null || (trayectoria.materiasDestacadas?.length ?? 0) > 0 || (trayectoria.actividadesExtracurriculares?.length ?? 0) > 0 || (trayectoria.proyectosRealizados?.length ?? 0) > 0 || Object.keys(trayectoria.promediosPorAno || {}).length > 0 || Object.keys(trayectoria.materiasPorAnoLapso || {}).length > 0 || (trayectoria.materiasPorArea?.length ?? 0) > 0) ? (
@@ -2067,7 +2074,7 @@ const DashboardAspirante = () => {
                           </>
                         ) : (
                           <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 border border-slate-200 rounded-full flex items-center justify-center mb-4">
                               <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" />
                             </div>
                             <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Sin Historial Académico</h3>
@@ -2076,7 +2083,7 @@ const DashboardAspirante = () => {
                             </p>
                             <Button
                               onClick={() => setActiveModule("notas")}
-                              className="bg-primary hover:bg-primary/90"
+                              className="bg-[#f37021] hover:bg-[#d65f1a] text-white"
                             >
                               <Upload className="w-4 h-4 mr-2" />
                               Agregar Trayectoria
@@ -2089,10 +2096,10 @@ const DashboardAspirante = () => {
 
                   <TabsContent value="preferences">
                     <div className="space-y-4">
-                      <div className="p-4 sm:p-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl sm:rounded-2xl border-2 border-pink-100 shadow-md">
+                      <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200">
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
                           <h3 className="font-bold text-lg sm:text-xl text-slate-900 flex items-center gap-2">
-                            <Heart className="w-5 h-5 text-pink-600" />
+                            <Heart className="w-5 h-5 text-[#f37021]" />
                             Preferencias de Estudio
                           </h3>
                           <Button
@@ -2181,7 +2188,7 @@ const DashboardAspirante = () => {
 
                             <Button
                               onClick={handleGuardarPreferencias}
-                              className="w-full bg-gradient-to-r from-primary to-orange-dark text-white"
+                              className="w-full bg-[#f37021] hover:bg-[#d65f1a] text-white"
                             >
                               <Save className="w-4 h-4 mr-2" />
                               Guardar Preferencias
@@ -2189,24 +2196,24 @@ const DashboardAspirante = () => {
                           </div>
                         ) : (
                           <div className="space-y-2.5 sm:space-y-3 text-sm sm:text-base">
-                            <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
-                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                            <div className="flex items-center gap-3 p-2.5 sm:p-3 border border-slate-200 rounded-lg">
+                              <div className="w-2 h-2 bg-[#f37021] rounded-full flex-shrink-0" />
                               <span className="font-semibold text-slate-700">Modalidad:</span>
                               <span className="text-slate-600">{preferencias.modalidad}</span>
                             </div>
-                            <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-white/70 rounded-lg">
-                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                            <div className="flex items-center gap-3 p-2.5 sm:p-3 border border-slate-200 rounded-lg">
+                              <div className="w-2 h-2 bg-[#f37021] rounded-full flex-shrink-0" />
                               <span className="font-semibold text-slate-700">Duración preferida:</span>
                               <span className="text-slate-600">{preferencias.duracion}</span>
                             </div>
-                            <div className="p-2.5 sm:p-3 bg-white/70 rounded-lg">
+                            <div className="p-2.5 sm:p-3 border border-slate-200 rounded-lg">
                               <div className="flex items-center gap-3 mb-2">
-                                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                                <div className="w-2 h-2 bg-[#f37021] rounded-full flex-shrink-0" />
                                 <span className="font-semibold text-slate-700">Áreas de interés:</span>
                               </div>
                               <div className="flex flex-wrap gap-2 ml-5">
                                 {preferencias.areasInteres.map((area: string, i: number) => (
-                                  <Badge key={i} className="bg-primary/10 text-primary">
+                                  <Badge key={i} className="bg-[#f37021]/10 text-[#c45a1a] border border-[#f37021]/20">
                                     {area}
                                   </Badge>
                                 ))}
@@ -2216,8 +2223,9 @@ const DashboardAspirante = () => {
                         )}
                       </div>
                     </div>
-                  </TabsContent>
-                </Tabs>
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -2317,14 +2325,6 @@ const DashboardAspirante = () => {
 
         {/* Main Content */}
         <main className="flex-1 px-6 py-8 relative">
-          {/* Fondo solo en Perfil: capa a ancho completo sin tapar sidebar; estructura igual que el resto */}
-          {activeModule === "perfil" && (
-            <div className="absolute inset-0 z-0" aria-hidden="true">
-              <img src={imagenBecas} alt="" className="absolute inset-0 w-full h-full object-cover object-center" />
-              <div className="absolute inset-0 bg-slate-900/20" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-background/30" />
-            </div>
-          )}
           <div className="relative z-10 max-w-6xl mx-auto">
             <div className="pt-0">
               {/* Orientación: barra de progreso solo cuando ya estás en un test (RIASEC o ICO), no en selección */}
