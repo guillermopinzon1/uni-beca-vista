@@ -211,8 +211,12 @@ const UnifiedApplicationForm = ({ programTitle, requiredDocuments = [] }: Unifie
     loadUserProfile();
   }, [tokens?.accessToken, toast]);
 
-  // Función para manejar cambios en el formulario
+  // Función para manejar cambios en el formulario (notas/promedios en escala 0-20)
   const handleInputChange = (field: keyof FormData, value: string | number | null) => {
+    if ((field === "promedioBachillerato" || field === "iaa") && typeof value === "number") {
+      if (value > 20) value = 20;
+      else if (value < 0) value = 0;
+    }
     setFormData(prev => ({
       ...prev,
       [field]: value

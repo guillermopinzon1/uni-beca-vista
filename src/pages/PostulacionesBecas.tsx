@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import {
   BookOpen,
   Home,
   LogOut,
+  LogIn,
+  UserPlus,
   ArrowLeft
 } from "lucide-react";
 import ProgramaExcelenciaTabs from "@/components/excelencia/ProgramaExcelenciaTabs";
@@ -18,7 +20,8 @@ import { API_BASE } from "@/lib/api";
 
 const PostulacionesBecas = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const location = useLocation();
+  const { isLoggedIn, user, logout } = useAuth();
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [configs, setConfigs] = useState<Array<any>>([]);
@@ -115,14 +118,34 @@ const PostulacionesBecas = () => {
                   <p className="text-sm text-muted-foreground">Sistema de Postulaciones a Becas</p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Volver al Inicio
-              </Button>
+              {isLoggedIn && user ? (
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Volver al Inicio
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/login", { state: { from: location } })}
+                    className="text-primary hover:bg-primary/10"
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Iniciar sesión
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/register", { state: { from: location } })}
+                    className="bg-primary text-primary-foreground hover:opacity-90"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Registrarse
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -210,7 +233,7 @@ const PostulacionesBecas = () => {
             </Card>
           )}
 
-          {/* Application Form */}
+          {/* Formulario de postulación (accesible con o sin sesión) */}
           {selectedProgram === "excelencia" ? (
             <ProgramaExcelenciaTabs configuraciones={configs.filter(c => (c.tipoBeca || '').toLowerCase() === 'excelencia')} />
           ) : (
@@ -241,14 +264,34 @@ const PostulacionesBecas = () => {
                 <p className="text-sm text-muted-foreground">Sistema de Postulaciones a Becas</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={handleLogout}
-              className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Volver al Inicio
-            </Button>
+            {isLoggedIn && user ? (
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Volver al Inicio
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/login", { state: { from: location } })}
+                  className="text-primary hover:bg-primary/10"
+                >
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Iniciar sesión
+                </Button>
+                <Button
+                  onClick={() => navigate("/register", { state: { from: location } })}
+                  className="bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Registrarse
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>

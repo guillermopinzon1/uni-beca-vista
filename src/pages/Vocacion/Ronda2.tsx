@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +31,7 @@ const Ronda2 = () => {
   const [respuestaSeleccionada, setRespuestaSeleccionada] = useState<string | boolean | null>(null);
   const [cargando, setCargando] = useState(false);
   const [cargandoPreguntas, setCargandoPreguntas] = useState(true);
+  const completadoExitosoRef = useRef(false);
 
   const accessToken = tokens?.accessToken || 
     JSON.parse(localStorage.getItem('auth_tokens') || 'null')?.accessToken;
@@ -47,22 +48,27 @@ const Ronda2 = () => {
           
           if (listaPreguntas.length > 0) {
             setPreguntas(listaPreguntas);
-            
+            const sesionIdActual = localStorage.getItem('sesionId');
             const tiemposIniciales: Record<string, number> = {};
             listaPreguntas.forEach((preg: Pregunta) => {
               tiemposIniciales[preg.id] = 0;
             });
             setTiempos(tiemposIniciales);
             setInicioTiempo(Date.now());
-            
+            const idsPreguntas = new Set(listaPreguntas.map((p: Pregunta) => p.id));
+            const respuestasSesionId = localStorage.getItem('respuestasRonda2SesionId');
             const respuestasGuardadas = localStorage.getItem('respuestasRonda2');
-            if (respuestasGuardadas) {
-              const respuestasParseadas = JSON.parse(respuestasGuardadas) as Record<string, { respuesta: unknown }>;
-              setRespuestas(respuestasParseadas);
-              // Restaurar la pregunta donde se quedó (primera sin responder, o última si ya respondió todas)
-              const primeraSinResponder = listaPreguntas.findIndex((p: Pregunta) => !respuestasParseadas[p.id]);
-              const indiceInicial = primeraSinResponder >= 0 ? primeraSinResponder : Math.max(0, listaPreguntas.length - 1);
-              setPreguntaActual(indiceInicial);
+            if (respuestasGuardadas && sesionIdActual && respuestasSesionId === sesionIdActual) {
+              const respuestasParseadas = JSON.parse(respuestasGuardadas) as Record<string, RespuestaPregunta>;
+              const filtradas: Record<string, RespuestaPregunta> = {};
+              Object.keys(respuestasParseadas).forEach((id) => {
+                if (idsPreguntas.has(id)) filtradas[id] = respuestasParseadas[id];
+              });
+              setRespuestas(filtradas);
+              const primeraSinResponder = listaPreguntas.findIndex((p: Pregunta) => !filtradas[p.id]);
+              setPreguntaActual(primeraSinResponder >= 0 ? primeraSinResponder : 0);
+            } else {
+              setPreguntaActual(0);
             }
             setCargandoPreguntas(false);
             return;
@@ -101,14 +107,48 @@ const Ronda2 = () => {
         if (sesionInfo.data.preguntasRonda2 && sesionInfo.data.preguntasRonda2.length > 0) {
           setPreguntas(sesionInfo.data.preguntasRonda2);
           localStorage.setItem('preguntasRonda2', JSON.stringify(sesionInfo.data.preguntasRonda2));
-          
           const tiemposIniciales: Record<string, number> = {};
           sesionInfo.data.preguntasRonda2.forEach((preg: Pregunta) => {
             tiemposIniciales[preg.id] = 0;
           });
           setTiempos(tiemposIniciales);
           setInicioTiempo(Date.now());
+          if (localStorage.getItem('respuestasRonda2SesionId') !== sesionId) {
+            setPreguntaActual(0);
+          }
         } else {
+          // Si el backend no devuelve preguntas, intentar recuperar de localStorage (mismo sesionId) para no perder progreso
+          const preguntasLocales = localStorage.getItem('preguntasRonda2');
+          if (preguntasLocales) {
+            try {
+              const lista = JSON.parse(preguntasLocales);
+              const listaPreguntas = Array.isArray(lista) ? lista : (lista?.preguntas || []);
+              if (listaPreguntas.length > 0) {
+                setPreguntas(listaPreguntas);
+                const tiemposIniciales: Record<string, number> = {};
+                listaPreguntas.forEach((preg: Pregunta) => { tiemposIniciales[preg.id] = 0; });
+                setTiempos(tiemposIniciales);
+                setInicioTiempo(Date.now());
+                const respuestasSesionId = localStorage.getItem('respuestasRonda2SesionId');
+                const respuestasGuardadas = localStorage.getItem('respuestasRonda2');
+                if (respuestasGuardadas && sesionId && respuestasSesionId === sesionId) {
+                  const respuestasParseadas = JSON.parse(respuestasGuardadas) as Record<string, RespuestaPregunta>;
+                  const idsPreg = new Set(listaPreguntas.map((p: Pregunta) => p.id));
+                  const filtradas: Record<string, RespuestaPregunta> = {};
+                  Object.keys(respuestasParseadas).forEach((id) => {
+                    if (idsPreg.has(id)) filtradas[id] = respuestasParseadas[id];
+                  });
+                  setRespuestas(filtradas);
+                  const primeraSinResponder = listaPreguntas.findIndex((p: Pregunta) => !filtradas[p.id]);
+                  setPreguntaActual(primeraSinResponder >= 0 ? primeraSinResponder : 0);
+                } else {
+                  setPreguntaActual(0);
+                }
+                setCargandoPreguntas(false);
+                return;
+              }
+            } catch (_) { /* ignorar */ }
+          }
           toast({
             title: "Preguntas en generación",
             description: "Las preguntas de Ronda 2 se están generando. Por favor espera unos segundos y recarga.",
@@ -129,6 +169,42 @@ const Ronda2 = () => {
     cargarPreguntas();
   }, [navigate, toast, accessToken]);
 
+  // Al salir sin finalizar: mantener estado "ronda_2" y guardar progreso para no marcar como completado
+  const handleSalirYContinuarDespues = () => {
+    const sesionId = localStorage.getItem('sesionId');
+    if (sesionId) {
+      localStorage.setItem('estadoSesion', 'ronda_2');
+      localStorage.setItem('respuestasRonda2', JSON.stringify(respuestas));
+      localStorage.setItem('respuestasRonda2SesionId', sesionId);
+    }
+    navigate("/orientacion/historial");
+  };
+
+  // Advertir al cerrar pestaña/recargar si hay progreso en Ronda 2 y no se ha completado
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const totalRespuestas = Object.keys(respuestas).length;
+      if (totalRespuestas > 0 && !cargando && preguntas.length > 0 && totalRespuestas < preguntas.length) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [respuestas, cargando, preguntas.length]);
+
+  // Al salir a otro módulo sin completar: guardar progreso para que aparezca "En progreso" y se pueda continuar
+  useEffect(() => {
+    return () => {
+      if (completadoExitosoRef.current) return;
+      const sid = localStorage.getItem('sesionId');
+      if (sid && preguntas.length > 0) {
+        localStorage.setItem('estadoSesion', 'ronda_2');
+        localStorage.setItem('respuestasRonda2', JSON.stringify(respuestas));
+        localStorage.setItem('respuestasRonda2SesionId', sid);
+      }
+    };
+  }, [respuestas, preguntas.length]);
+
   // Sincronizar la selección al cambiar de pregunta (al retroceder se ve lo ya guardado)
   const preguntaR2 = preguntas[preguntaActual];
   useEffect(() => {
@@ -144,7 +220,7 @@ const Ronda2 = () => {
   const responderPregunta = (preguntaId: string, respuesta: string | boolean) => {
     if (!inicioTiempo) return;
 
-    const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+    const tiempoTranscurrido = Math.min(32767, Math.max(0, Math.floor((Date.now() - inicioTiempo) / 1000)));
     
     const nuevaRespuesta: RespuestaPregunta = {
       preguntaId,
@@ -164,7 +240,9 @@ const Ronda2 = () => {
       [preguntaId]: tiempoTranscurrido,
     });
 
+    const sesionId = localStorage.getItem('sesionId');
     localStorage.setItem('respuestasRonda2', JSON.stringify(nuevasRespuestas));
+    if (sesionId) localStorage.setItem('respuestasRonda2SesionId', sesionId);
 
     if (preguntaActual === preguntas.length - 1) {
       enviarRespuestasRonda2(nuevasRespuestas);
@@ -212,7 +290,12 @@ const Ronda2 = () => {
         }
       });
       
-      const respuestasArray = Array.from(respuestasMap.values());
+      const respuestasArray = Array.from(respuestasMap.values()).map((r) => ({
+        ...r,
+        tiempoRespuesta: typeof r.tiempoRespuesta === 'number' && Number.isFinite(r.tiempoRespuesta)
+          ? Math.min(32767, Math.max(0, Math.floor(r.tiempoRespuesta)))
+          : undefined,
+      }));
       
       console.log('📊 Ronda 2 - Total de preguntas:', preguntas.length);
       console.log('📊 Ronda 2 - Respuestas filtradas:', respuestasArray.length);
@@ -242,9 +325,11 @@ const Ronda2 = () => {
 
       const respuesta = await guardarRespuestasRonda2(accessToken, sesionId, respuestasArray);
       
+      completadoExitosoRef.current = true;
       // Limpiar localStorage
       localStorage.removeItem('respuestasRonda1');
       localStorage.removeItem('respuestasRonda2');
+      localStorage.removeItem('respuestasRonda2SesionId');
       localStorage.removeItem('preguntasRonda1');
       localStorage.removeItem('preguntasRonda2');
       localStorage.setItem('estadoSesion', respuesta.data.estado);
@@ -418,7 +503,7 @@ const Ronda2 = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => navigate("/orientacion/historial")}
+                  onClick={handleSalirYContinuarDespues}
                   disabled={cargando}
                   className="shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                 >

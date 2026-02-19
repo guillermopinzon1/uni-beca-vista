@@ -82,21 +82,31 @@ const SeleccionarTest = () => {
         const sesionesEnProgreso: Record<string, unknown>[] = Array.isArray(data.sesionesEnProgreso)
           ? (data.sesionesEnProgreso as Record<string, unknown>[])
           : [];
+        const localSesionId = typeof window !== "undefined" ? localStorage.getItem("sesionId") : null;
+        const localEstado = (typeof window !== "undefined" ? localStorage.getItem("estadoSesion") : null) || "";
+        const localTipoTest = typeof window !== "undefined" ? localStorage.getItem("tipoTest") : null;
+        const esRonda2EnLocal = localEstado.toLowerCase() === "ronda_2" && !!localSesionId && localTipoTest === "Holland_RIASEC";
+
+        const idDe = (s: Record<string, unknown>) => String((s.id ?? s.sesion_id ?? s.sesionId ?? "") || "");
         const hollandCompletada = historial.find((s) => {
           const tipo = tipoTestDeSesion(s);
-          return tipo === "Holland_RIASEC" && sesionCompletada(s.estado as string, s.tieneResultado as boolean, s);
+          const completada = tipo === "Holland_RIASEC" && sesionCompletada(s.estado as string, s.tieneResultado as boolean, s);
+          if (esRonda2EnLocal && idDe(s) === localSesionId) return false;
+          return completada;
         });
         const icoCompletada = historial.find((s) => {
           const tipo = tipoTestDeSesion(s);
           return tipo === "ICO" && sesionCompletada(s.estado as string, s.tieneResultado as boolean, s);
         });
-        const hollandProgreso = sesionesEnProgreso.find((s) => tipoTestDeSesion(s) === "Holland_RIASEC") ?? null;
+        let hollandProgreso = sesionesEnProgreso.find((s) => tipoTestDeSesion(s) === "Holland_RIASEC") ?? null;
+        if (esRonda2EnLocal && !hollandProgreso) {
+          hollandProgreso = { id: localSesionId, estado: "ronda_2", tipoTest: "Holland_RIASEC", fechaInicio: "" } as Record<string, unknown>;
+        }
         const icoProgreso = sesionesEnProgreso.find((s) => tipoTestDeSesion(s) === "ICO") ?? null;
         setYaTieneHolland(!!hollandCompletada);
         setYaTieneIco(!!icoCompletada);
         setHollandEnProgreso(hollandProgreso as Record<string, unknown> | null);
         setIcoEnProgreso(icoProgreso as Record<string, unknown> | null);
-        const idDe = (s: Record<string, unknown>) => String((s.id ?? s.sesion_id ?? s.sesionId ?? "") || "");
         setSesionIdHolland(hollandCompletada ? idDe(hollandCompletada) || null : null);
         setSesionIdIco(icoCompletada ? idDe(icoCompletada) || null : null);
       })
@@ -129,9 +139,19 @@ const SeleccionarTest = () => {
       if (tipoTest === "Holland_RIASEC") {
         if (estado === "ronda_1_completada" || estado === "ronda_2") {
           const sesionInfo = await obtenerSesion(accessToken, id);
-          const preguntasR2 = (sesionInfo?.data as { preguntasRonda2?: unknown[] })?.preguntasRonda2 ?? [];
+          let preguntasR2 = (sesionInfo?.data as { preguntasRonda2?: unknown[] })?.preguntasRonda2 ?? [];
+          if (preguntasR2.length === 0) {
+            try {
+              const local = localStorage.getItem("preguntasRonda2");
+              if (local) {
+                const arr = JSON.parse(local);
+                preguntasR2 = Array.isArray(arr) ? arr : (arr?.preguntas ?? []);
+              }
+            } catch (_) {}
+          }
           if (preguntasR2.length > 0) {
             localStorage.setItem("preguntasRonda2", JSON.stringify(preguntasR2));
+            localStorage.setItem("estadoSesion", estado === "ronda_2" ? "ronda_2" : "ronda_1_completada");
             navigate("/orientacion/ronda-2");
             return;
           }
@@ -196,6 +216,9 @@ const SeleccionarTest = () => {
       localStorage.setItem('tipoTest', respuesta.data.tipoTest);
       localStorage.setItem('estadoSesion', respuesta.data.estado);
       localStorage.setItem('preguntasRonda1', JSON.stringify(respuesta.data.preguntas));
+      localStorage.removeItem('respuestasRonda2');
+      localStorage.removeItem('respuestasRonda2SesionId');
+      localStorage.removeItem('preguntasRonda2');
 
       toast({
         title: "Test iniciado",

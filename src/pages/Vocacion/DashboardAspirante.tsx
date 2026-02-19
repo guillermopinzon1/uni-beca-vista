@@ -527,13 +527,20 @@ const DashboardAspirante = () => {
     if (/4to|cuarto/.test(lower)) return 4;
     return 0;
   };
-  /** Agrega materia destacada con nota (se guarda como "Materia: nota" para el API). */
+  /** Agrega materia destacada con nota (se guarda como "Materia: nota" para el API). Notas en escala 0-20. */
   const [nuevaMateriaNota, setNuevaMateriaNota] = useState("");
   const addMateriaDestacada = () => {
     const mat = nuevaMateria?.trim();
     const notaVal = nuevaMateriaNota?.trim();
     if (!mat) return;
-    const nota = notaVal !== "" ? notaVal : "—";
+    let nota: string;
+    if (notaVal === "") {
+      nota = "—";
+    } else {
+      const n = parseFloat(notaVal);
+      if (Number.isNaN(n)) nota = notaVal;
+      else nota = Math.min(20, Math.max(0, n)).toString();
+    }
     setTrayectoria((prev) => ({
       ...prev,
       materiasDestacadas: [...(prev.materiasDestacadas || []), `${mat}: ${nota}`],
@@ -813,6 +820,13 @@ const DashboardAspirante = () => {
     });
   };
   const setNewMateriaLapso = (ano: string, lapso: string, field: "materia" | "nota", value: string) => {
+    if (field === "nota" && value !== "") {
+      const n = parseFloat(value);
+      if (!Number.isNaN(n)) {
+        if (n > 20) value = "20";
+        else if (n < 0) value = "0";
+      }
+    }
     const key = `${ano}-${lapso}`;
     setNewMateriaLapsoInputs((prev) => ({
       ...prev,
@@ -868,6 +882,13 @@ const DashboardAspirante = () => {
     });
   };
   const setNewMateriaArea = (areaIndex: number, field: "nombre" | "nota", value: string) => {
+    if (field === "nota" && value !== "") {
+      const n = parseFloat(value);
+      if (!Number.isNaN(n)) {
+        if (n > 20) value = "20";
+        else if (n < 0) value = "0";
+      }
+    }
     setNewMateriaAreaInputs((prev) => ({
       ...prev,
       [areaIndex]: { ...(prev[areaIndex] || { nombre: "", nota: "" }), [field]: value },
@@ -1063,10 +1084,21 @@ const DashboardAspirante = () => {
                         min={0}
                         max={20}
                         step={0.01}
-                        placeholder="Nota"
+                        placeholder="Nota (0-20)"
                         className="w-20"
                         value={nuevaMateriaNota}
-                        onChange={(e) => setNuevaMateriaNota(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "") setNuevaMateriaNota("");
+                          else {
+                            const n = parseFloat(v);
+                            if (!Number.isNaN(n)) {
+                              if (n > 20) setNuevaMateriaNota("20");
+                              else if (n < 0) setNuevaMateriaNota("0");
+                              else setNuevaMateriaNota(v);
+                            } else setNuevaMateriaNota(v);
+                          }
+                        }}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMateriaDestacada())}
                       />
                       <Button type="button" variant="outline" size="icon" onClick={addMateriaDestacada}>

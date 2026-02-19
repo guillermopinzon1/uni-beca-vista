@@ -113,10 +113,8 @@ const Ronda1 = () => {
   const responderPregunta = (preguntaId: string, respuesta: string | boolean) => {
     if (!inicioTiempo) return;
 
-    // Calcular tiempo transcurrido
-    const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+    const tiempoTranscurrido = Math.min(32767, Math.max(0, Math.floor((Date.now() - inicioTiempo) / 1000)));
     
-    // Guardar respuesta
     const nuevaRespuesta: RespuestaPregunta = {
       preguntaId,
       respuesta,
@@ -186,7 +184,12 @@ const Ronda1 = () => {
         }
       });
       
-      const respuestasFiltradas = Array.from(respuestasMap.values());
+      const respuestasFiltradas = Array.from(respuestasMap.values()).map((r) => ({
+        ...r,
+        tiempoRespuesta: typeof r.tiempoRespuesta === 'number' && Number.isFinite(r.tiempoRespuesta)
+          ? Math.min(32767, Math.max(0, Math.floor(r.tiempoRespuesta)))
+          : undefined,
+      }));
       
       console.log('📊 Total de preguntas:', preguntas.length);
       console.log('📊 Respuestas filtradas:', respuestasFiltradas.length);

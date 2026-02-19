@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Compass, LogIn, Search, ArrowRight } from "lucide-react";
 import imagenBecas from "@/assets/Universidad-Metropolitana.jpg";
-import imagenOrientacion from "@/assets/university-hero.jpg";
+
+const imagenOrientacion = "https://www.unimet.edu.ve/wp-content/uploads/2024/06/BANDERA_UNIMET_NUEVA.jpg";
 
 const CAMPUS_IMAGE = "https://www.unimet.edu.ve/wp-content/uploads/2023/12/FOTOS-CAMPUS-2023-24-1-1024x683.jpg";
 

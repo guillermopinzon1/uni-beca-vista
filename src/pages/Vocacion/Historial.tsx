@@ -186,9 +186,19 @@ const Historial = () => {
       if (tipoTest === "Holland_RIASEC") {
         if (estado === "ronda_1_completada" || estado === "ronda_2") {
           const sesionInfo = await obtenerSesion(accessToken, id);
-          const preguntasR2 = sesionInfo?.data?.preguntasRonda2 ?? [];
+          let preguntasR2 = sesionInfo?.data?.preguntasRonda2 ?? [];
+          if (preguntasR2.length === 0) {
+            const local = localStorage.getItem("preguntasRonda2");
+            if (local) {
+              try {
+                const arr = JSON.parse(local);
+                preguntasR2 = Array.isArray(arr) ? arr : (arr?.preguntas ?? []);
+              } catch (_) {}
+            }
+          }
           if (preguntasR2.length > 0) {
             localStorage.setItem("preguntasRonda2", JSON.stringify(preguntasR2));
+            localStorage.setItem("estadoSesion", estado === "ronda_2" ? "ronda_2" : "ronda_1_completada");
             navigate("/orientacion/ronda-2");
             return;
           }
@@ -206,10 +216,31 @@ const Historial = () => {
     }
   };
 
-  const historialEnProgreso = sesionesEnProgreso;
-  const historialCompletados = historial.filter((s: any) =>
-    isSesionCompletada(s.estado ?? s.estado, s.tipoTest ?? s.tipo_test)
-  );
+  const localSesionId = typeof window !== "undefined" ? localStorage.getItem("sesionId") : null;
+  const localEstado = (typeof window !== "undefined" ? localStorage.getItem("estadoSesion") : null) || "";
+  const esRonda2EnProgresoEnLocal = localSesionId && localEstado.toLowerCase() === "ronda_2";
+
+  const historialCompletados = historial.filter((s: any) => {
+    const id = s.id ?? s.sesion_id;
+    if (esRonda2EnProgresoEnLocal && id === localSesionId) return false;
+    return isSesionCompletada(s.estado ?? s.estado, s.tipoTest ?? s.tipo_test);
+  });
+
+  let historialEnProgreso = [...sesionesEnProgreso];
+  if (esRonda2EnProgresoEnLocal && localSesionId) {
+    const idsEnProgreso = new Set(historialEnProgreso.map((s: any) => s.id ?? s.sesion_id));
+    if (!idsEnProgreso.has(localSesionId)) {
+      const enCompletadosPeroRonda2Local = historial.filter(
+        (s: any) => (s.id ?? s.sesion_id) === localSesionId && isSesionCompletada(s.estado ?? s.estado, s.tipoTest ?? s.tipo_test)
+      );
+      if (enCompletadosPeroRonda2Local.length > 0) {
+        historialEnProgreso = [
+          ...historialEnProgreso,
+          ...enCompletadosPeroRonda2Local.map((s: any) => ({ ...s, estado: "ronda_2" })),
+        ];
+      }
+    }
+  }
 
   if (cargando) {
     return (

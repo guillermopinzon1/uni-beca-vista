@@ -125,7 +125,7 @@ const App = () => (
               {/* Programas de Becas - Protegidos */}
               <Route path="/scholarship-programs" element={<ProtectedRoute allowedRoles={['estudiante']}><ScholarshipPrograms /></ProtectedRoute>} />
               <Route path="/aspirante-scholarship-programs" element={<ProtectedRoute allowedRoles={['aspirante']}><AspiranteScholarshipPrograms /></ProtectedRoute>} />
-              <Route path="/postulaciones-becas" element={<ProtectedRoute><PostulacionesBecas /></ProtectedRoute>} />
+              <Route path="/postulaciones-becas" element={<PostulacionesBecas />} />
               <Route path="/post-register-application" element={<ProtectedRoute allowedRoles={['aspirante']}><PostRegisterApplication /></ProtectedRoute>} />
 
               {/* Perfil y Postulaciones - Protegidos */}
