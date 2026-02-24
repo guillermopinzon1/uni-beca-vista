@@ -72,7 +72,7 @@ const Home = () => {
                 className="border-2 border-white text-white bg-white/15 hover:bg-white/25 rounded-xl px-6 h-12 font-semibold shadow-lg"
                 onClick={() => navigate("/vocational")}
               >
-                <Compass className="w-5 h-5 mr-2" /> Test Vocacional
+                <Compass className="w-5 h-5 mr-2" /> Solicitud de Orientación Vocacional
               </Button>
             </div>
           </motion.div>
