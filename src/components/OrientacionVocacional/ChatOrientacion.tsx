@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLLM } from '@/hooks/useLLM';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Send, Bot, User, MessageSquare } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Loader2, Send, Bot, User, Trash2,
+  GraduationCap, ClipboardList, MapPin, CalendarDays, Phone
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Mensaje {
@@ -11,6 +14,14 @@ interface Mensaje {
   content: string;
   timestamp: Date;
 }
+
+const OPCIONES_SUGERIDAS = [
+  { label: 'Carreras disponibles', texto: '¿Qué carreras tiene la UNIMET?', icon: GraduationCap },
+  { label: 'Mi resultado de test', texto: '¿Qué me recomiendas según mi resultado de test?', icon: ClipboardList },
+  { label: 'Información de admisión', texto: '¿Cuáles son las vías de ingreso a la UNIMET?', icon: MapPin },
+  { label: 'Fecha del PDU', texto: '¿Cuándo es la próxima fecha del PDU?', icon: CalendarDays },
+  { label: 'Contacto', texto: '¿A quién puedo contactar para información de becas?', icon: Phone },
+];
 
 const ChatOrientacion: React.FC = () => {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
@@ -20,70 +31,59 @@ const ChatOrientacion: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll automático al final cuando hay nuevos mensajes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensajes]);
 
-  // Focus en el input cuando se carga el componente
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  const handleEnviarMensaje = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!inputMensaje.trim() || loading) return;
+  const enviarMensaje = async (texto: string) => {
+    if (!texto.trim() || loading) return;
 
     const nuevoMensaje: Mensaje = {
       role: 'user',
-      content: inputMensaje.trim(),
-      timestamp: new Date()
+      content: texto.trim(),
+      timestamp: new Date(),
     };
 
-    // Agregar mensaje del usuario inmediatamente
     setMensajes(prev => [...prev, nuevoMensaje]);
-    const mensajeTemporal = inputMensaje;
     setInputMensaje('');
 
     try {
-      // Preparar historial para el LLM (incluye el nuevo mensaje)
-      const historialParaLLM = [...mensajes, nuevoMensaje].map(msg => ({
-        role: msg.role,
-        content: msg.content
+      const historial = [...mensajes, nuevoMensaje].map(m => ({
+        role: m.role,
+        content: m.content,
       }));
 
-      // Llamar al LLM
-      const respuesta = await chatLLM(historialParaLLM);
+      const respuesta = await chatLLM(historial);
 
-      // Agregar respuesta del asistente
-      const mensajeRespuesta: Mensaje = {
-        role: 'assistant',
-        content: respuesta,
-        timestamp: new Date()
-      };
+      setMensajes(prev => [
+        ...prev,
+        { role: 'assistant', content: respuesta, timestamp: new Date() },
+      ]);
 
-      setMensajes(prev => [...prev, mensajeRespuesta]);
-      
-      // Focus de vuelta al input
       inputRef.current?.focus();
     } catch (err: any) {
+      const isRateLimit = err.status === 429;
       toast({
-        title: 'Error',
+        title: isRateLimit ? 'Límite alcanzado' : 'Error',
         description: err.message || 'Error al enviar mensaje. Intenta de nuevo.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
-      
-      // Si falla, mantener el mensaje del usuario pero mostrar error
-      // El mensaje del usuario ya se agregó arriba
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    // Enviar con Enter (pero no con Shift+Enter para permitir saltos de línea)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    enviarMensaje(inputMensaje);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleEnviarMensaje(e);
+      enviarMensaje(inputMensaje);
     }
   };
 
@@ -92,151 +92,174 @@ const ChatOrientacion: React.FC = () => {
     inputRef.current?.focus();
   };
 
+  const mostrarWelcome = mensajes.length === 0 && !loading;
+
   return (
-    <Card className="w-full max-w-4xl mx-auto h-[600px] flex flex-col shadow-lg">
-      <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <MessageSquare className="h-6 w-6 text-blue-600" />
-            Chat de Orientación Vocacional
-          </CardTitle>
-          {mensajes.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={limpiarChat}
-              className="text-xs"
-            >
-              Limpiar Chat
-            </Button>
-          )}
+    <Card className="w-full max-w-4xl mx-auto h-[620px] flex flex-col shadow-lg overflow-hidden border-orange-100">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b bg-gradient-to-r from-orange-50 to-amber-50 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <img
+            src="/lovable-uploads/UNIMETLogo.png"
+            alt="UNIMET"
+            className="h-9 w-9 rounded-full object-contain bg-white p-0.5 shadow-sm"
+          />
+          <div>
+            <h2 className="text-base font-bold text-gray-900 leading-tight">
+              Asistente UNIMET
+            </h2>
+            <p className="text-xs text-gray-500">Orientación Vocacional</p>
+          </div>
         </div>
-        <p className="text-sm text-gray-600 mt-1">
-          Haz preguntas sobre carreras, orientación vocacional y más
-        </p>
-      </CardHeader>
+
+        {mensajes.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={limpiarChat}
+            className="text-xs text-gray-500 hover:text-red-500 gap-1"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Limpiar
+          </Button>
+        )}
+      </div>
 
       <CardContent className="flex flex-col flex-1 overflow-hidden p-0">
-        {/* Área de mensajes - Scrollable */}
-        <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-gray-50">
-          {mensajes.length === 0 && (
-            <div className="text-center text-gray-500 py-12">
-              <Bot className="h-16 w-16 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium mb-2">¡Hola! 👋</p>
-              <p className="text-sm">
-                Soy tu asistente de orientación vocacional.
-                <br />
-                Puedes preguntarme sobre carreras, intereses profesionales, o cualquier duda que tengas.
+        {/* Área de mensajes */}
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50/60">
+          {/* Pantalla de bienvenida */}
+          {mostrarWelcome && (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4 animate-in fade-in duration-300">
+              <img
+                src="/lovable-uploads/UNIMETLogo.png"
+                alt="UNIMET"
+                className="h-16 w-16 mb-5 rounded-full object-contain bg-white p-1 shadow-md"
+              />
+              <p className="text-base font-semibold text-gray-800 mb-1">
+                Hola, soy tu asistente de orientación vocacional
               </p>
-              <div className="mt-6 space-y-2 text-left max-w-md mx-auto">
-                <p className="text-xs font-medium text-gray-700 mb-2">Ejemplos de preguntas:</p>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  <li>• ¿Qué carrera me recomiendas si me gusta la tecnología?</li>
-                  <li>• ¿Cuál es la diferencia entre Ingeniería de Sistemas e Informática?</li>
-                  <li>• ¿Qué habilidades necesito para estudiar programación?</li>
-                </ul>
+              <p className="text-base font-semibold text-[#F37021] mb-3">
+                de la Universidad Metropolitana.
+              </p>
+              <p className="text-sm text-gray-500 max-w-md mb-8">
+                Puedo ayudarte con información sobre carreras, resultados de tu
+                test vocacional, fechas de admisión y más.
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                {OPCIONES_SUGERIDAS.map(op => (
+                  <button
+                    key={op.label}
+                    onClick={() => enviarMensaje(op.texto)}
+                    className="flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition-all hover:border-[#F37021] hover:bg-orange-50 hover:shadow-md active:scale-95"
+                  >
+                    <op.icon className="h-4 w-4 text-[#F37021]" />
+                    {op.label}
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {mensajes.map((mensaje, index) => (
-            <div
-              key={index}
-              className={`flex gap-3 ${
-                mensaje.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {mensaje.role === 'assistant' && (
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
-                  <Bot className="h-5 w-5 text-blue-600" />
+          {/* Mensajes de la conversación */}
+          {!mostrarWelcome && (
+            <div className="space-y-4">
+              {mensajes.map((mensaje, index) => (
+                <div
+                  key={index}
+                  className={`flex gap-3 ${
+                    mensaje.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {mensaje.role === 'assistant' && (
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shadow-sm">
+                      <Bot className="h-4.5 w-4.5 text-[#F37021]" />
+                    </div>
+                  )}
+
+                  <div
+                    className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
+                      mensaje.role === 'user'
+                        ? 'bg-[#F37021] text-white rounded-br-sm'
+                        : 'bg-white border border-gray-200 rounded-bl-sm'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {mensaje.content}
+                    </p>
+                    <p
+                      className={`text-[10px] mt-1.5 ${
+                        mensaje.role === 'user'
+                          ? 'text-orange-200'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {mensaje.timestamp.toLocaleTimeString('es-VE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+
+                  {mensaje.role === 'user' && (
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shadow-sm">
+                      <User className="h-4.5 w-4.5 text-gray-600" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {loading && (
+                <div className="flex gap-3 justify-start">
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shadow-sm">
+                    <Bot className="h-4.5 w-4.5 text-[#F37021]" />
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#F37021]" />
+                      <span className="text-sm text-gray-500">Pensando...</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div
-                className={`max-w-[75%] rounded-2xl p-4 shadow-sm ${
-                  mensaje.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-sm'
-                    : 'bg-white border border-gray-200 rounded-bl-sm'
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {mensaje.content}
-                </p>
-                <p className={`text-xs mt-2 ${
-                  mensaje.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                }`}>
-                  {mensaje.timestamp.toLocaleTimeString('es-VE', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </p>
-              </div>
-
-              {mensaje.role === 'user' && (
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center shadow-sm">
-                  <User className="h-5 w-5 text-gray-600" />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Indicador de carga */}
-          {loading && (
-            <div className="flex gap-3 justify-start">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
-                <Bot className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm p-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                  <span className="text-sm text-gray-500">Pensando...</span>
-                </div>
-              </div>
+              <div ref={messagesEndRef} />
             </div>
           )}
-
-          {/* Scroll anchor */}
-          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input de mensaje - Fixed en la parte inferior */}
-        <div className="border-t bg-white p-4">
+        {/* Input */}
+        <div className="border-t bg-white px-4 py-3">
           {error && (
-            <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs">
-              ⚠️ {error}
+            <div className="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+              {error}
             </div>
           )}
 
-          <form onSubmit={handleEnviarMensaje} className="flex gap-2">
+          <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               ref={inputRef}
               value={inputMensaje}
-              onChange={(e) => setInputMensaje(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onChange={e => setInputMensaje(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Escribe tu pregunta aquí..."
               disabled={loading}
               className="flex-1"
               maxLength={1000}
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading || !inputMensaje.trim()}
-              className="px-6"
+              className="bg-[#F37021] hover:bg-orange-600 px-5"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar
-                </>
+                <Send className="h-4 w-4" />
               )}
             </Button>
           </form>
-
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            Presiona Enter para enviar • Shift+Enter para nueva línea
-          </p>
         </div>
       </CardContent>
     </Card>

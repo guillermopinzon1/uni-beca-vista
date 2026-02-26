@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { API_BASE } from '@/lib/api/config';
 
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  try {
+    const stored = localStorage.getItem('auth_tokens');
+    const token = stored ? JSON.parse(stored)?.accessToken : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  } catch { /* ignore */ }
+  return headers;
+}
+
 export const useLLM = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11,13 +21,10 @@ export const useLLM = () => {
 
     try {
       const url = `${API_BASE}/v1/llm/consulta`;
-      console.log('🔍 Consultando LLM:', url);
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ prompt, context })
       });
 
@@ -80,13 +87,10 @@ export const useLLM = () => {
 
     try {
       const url = `${API_BASE}/v1/llm/recomendaciones`;
-      console.log('🔍 Generando recomendaciones:', url);
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           perfilEstudiante,
           carrerasDisponibles
@@ -146,64 +150,61 @@ export const useLLM = () => {
     }
   };
 
-  const chatLLM = async (mensajes: Array<{role?: 'user' | 'assistant', content: string}>, contexto: any = {}) => {
+  const chatLLM = async (mensajes: Array<{role: 'user' | 'assistant', content: string}>) => {
     setLoading(true);
     setError(null);
 
     try {
       const url = `${API_BASE}/v1/llm/chat`;
-      console.log('🔍 Chat LLM:', url);
-      console.log('📤 Mensajes enviados:', mensajes);
+      const headers = getAuthHeaders();
+
+      console.log('[ChatLLM] URL:', url);
+      console.log('[ChatLLM] Auth:', headers.Authorization ? 'Bearer ***' : 'Sin JWT');
+      console.log('[ChatLLM] Mensajes:', mensajes.length);
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ mensajes, contexto })
+        headers,
+        body: JSON.stringify({ mensajes })
       });
 
-      console.log('📥 Status de respuesta:', response.status, response.statusText);
-      console.log('📥 Content-Type:', response.headers.get('content-type'));
+      console.log('[ChatLLM] Status:', response.status, response.statusText);
 
       const contentType = response.headers.get('content-type');
       const isJson = contentType?.includes('application/json');
 
       if (!response.ok) {
         let errorMessage = `Error ${response.status}: ${response.statusText}`;
-        
-        if (isJson) {
+
+        if (response.status === 429) {
+          errorMessage = 'Demasiados mensajes. Intenta de nuevo en 15 minutos.';
+        } else if (isJson) {
           try {
             const errorData = await response.json();
+            console.log('[ChatLLM] Error body:', errorData);
             errorMessage = errorData.message || errorData.error || errorMessage;
-            console.error('❌ Error del servidor:', errorData);
           } catch {
             try {
               const textError = await response.text();
-              if (textError) {
-                errorMessage = textError;
-              }
-            } catch {
-              // Ignorar
-            }
+              if (textError) errorMessage = textError;
+            } catch { /* ignore */ }
           }
         } else {
           try {
             const textError = await response.text();
-            if (textError) {
-              errorMessage = textError;
-            }
-          } catch {
-            // Ignorar
-          }
+            console.log('[ChatLLM] Error text:', textError);
+            if (textError) errorMessage = textError;
+          } catch { /* ignore */ }
         }
-        
-        throw new Error(errorMessage);
+
+        const err = new Error(errorMessage);
+        (err as any).status = response.status;
+        throw err;
       }
 
       const responseText = await response.text();
-      console.log('📥 Respuesta recibida (texto):', responseText.substring(0, 200));
-      
+      console.log('[ChatLLM] Respuesta raw (primeros 300 chars):', responseText.substring(0, 300));
+
       if (!responseText || responseText.trim() === '') {
         throw new Error('El servidor devolvió una respuesta vacía');
       }
@@ -211,18 +212,17 @@ export const useLLM = () => {
       let data;
       try {
         data = JSON.parse(responseText);
-        console.log('✅ JSON parseado correctamente:', data);
-      } catch (parseError) {
-        console.error('❌ Error al parsear JSON:', parseError);
-        console.error('📄 Respuesta completa:', responseText);
-        throw new Error(`El servidor devolvió una respuesta no válida: ${responseText.substring(0, 100)}`);
+      } catch {
+        throw new Error('El servidor devolvió una respuesta no válida');
       }
 
-      return data.data?.respuesta || data.respuesta || data.message || 'Sin respuesta';
+      const respuesta = data.data?.respuesta || data.respuesta || data.message || 'Sin respuesta';
+      console.log('[ChatLLM] Texto extraído (primeros 200 chars):', respuesta.substring(0, 200));
+      return respuesta;
     } catch (err: any) {
       const errorMessage = err.message || 'Error en chat';
+      console.error('[ChatLLM] ERROR:', errorMessage);
       setError(errorMessage);
-      console.error('❌ Error en chatLLM:', err);
       throw err;
     } finally {
       setLoading(false);
