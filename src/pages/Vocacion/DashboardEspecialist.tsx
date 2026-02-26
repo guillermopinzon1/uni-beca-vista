@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, Plus, FileQuestion, BookMarked, Bold, Italic, Underline, List } from "lucide-react";
+import { ArrowLeft, Target, Users, BookOpen, TrendingUp, Heart, Award, CheckCircle, AlertCircle, Info, FileText, BrainCircuit, Upload, User, LogOut, Search, Filter, Calendar, MessageSquare, Mail, BarChart, Download, Megaphone, Sparkles, ChevronRight, ArrowUpRight, GraduationCap, Loader2, X, Plus, FileQuestion, BookMarked, Bold, Italic, Underline, List, ChevronDown, Settings2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect, useRef } from "react";
 import ReglamentoAccess from "@/components/shared/ReglamentoAccess";
@@ -48,6 +48,7 @@ import {
   type DimensionRIASEC,
   type TipoInstruccionesRespuesta,
   type InstruccionesRespuestaValue,
+  type PesoPregunta,
 } from "@/lib/api/preguntas";
 import {
   listarCareers,
@@ -269,6 +270,7 @@ const DashboardEspecialist = () => {
       id?: string;
       instrucciones_respuesta_tipo?: TipoInstruccionesRespuesta;
       instrucciones_respuesta_opciones?: string[];
+      peso_numerico?: number;
     }
   >({
     codigo_pregunta: "",
@@ -277,6 +279,7 @@ const DashboardEspecialist = () => {
     texto__pregunta: "",
     tipo_pregunta: "directa",
     peso_pregunta: "media",
+    peso_numerico: 50,
     activa: true,
     instrucciones_respuesta_tipo: "si_no",
     instrucciones_respuesta_opciones: ["Sí", "No"],
@@ -289,6 +292,20 @@ const DashboardEspecialist = () => {
   const [guiaCSVPreguntasTab, setGuiaCSVPreguntasTab] = useState<"descargar" | "subir" | null>(null);
   const [exportandoPreguntas, setExportandoPreguntas] = useState(false);
   const [preguntaADesactivar, setPreguntaADesactivar] = useState<PreguntaItem | null>(null);
+  const [pesoEscalaConfig, setPesoEscalaConfig] = useState<{
+    modo: "porPregunta" | "totalAjustado";
+    maxPorTipo: Record<TipoTestPregunta, number>;
+  }>(() => {
+    try {
+      const saved = localStorage.getItem("peso_escala_config");
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return {
+      modo: "porPregunta",
+      maxPorTipo: { Holland_RIASEC: 100, ICO: 100, Kuder: 100, Personalizado: 100 },
+    };
+  });
+  const [showPesoConfig, setShowPesoConfig] = useState(false);
   const [carreraADesactivar, setCarreraADesactivar] = useState<CareerListItem | null>(null);
   const [desactivandoPregunta, setDesactivandoPregunta] = useState(false);
   const [desactivandoCarrera, setDesactivandoCarrera] = useState(false);
@@ -2443,6 +2460,34 @@ Te invitamos a conocer más sobre:
         { value: "Convencional", label: "Convencional" },
       ];
 
+      const pesoMaxPorTipo = (tipo: TipoTestPregunta) => pesoEscalaConfig.maxPorTipo[tipo] ?? 100;
+
+      const numericoToCualitativo = (num: number, max: number): PesoPregunta => {
+        const pct = max > 0 ? num / max : 0;
+        if (pct >= 0.65) return "alta";
+        if (pct >= 0.35) return "media";
+        return "baja";
+      };
+
+      const cualitativoToNumerico = (peso: PesoPregunta, max: number): number => {
+        if (peso === "alta") return Math.round(max * 0.8);
+        if (peso === "media") return Math.round(max * 0.5);
+        return Math.round(max * 0.2);
+      };
+
+      const pesoSugerido = (tipoTest: TipoTestPregunta, editandoId?: string): number => {
+        const max = pesoMaxPorTipo(tipoTest);
+        if (pesoEscalaConfig.modo !== "totalAjustado") return Math.round(max * 0.5);
+        const activas = preguntasList.filter(p => p.tipo_test === tipoTest && p.activa);
+        const divisor = editandoId ? activas.length : activas.length + 1;
+        return Math.max(1, Math.round(max / Math.max(1, divisor)));
+      };
+
+      const guardarPesoConfig = (cfg: typeof pesoEscalaConfig) => {
+        setPesoEscalaConfig(cfg);
+        localStorage.setItem("peso_escala_config", JSON.stringify(cfg));
+      };
+
       const abrirModalPregunta = (p?: PreguntaItem) => {
         const { tipo, opciones } = p ? normalizarInstruccionesParaForm(p.instrucciones_respuesta) : { tipo: "si_no" as TipoInstruccionesRespuesta, opciones: ["Sí", "No"] };
         if (p) {
@@ -2454,6 +2499,7 @@ Te invitamos a conocer más sobre:
             texto__pregunta: p.texto__pregunta,
             tipo_pregunta: p.tipo_pregunta,
             peso_pregunta: p.peso_pregunta,
+            peso_numerico: cualitativoToNumerico(p.peso_pregunta, pesoMaxPorTipo(p.tipo_test)),
             instrucciones_pregunta: p.instrucciones_pregunta ?? undefined,
             dimension_secundaria: p.dimension_secundaria ?? [],
             activa: p.activa,
@@ -2469,6 +2515,7 @@ Te invitamos a conocer más sobre:
             texto__pregunta: "",
             tipo_pregunta: "directa",
             peso_pregunta: "media",
+            peso_numerico: pesoSugerido("Holland_RIASEC"),
             activa: true,
             instrucciones_respuesta_tipo: tipo,
             instrucciones_respuesta_opciones: opciones,
@@ -2500,6 +2547,8 @@ Te invitamos a conocer más sobre:
           return;
         }
         setGuardandoPregunta(true);
+        const pesoMax = pesoMaxPorTipo(formPregunta.tipo_test);
+        const pesoCualitativo = numericoToCualitativo(formPregunta.peso_numerico ?? Math.round(pesoMax * 0.5), pesoMax);
         const tipoInst = formPregunta.instrucciones_respuesta_tipo ?? "si_no";
         const opcionesInst = (formPregunta.instrucciones_respuesta_opciones ?? ["Sí", "No"]).filter(Boolean);
         const instruccionesRespuesta = { tipo: tipoInst, opciones: opcionesInst.length ? opcionesInst : ["Sí", "No"] };
@@ -2512,7 +2561,7 @@ Te invitamos a conocer más sobre:
               dimension_principal: formPregunta.dimension_principal,
               texto__pregunta: formPregunta.texto__pregunta,
               tipo_pregunta: formPregunta.tipo_pregunta,
-              peso_pregunta: formPregunta.peso_pregunta,
+              peso_pregunta: pesoCualitativo,
               instrucciones_pregunta: formPregunta.instrucciones_pregunta,
               instrucciones_respuesta: instruccionesRespuesta,
               dimension_secundaria: formPregunta.dimension_secundaria,
@@ -2526,7 +2575,7 @@ Te invitamos a conocer más sobre:
               dimension_principal: formPregunta.dimension_principal,
               texto__pregunta: formPregunta.texto__pregunta,
               tipo_pregunta: formPregunta.tipo_pregunta,
-              peso_pregunta: formPregunta.peso_pregunta,
+              peso_pregunta: pesoCualitativo,
               instrucciones_pregunta: formPregunta.instrucciones_pregunta,
               instrucciones_respuesta: instruccionesRespuesta,
               dimension_secundaria: formPregunta.dimension_secundaria,
@@ -2815,7 +2864,65 @@ Te invitamos a conocer más sobre:
               <option value="false">Inactivas</option>
             </select>
             <Button onClick={() => abrirModalPregunta()} className="bg-primary text-primary-foreground">Agregar pregunta</Button>
+            <Button variant="outline" className="flex items-center gap-1.5" onClick={() => setShowPesoConfig(v => !v)}>
+              <Settings2 className="w-4 h-4" />
+              Escala de pesos
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showPesoConfig ? "rotate-180" : ""}`} />
+            </Button>
           </div>
+
+          {showPesoConfig && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold text-slate-800">Configuración de escala de pesos</h3>
+              </div>
+              <div className="flex flex-wrap gap-4 items-center">
+                <span className="text-sm font-medium text-slate-700">Modo de asignación:</span>
+                <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                  <input type="radio" name="pesoModo" checked={pesoEscalaConfig.modo === "porPregunta"} onChange={() => guardarPesoConfig({ ...pesoEscalaConfig, modo: "porPregunta" })} />
+                  Por pregunta (manual)
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                  <input type="radio" name="pesoModo" checked={pesoEscalaConfig.modo === "totalAjustado"} onChange={() => guardarPesoConfig({ ...pesoEscalaConfig, modo: "totalAjustado" })} />
+                  Total ajustado (distribución automática)
+                </label>
+              </div>
+              <p className="text-xs text-slate-500">
+                {pesoEscalaConfig.modo === "porPregunta"
+                  ? "Asigna manualmente el peso de cada pregunta entre 1 y el máximo definido por tipo de test."
+                  : "Al crear o editar una pregunta, el sistema sugiere su peso dividiendo el total entre el número de preguntas activas del mismo tipo."}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 border-t border-slate-100">
+                {(["Holland_RIASEC", "ICO", "Kuder", "Personalizado"] as TipoTestPregunta[]).map(tipo => {
+                  const count = preguntasList.filter(p => p.tipo_test === tipo && p.activa).length;
+                  const max = pesoEscalaConfig.maxPorTipo[tipo] ?? 100;
+                  return (
+                    <div key={tipo} className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">{TIPOS_TEST.find(t => t.value === tipo)?.label ?? tipo}</Label>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-500 shrink-0">Máx:</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={9999}
+                          className="h-8 text-sm"
+                          value={max}
+                          onChange={e => {
+                            const v = Math.max(1, parseInt(e.target.value) || 1);
+                            guardarPesoConfig({ ...pesoEscalaConfig, maxPorTipo: { ...pesoEscalaConfig.maxPorTipo, [tipo]: v } });
+                          }}
+                        />
+                      </div>
+                      {pesoEscalaConfig.modo === "totalAjustado" && (
+                        <p className="text-xs text-slate-400">{count} pregunta{count !== 1 ? "s" : ""} activa{count !== 1 ? "s" : ""} → ~{count > 0 ? Math.round(max / count) : max} pts c/u</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <Card className="border-orange/20 bg-slate-50/50">
             <CardHeader className="pb-2">
@@ -2917,13 +3024,14 @@ Te invitamos a conocer más sobre:
                       <th className="text-left p-3 font-medium">Tipo test</th>
                       <th className="text-left p-3 font-medium">Dimensión</th>
                       <th className="text-left p-3 font-medium">Texto</th>
+                      <th className="text-left p-3 font-medium">Peso</th>
                       <th className="text-left p-3 font-medium">Estado</th>
                       <th className="text-right p-3 font-medium">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preguntasFiltradasPorCodigo.length === 0 ? (
-                      <tr><td colSpan={6} className="p-6 text-center text-slate-500">{preguntasList.length === 0 ? "No hay preguntas que coincidan con los filtros." : "Ningún código coincide con la búsqueda. Prueba otro texto."}</td></tr>
+                      <tr><td colSpan={7} className="p-6 text-center text-slate-500">{preguntasList.length === 0 ? "No hay preguntas que coincidan con los filtros." : "Ningún código coincide con la búsqueda. Prueba otro texto."}</td></tr>
                     ) : (
                       preguntasFiltradasPorCodigo.map(p => (
                         <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
@@ -2931,6 +3039,10 @@ Te invitamos a conocer más sobre:
                           <td className="p-3">{p.tipo_test}</td>
                           <td className="p-3">{p.dimension_principal}</td>
                           <td className="p-3 max-w-[200px] truncate" title={p.texto__pregunta}>{p.texto__pregunta}</td>
+                          <td className="p-3 whitespace-nowrap">
+                            <span className="text-sm font-semibold text-slate-700">{cualitativoToNumerico(p.peso_pregunta, pesoMaxPorTipo(p.tipo_test))}</span>
+                            <span className="text-xs text-slate-400">/{pesoMaxPorTipo(p.tipo_test)}</span>
+                          </td>
                           <td className="p-3">
                             <Badge variant={p.activa ? "default" : "secondary"}>{p.activa ? "Activa" : "Inactiva"}</Badge>
                           </td>
@@ -2973,7 +3085,10 @@ Te invitamos a conocer más sobre:
                   </div>
                   <div>
                     <Label>Tipo de test</Label>
-                    <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.tipo_test} onChange={e => setFormPregunta(f => ({ ...f, tipo_test: e.target.value as TipoTestPregunta }))}>
+                    <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.tipo_test} onChange={e => {
+                      const newTipo = e.target.value as TipoTestPregunta;
+                      setFormPregunta(f => ({ ...f, tipo_test: newTipo, peso_numerico: pesoSugerido(newTipo, preguntaEdit?.id) }));
+                    }}>
                       {TIPOS_TEST.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
@@ -2998,13 +3113,47 @@ Te invitamos a conocer más sobre:
                       <option value="proyectiva">Proyectiva</option>
                     </select>
                   </div>
-                  <div>
-                    <Label>Peso</Label>
-                    <select className="w-full rounded-md border border-slate-200 bg-white px-3 py-2" value={formPregunta.peso_pregunta} onChange={e => setFormPregunta(f => ({ ...f, peso_pregunta: e.target.value as "alta" | "media" | "baja" }))}>
-                      <option value="alta">Alta</option>
-                      <option value="media">Media</option>
-                      <option value="baja">Baja</option>
-                    </select>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Peso de la pregunta</Label>
+                      <span className="text-xs text-slate-500">Escala: 1–{pesoMaxPorTipo(formPregunta.tipo_test)} pts</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={pesoMaxPorTipo(formPregunta.tipo_test)}
+                        className="h-9 w-24 text-sm"
+                        value={formPregunta.peso_numerico ?? Math.round(pesoMaxPorTipo(formPregunta.tipo_test) * 0.5)}
+                        onChange={e => {
+                          const v = Math.max(1, Math.min(pesoMaxPorTipo(formPregunta.tipo_test), parseInt(e.target.value) || 1));
+                          setFormPregunta(f => ({ ...f, peso_numerico: v }));
+                        }}
+                      />
+                      <input
+                        type="range"
+                        min={1}
+                        max={pesoMaxPorTipo(formPregunta.tipo_test)}
+                        className="flex-1 accent-primary"
+                        value={formPregunta.peso_numerico ?? Math.round(pesoMaxPorTipo(formPregunta.tipo_test) * 0.5)}
+                        onChange={e => setFormPregunta(f => ({ ...f, peso_numerico: parseInt(e.target.value) }))}
+                      />
+                      <Badge variant={
+                        numericoToCualitativo(formPregunta.peso_numerico ?? Math.round(pesoMaxPorTipo(formPregunta.tipo_test) * 0.5), pesoMaxPorTipo(formPregunta.tipo_test)) === "alta"
+                          ? "default"
+                          : numericoToCualitativo(formPregunta.peso_numerico ?? Math.round(pesoMaxPorTipo(formPregunta.tipo_test) * 0.5), pesoMaxPorTipo(formPregunta.tipo_test)) === "media"
+                          ? "secondary"
+                          : "outline"
+                      }>
+                        {numericoToCualitativo(formPregunta.peso_numerico ?? Math.round(pesoMaxPorTipo(formPregunta.tipo_test) * 0.5), pesoMaxPorTipo(formPregunta.tipo_test))}
+                      </Badge>
+                    </div>
+                    {pesoEscalaConfig.modo === "totalAjustado" && (
+                      <p className="text-xs text-slate-500">
+                        Sugerido: <strong>{pesoSugerido(formPregunta.tipo_test, preguntaEdit?.id)} pts</strong>
+                        {" "}(máx {pesoMaxPorTipo(formPregunta.tipo_test)} ÷ {preguntasList.filter(p => p.tipo_test === formPregunta.tipo_test && p.activa).length + (preguntaEdit ? 0 : 1)} preguntas)
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-3 border-t border-slate-200 pt-4">
